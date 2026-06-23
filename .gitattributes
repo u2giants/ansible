@@ -1,0 +1,10 @@
+# Force LF for everything that runs on / is parsed by the Linux host. CRLF in a shell
+# script or YAML breaks on the box (bash chokes on \r). Authored on Windows, runs on Ubuntu.
+* text=auto eol=lf
+*.sh        text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.j2        text eol=lf
+*.cfg       text eol=lf
+*.ini       text eol=lf
+Makefile    text eol=lf
