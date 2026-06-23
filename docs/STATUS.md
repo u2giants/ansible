@@ -19,6 +19,9 @@ throwaway host.** Each phase ends with a GATE that must pass before the next beg
 - Cloud-init bootstrap template (§5.4).
 - **Agent governance:** `AGENTS.md` + `CLAUDE.md` (repo-side rules for AI sessions) and the
   `motd` role (on-box login banner) — so every agent/human is told to route changes through this repo.
+  Rolled out the rule beyond this repo (2026-06-23): global `~/.claude/CLAUDE.md` + `~/.codex/AGENTS.md`,
+  and an `AGENTS.md` policy section in all 12 u2giants repos (3 direct-to-main where a ruleset blocks
+  branches; 9 as PRs awaiting merge).
 - **Local validation passed (2026-06-23):** `ansible-lint` clean (2 intentional warnings) and
   `ansible-playbook --syntax-check` green, run from WSL.
 
