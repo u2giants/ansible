@@ -13,7 +13,7 @@ enable_phase2: false        # flip to true ONLY on scratch, or in a prod mainten
 # ----------------------------------------------------------------------------------
 # Host facts (plan §2)
 # ----------------------------------------------------------------------------------
-host_timezone: "Etc/UTC"    # VERIFY against `timedatectl` on the box
+host_timezone: "America/New_York"   # confirmed live 2026-06-23 (timedatectl)
 managed_user: "ai"
 
 # ----------------------------------------------------------------------------------
@@ -64,20 +64,27 @@ firewall_allowed_tcp:
 
 # ----------------------------------------------------------------------------------
 # docker role (plan §3.3, §4a) — manage daemon.json ONLY; pin engine; never auto-restart
+# daemon.json is deployed verbatim from roles/docker/files/daemon.json (captured live).
 # ----------------------------------------------------------------------------------
 docker_manage_daemon_json: true
-docker_ce_version: ""          # VERIFY & PIN from `apt-cache policy docker-ce`, e.g. "5:27.3.1-1~ubuntu.24.04~noble"
+docker_ce_version: "5:29.6.0-1~ubuntu.24.04~noble"   # confirmed live 2026-06-23
 docker_auto_restart: false     # MUST stay false — a restart hits Coolify + ~20 containers
 
 # ----------------------------------------------------------------------------------
 # cron_glue role (plan §4a) — Ansible owns ENTRIES; keeper scripts stay in HiClaw repo
 # ----------------------------------------------------------------------------------
 cron_glue_entries:
-  - name: "sync infra docs to git"
+  - name: "tailscale keepalive ping"          # root crontab, confirmed live 2026-06-23
+    user: "root"
+    job: "tailscale ping -c 1 100.94.183.1 >/dev/null 2>&1"
+    minute: "*/4"
+  - name: "sync infra docs to git"            # ai crontab, confirmed live 2026-06-23
     user: "{{ managed_user }}"
-    job: "/home/ai/bin/sync-infra-docs.sh"
+    job: "/home/ai/bin/sync-infra-docs.sh >> /home/ai/logs/sync-infra-docs.log 2>&1"
     minute: "*/15"
     # The script itself is NOT managed here — it lives in its source repo.
+# NOT adopted (app-layer, owned by the HiClaw repo per plan §4a — 5 minute-by-minute
+# /worksp/hiclaw/*-keeper.sh entries on the box). Left to that repo on purpose.
 
 # ----------------------------------------------------------------------------------
 # cloudflared_coolify role (plan §3.1, §4a) — Tunnel 1 ONLY. Never touch Tunnels 2/3.

@@ -1,5 +1,5 @@
 ---
 docker_manage_daemon_json: true
-docker_live_restore: true        # MUST stay true; and daemon.json MUST NOT contain a dns key
-docker_ce_version: ""            # set to the installed version string to hold the package
+# Pinned to the version live on hetz (2026-06-23). Update deliberately in a maintenance window.
+docker_ce_version: "5:29.6.0-1~ubuntu.24.04~noble"
 docker_auto_restart: false       # MUST stay false — never auto-restart Docker

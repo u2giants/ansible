@@ -3,33 +3,43 @@
 # hits Coolify + ~20 containers and causes docker.sock staleness (June 2026 outage), so this
 # role NEVER restarts Docker. A daemon.json change only prints a manual-action notice.
 # Read plan §3.3 / §4a before editing.
+#
+# daemon.json is reproduced VERBATIM from the live box (files/daemon.json, captured
+# 2026-06-23) so re-applies are byte-idempotent. The real safety invariant (learned from the
+# May 2026 outage) is: the `dns` key must NOT point at 127.0.0.53 (the host resolved stub,
+# unreachable from containers). Public resolvers (1.1.1.1/8.8.8.8) are fine and ARE deployed.
 
 - name: Pin the docker-ce package version (do NOT upgrade Docker via this role)
   ansible.builtin.dpkg_selections:
     name: docker-ce
     selection: hold
   when: docker_ce_version | length > 0
-  # The version is pinned by holding the currently-installed package. To move versions,
-  # do it deliberately in a maintenance window — never as a side effect of an apply.
 
-- name: Assert daemon.json has live-restore and NO dns key (plan §3.3)
-  ansible.builtin.assert:
-    that:
-      - docker_live_restore | bool
-    fail_msg: >-
-      daemon.json must keep live-restore:true. Docker 27+ reads the real upstream resolver
-      automatically; adding a `dns` key pointing at 127.0.0.53 breaks ALL containers (§3.3).
-
-- name: Manage /etc/docker/daemon.json (the ONLY file this role owns)
+- name: Deploy /etc/docker/daemon.json (verbatim from the live box; the ONLY file this role owns)
   ansible.builtin.copy:
+    src: daemon.json
     dest: /etc/docker/daemon.json
     owner: root
     group: root
     mode: "0644"
-    # Rendered from a dict so we can guarantee NO `dns` key is ever present.
-    content: "{{ _daemon_json | to_nice_json }}"
-  vars:
-    _daemon_json:
-      live-restore: "{{ docker_live_restore | bool }}"
   when: docker_manage_daemon_json | bool
   notify: Docker restart required (manual)
+
+- name: Read back daemon.json for safety assertions
+  ansible.builtin.slurp:
+    src: /etc/docker/daemon.json
+  register: docker_daemon_json
+  check_mode: false
+  when: docker_manage_daemon_json | bool
+
+- name: Assert daemon.json keeps live-restore and never points DNS at the host stub (plan §3.3)
+  ansible.builtin.assert:
+    that:
+      - "'live-restore' in _cfg"
+      - "'127.0.0.53' not in _cfg"      # the real landmine — host stub kills every container
+    fail_msg: >-
+      daemon.json must keep live-restore and must NOT contain 127.0.0.53 in its dns key
+      (that points containers at the unreachable host resolver stub — the May 2026 outage, §3.3).
+  vars:
+    _cfg: "{{ docker_daemon_json.content | b64decode }}"
+  when: docker_manage_daemon_json | bool

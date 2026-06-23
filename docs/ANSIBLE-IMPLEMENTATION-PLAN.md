@@ -141,8 +141,12 @@ The authoritative live reference is `/worksp/infra/CLAUDE.md` and `/home/ai/CLAU
   container crashed simultaneously.** Fixes that are now in place and your Ansible must preserve
   (encode them as managed files so a rebuild reapplies them):
   - `/etc/systemd/resolved.conf.d/fallback-dns.conf` → `FallbackDNS=1.1.1.1 1.0.0.1 8.8.8.8 8.8.4.4`
-  - `/etc/docker/daemon.json` → `{"live-restore": true}` and **NO `dns` key** (Docker 27+ reads the
-    real upstream from resolved automatically; pointing it at `127.0.0.53` breaks all containers).
+  - `/etc/docker/daemon.json` → keeps `"live-restore": true`. **CORRECTED 2026-06-23 after live
+    discovery:** the real file DOES carry a `dns` key — `"dns": ["1.1.1.1","8.8.8.8"]` (public
+    resolvers) — alongside `log-opts` and `default-address-pools`, and works fine on Docker
+    29.6.0. The actual landmine is narrower than first written: the `dns` key must **never** point
+    at `127.0.0.53` (the host resolved stub, unreachable from containers). The `docker` role now
+    deploys the file verbatim and asserts `127.0.0.53` never appears.
   - `oauth2-proxy` compose sets per-container `dns: [1.1.1.1, 8.8.8.8]` (it does OIDC discovery on
     every startup and exits code 1 if DNS fails). That file is at
     `/worksp/hiclaw/oauth2-proxy/docker-compose.yml` — manually managed, not Coolify.
@@ -162,7 +166,8 @@ The authoritative live reference is `/worksp/infra/CLAUDE.md` and `/home/ai/CLAU
 - Do **not** set `HTTP_PROXY`/`HTTPS_PROXY`/`ALL_PROXY` anywhere (the SOCKS tunnel on `:1080` is
   intentionally disabled; proxy env vars silently break tools/containers).
 - Do **not** enable `socks5-home-tunnel.service`.
-- Do **not** add a `dns` key to `daemon.json`.
+- Do **not** point `daemon.json`'s `dns` key at `127.0.0.53` (the host stub). A `dns` key with
+  **public** resolvers is correct and is what's deployed (corrected 2026-06-23 — see §3.3).
 - Do **not** commit secrets. Tunnel tokens, the Cloudflare API token, restic/S3 creds, the GHCR
   PAT, OAuth secrets all live in **1Password** (vault `vibe_coding`) and are injected at apply time.
 - Do **not** create/push new external repos or relocate infra content without the owner's explicit

@@ -21,6 +21,9 @@ op-*.json
 files/cloud-init/*.rendered
 files/cloud-init/user-data.yaml
 
+# --- Discovery output (live host internals: ports, iptables, configs) — keep local ---
+discovery/
+
 # --- Ansible runtime cruft ---
 *.retry
 .ansible/
