@@ -11,14 +11,14 @@
 
 - name: Grant passwordless sudo to the managed user
   ansible.builtin.copy:
-    dest: "/etc/sudoers.d/90-{{ managed_user }}"
+    # Matches the existing file on the box byte-for-byte (filename, content, mode) so a
+    # re-apply is a no-op instead of leaving a duplicate 90-ai file (confirmed live 2026-06-23).
+    dest: "/etc/sudoers.d/{{ managed_user }}"
     owner: root
     group: root
     mode: "0440"
     validate: "visudo -cf %s"          # never write a broken sudoers file
-    content: |
-      # Managed by Ansible (users role).
-      {{ managed_user }} ALL=(ALL) NOPASSWD:ALL
+    content: "{{ managed_user }} ALL=(ALL) NOPASSWD:ALL\n"
 
 - name: Install authorized public keys for the managed user
   ansible.posix.authorized_key:

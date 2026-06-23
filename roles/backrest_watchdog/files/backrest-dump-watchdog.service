@@ -1,0 +1,9 @@
+[Unit]
+Description=Backrest DB-dump self-heal watchdog
+Documentation=https://github.com/u2giants/backrest-hetzner
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/backrest-dump-watchdog.sh

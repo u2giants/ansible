@@ -1,38 +1,49 @@
-#!/usr/bin/env bash
-# backrest-dump-watchdog.sh — self-heal the backrest backup agent (plan §3.4).
+#!/bin/bash
+# Backrest DB-dump self-heal watchdog (runs on the HOST via systemd timer, every 15 min).
 #
-# Problem: backrest bind-mounts /var/run/docker.sock. When the host Docker daemon restarts,
-# the socket is recreated and backrest keeps a STALE handle — it can no longer exec the
-# database dumps. This silently broke backups for 4 days in June 2026.
+# Why this exists: the backrest container dumps databases by talking to the Docker daemon
+# through a bind-mounted /var/run/docker.sock. When the host's Docker daemon restarts, that
+# socket is recreated and the container holds a STALE handle -> every `docker exec` fails ->
+# dumps silently freeze. In June 2026 this went unnoticed for 4 days. The host can always
+# reach Docker, so the host watchdog detects the wedged state and restarts the container.
 #
-# This watchdog (run by a systemd timer on the HOST, not inside a container) detects the
-# wedged state and restarts the backrest container so it re-opens a fresh docker.sock.
-#
-# It is intentionally conservative: it only acts when it has positive evidence of the wedge,
-# and a restart of one backup container is non-disruptive to apps/Coolify.
-set -euo pipefail
+# It heals three conditions:
+#   1. backrest container not running        -> bring it up
+#   2. backrest cannot reach docker.sock      -> restart it, then trigger a dump
+#   3. freshest dump is stale (any cause)     -> trigger a dump
+set -uo pipefail
 
-CONTAINER="${BACKREST_CONTAINER:-backrest}"
-LOG_TAG="backrest-watchdog"
-log() { logger -t "$LOG_TAG" -- "$*"; echo "[$LOG_TAG] $*"; }
+LATEST=/opt/backrest/db-dumps/coolify-db-latest.sql
+STALE_MIN=45            # coolify-db dumps every 15 min; >45 min = 3 missed cycles
+LOG() { logger -t backrest-watchdog "$*" 2>/dev/null; echo "$(date '+%F %T') $*"; }
 
-# If the container isn't running at all, let Coolify/restart-policy handle it — not our job.
-if ! docker inspect -f '{{.State.Running}}' "$CONTAINER" >/dev/null 2>&1; then
-  log "container '$CONTAINER' not present/running; nothing to do"
-  exit 0
+# 1. container running?
+if ! docker ps --format '{{.Names}}' | grep -q '^backrest$'; then
+    LOG "backrest not running -> compose up"
+    (cd /opt/backrest && docker compose up -d) || LOG "compose up FAILED"
+    exit 0
 fi
 
-# Probe the docker.sock from inside the container the way backrest uses it. A healthy agent
-# can reach the daemon; a wedged one fails with a stale-handle/connection error.
-if docker exec "$CONTAINER" sh -c 'docker version >/dev/null 2>&1 || curl -s --unix-socket /var/run/docker.sock http://localhost/_ping >/dev/null 2>&1'; then
-  # Healthy.
-  exit 0
+# 2. container can reach Docker?
+if ! docker exec backrest docker ps >/dev/null 2>&1; then
+    LOG "backrest cannot reach docker.sock (stale mount) -> restarting backrest"
+    docker restart backrest >/dev/null 2>&1 || LOG "restart FAILED"
+    sleep 5
+    if docker exec backrest /scripts/pre-backup.sh >/dev/null 2>&1; then
+        LOG "post-restart dump OK"
+    else
+        LOG "post-restart dump STILL FAILING - needs a human"
+    fi
+    exit 0
 fi
 
-log "container '$CONTAINER' cannot reach docker.sock (stale handle suspected) — restarting it"
-if docker restart "$CONTAINER" >/dev/null 2>&1; then
-  log "restarted '$CONTAINER' successfully"
-else
-  log "ERROR: failed to restart '$CONTAINER'"
-  exit 1
+# 3. dump fresh?
+if [ ! -f "$LATEST" ] || [ -n "$(find "$LATEST" -mmin +"${STALE_MIN}" 2>/dev/null)" ]; then
+    LOG "coolify-db dump stale (>${STALE_MIN} min) despite Docker reachable -> triggering dump"
+    if docker exec backrest /scripts/pre-backup.sh >/dev/null 2>&1; then
+        LOG "recovery dump OK"
+    else
+        LOG "recovery dump FAILED - needs a human"
+    fi
 fi
+exit 0
