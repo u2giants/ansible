@@ -1,0 +1,14 @@
+
+============================================================================
+  {{ inventory_hostname | upper }} — MANAGED BY ANSIBLE.  DO NOT HAND-EDIT.
+============================================================================
+
+  To change this server, change the repo:  {{ motd_repo_url }}
+  Open a PR -> CI shows the diff -> merge -> the change is applied, serialized.
+
+  Do NOT  apt install / crontab -e / edit /etc / change firewall or systemd here.
+  Manual changes are DRIFT and get reverted by the next apply. App changes go in
+  the app's own repo via Coolify, never here.
+
+  Full rules: AGENTS.md in the repo above.
+============================================================================

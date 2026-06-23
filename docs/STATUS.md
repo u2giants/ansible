@@ -17,6 +17,10 @@ throwaway host.** Each phase ends with a GATE that must pass before the next beg
 - All roles authored with READMEs and the §4a safety rails baked in.
 - CI: `check.yml` (PR dry-run), `apply.yml` (gated off via `ENABLE_AUTO_APPLY`), `drift.yml` (daily check-only).
 - Cloud-init bootstrap template (§5.4).
+- **Agent governance:** `AGENTS.md` + `CLAUDE.md` (repo-side rules for AI sessions) and the
+  `motd` role (on-box login banner) — so every agent/human is told to route changes through this repo.
+- **Local validation passed (2026-06-23):** `ansible-lint` clean (2 intentional warnings) and
+  `ansible-playbook --syntax-check` green, run from WSL.
 
 ## Immediate next steps (require the live box + owner)
 1. Run `bin/discover.sh` on `hetz`; reconcile `inventory/group_vars/all.yml` and role vars with reality.

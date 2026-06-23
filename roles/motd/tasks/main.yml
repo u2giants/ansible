@@ -1,0 +1,20 @@
+---
+# motd — print a loud governance banner at login so any human or AI session that lands on the
+# box is told, before doing anything, that the host is Ansible-managed and must not be
+# hand-edited (plan §6: "Document the rule loudly"). Non-disruptive.
+
+- name: Install Ansible-managed login banner (static motd)
+  ansible.builtin.template:
+    src: motd.j2
+    dest: /etc/motd
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install dynamic motd hook (composes with Ubuntu's update-motd.d)
+  ansible.builtin.template:
+    src: 99-ansible-managed.j2
+    dest: /etc/update-motd.d/99-ansible-managed
+    owner: root
+    group: root
+    mode: "0755"

@@ -1,0 +1,7 @@
+#!/bin/sh
+# Managed by Ansible (motd role). Dynamic motd hook — composes with Ubuntu's update-motd.d.
+cat <<'BANNER'
+
+  [ Ansible-managed host — change {{ motd_repo_url }}, not the box. See AGENTS.md. ]
+
+BANNER

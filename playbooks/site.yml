@@ -27,6 +27,10 @@
 
   roles:
     # ---- Phase 1: non-disruptive (additive/low-risk) ----
+    - role: motd
+      tags: [phase1, motd]
+      when: enable_phase1 | bool
+
     - role: base
       tags: [phase1, base]
       when: enable_phase1 | bool
