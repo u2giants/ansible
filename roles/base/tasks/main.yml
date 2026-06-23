@@ -33,6 +33,14 @@
       APT::Periodic::Unattended-Upgrade "1";
   when: base_unattended_upgrades | bool
 
+- name: Ensure journald drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/journald.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Cap journald disk usage
   ansible.builtin.copy:
     dest: /etc/systemd/journald.conf.d/00-ansible-limits.conf
