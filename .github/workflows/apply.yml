@@ -1,0 +1,69 @@
+name: apply
+
+# On merge to main: the SINGLE, SERIALIZED apply point (plan §5). Two merges never apply at
+# once. GATED: the real apply only runs when the repo variable ENABLE_AUTO_APPLY == 'true'.
+# Until Phases 1–3 gates pass (plan §9), leave it unset so this stays check-only.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: "Ansible tags to run (default phase1)"
+        default: "phase1"
+
+# THE serialization guarantee: queue, never run two applies simultaneously (§5.1).
+concurrency:
+  group: apply-hetzner
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    environment: production    # add required reviewers here for a manual approval gate
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ansible-core
+      - run: ansible-galaxy collection install -r requirements.yml
+
+      - name: Connect to Tailscale (ephemeral tag:ci)
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Load secrets from 1Password
+        uses: 1password/load-secrets-action@v2
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          SSH_PRIVATE_KEY: op://vibe_coding/ci-deploy-ssh/private_key
+          CLOUDFLARED_TUNNEL_TOKEN: op://vibe_coding/cf-tunnel-coolify/credential
+
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      # --- GATE: apply for real only when explicitly enabled (plan §9, Phase 4) ---
+      - name: Apply (REAL) — phase1 only, serialized
+        if: vars.ENABLE_AUTO_APPLY == 'true'
+        run: |
+          ansible-playbook playbooks/site.yml -l hetzner \
+            --tags "${{ github.event.inputs.tags || 'phase1' }}"
+
+      - name: Auto-apply disabled — dry run only
+        if: vars.ENABLE_AUTO_APPLY != 'true'
+        run: |
+          echo "::notice::ENABLE_AUTO_APPLY is not 'true' — running --check only (plan §9)."
+          ansible-playbook playbooks/site.yml -l hetzner --tags phase1 --check --diff

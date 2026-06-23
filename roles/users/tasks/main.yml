@@ -1,0 +1,30 @@
+---
+# users — ensure the `ai` operator user exists with passwordless sudo and the CI
+# public key(s). PUBLIC keys only; private keys live in 1Password/CI (plan §4).
+
+- name: Ensure managed user exists
+  ansible.builtin.user:
+    name: "{{ managed_user }}"
+    shell: /bin/bash
+    create_home: true
+    state: present
+
+- name: Grant passwordless sudo to the managed user
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/90-{{ managed_user }}"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: "visudo -cf %s"          # never write a broken sudoers file
+    content: |
+      # Managed by Ansible (users role).
+      {{ managed_user }} ALL=(ALL) NOPASSWD:ALL
+
+- name: Install authorized public keys for the managed user
+  ansible.posix.authorized_key:
+    user: "{{ managed_user }}"
+    key: "{{ item }}"
+    state: present
+    exclusive: false                   # never wipe keys we don't manage (lockout risk)
+  loop: "{{ users_authorized_keys }}"
+  when: users_authorized_keys | length > 0

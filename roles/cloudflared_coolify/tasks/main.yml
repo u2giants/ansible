@@ -1,0 +1,63 @@
+---
+# cloudflared_coolify — manage ONLY Tunnel 1 (coolify.designflow.app): its systemd unit and
+# its root-only env file. NEVER touch Coolify-managed Tunnels 2 & 3 (mcp/mcpgw), which are
+# containers Coolify owns (plan §3.1, §4a). Tunnel 1's routing config lives REMOTELY in
+# Cloudflare, not in a local file — so we only manage the unit + token here.
+
+- name: Refuse to run without the tunnel token (must come from 1Password at apply time)
+  ansible.builtin.assert:
+    that:
+      - cloudflared_tunnel_token | default('') | length > 0
+    fail_msg: >-
+      cloudflared_tunnel_token is empty. It must be injected at apply time from
+      op://vibe_coding/cf-tunnel-coolify (plan §5.2). Never commit the token.
+
+- name: Ensure cloudflared config directory exists
+  ansible.builtin.file:
+    path: /etc/cloudflared
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Write Tunnel 1 env file (root-only secret)
+  ansible.builtin.copy:
+    dest: "{{ cloudflared_env_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+    content: |
+      # Managed by Ansible (cloudflared_coolify role). Token injected from 1Password.
+      TUNNEL_TOKEN={{ cloudflared_tunnel_token }}
+  no_log: true
+  notify: Restart cloudflared coolify tunnel
+
+- name: Install Tunnel 1 systemd unit
+  ansible.builtin.template:
+    src: cloudflared-coolify.service.j2
+    dest: "/etc/systemd/system/{{ cloudflared_service_name }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart cloudflared coolify tunnel
+
+- name: Flush handlers so the unit is reloaded before we enable it
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start Tunnel 1
+  ansible.builtin.systemd:
+    name: "{{ cloudflared_service_name }}"
+    enabled: true
+    state: started
+
+- name: Validate Tunnel 1 is active after any change (plan §4a)
+  ansible.builtin.command:
+    cmd: "systemctl is-active {{ cloudflared_service_name }}"
+  register: cf_active
+  changed_when: false
+  check_mode: false
+  retries: 5
+  delay: 3
+  until: cf_active.stdout == "active"

@@ -1,0 +1,7 @@
+---
+- name: Restart systemd-resolved
+  ansible.builtin.systemd:
+    name: systemd-resolved
+    state: restarted
+  # Brief, host-only DNS blip. Does NOT restart Docker, so containers are unaffected
+  # (the whole point of the §3.3 fix is to keep the resolver healthy).

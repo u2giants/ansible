@@ -1,0 +1,27 @@
+---
+# dns_hardening — preserve the May 2026 DNS-cascade outage fixes (plan §3.3).
+# This role manages ONLY the host resolver fallback. The Docker side of the fix
+# (daemon.json live-restore, NO dns key) is owned by the `docker` role to avoid two
+# roles fighting over the same file.
+
+- name: Ensure resolved drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/resolved.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Configure systemd-resolved FallbackDNS
+  ansible.builtin.copy:
+    dest: /etc/systemd/resolved.conf.d/fallback-dns.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by Ansible (dns_hardening role). See plan §3.3 — the May 2026 outage.
+      # When host DNS broke, Docker's DNS relay (127.0.0.11) broke and every tunnel /
+      # oauth2-proxy container crashed at once. These public fallbacks prevent that.
+      [Resolve]
+      FallbackDNS={{ dns_fallback_servers }}
+  notify: Restart systemd-resolved

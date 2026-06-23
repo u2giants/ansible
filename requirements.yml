@@ -1,0 +1,11 @@
+---
+# The plan (§4) mandates ansible.builtin modules only, so any AI session can run
+# this with a stock Ansible install and zero exotic dependencies.
+#
+# ansible.posix is the single small, universally-available exception: it provides
+# the idempotent sysctl / authorized_key helpers used by the firewall and users
+# roles. It ships with the `ansible` package already; pinned here only so CI can
+# `ansible-galaxy collection install -r requirements.yml` deterministically.
+collections:
+  - name: ansible.posix
+    version: ">=1.5.0"

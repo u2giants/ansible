@@ -1,0 +1,11 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart cloudflared coolify tunnel
+  ansible.builtin.systemd:
+    name: "{{ cloudflared_service_name }}"
+    state: restarted
+  # Restarts ONLY Tunnel 1. Never touches Coolify-managed Tunnels 2/3 (§3.1). The task list
+  # validates the tunnel goes back to active afterwards.

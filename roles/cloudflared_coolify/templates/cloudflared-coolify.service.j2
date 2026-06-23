@@ -1,0 +1,18 @@
+# Managed by Ansible (cloudflared_coolify role) — Tunnel 1 only (coolify.designflow.app).
+# Token-based run; routing config lives REMOTELY in Cloudflare (plan §3.1), not in a local file.
+[Unit]
+Description=Cloudflare Tunnel for Coolify (Tunnel 1)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+EnvironmentFile={{ cloudflared_env_path }}
+ExecStart=/usr/bin/cloudflared --no-autoupdate tunnel run --token ${TUNNEL_TOKEN}
+Restart=on-failure
+RestartSec=5
+# DNS hardening relevance (§3.3): cloudflared does discovery on startup; the host resolver
+# fallback (dns_hardening role) keeps it healthy.
+
+[Install]
+WantedBy=multi-user.target

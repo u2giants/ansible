@@ -1,0 +1,16 @@
+# ansible-lint config — keep it strict but pragmatic for a single-host, builtin-only project.
+profile: moderate
+
+exclude_paths:
+  - .github/
+  - files/cloud-init/
+  - bin/
+
+# We deliberately use FQCN builtins everywhere; warn (don't fail) on the few
+# pragmatic command/shell reads that the plan §4a calls out as unavoidable.
+warn_list:
+  - command-instead-of-module
+  - no-changed-when      # genuine read-only command/shell tasks are marked check_mode: false
+
+skip_list:
+  - var-naming[no-role-prefix]   # group_vars use shared, non-prefixed names by design

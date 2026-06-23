@@ -1,0 +1,5 @@
+---
+# Container name of the backup agent that bind-mounts /var/run/docker.sock.
+backrest_container_name: "backrest"
+# How often the watchdog checks for the wedged state.
+backrest_watchdog_interval: "5min"

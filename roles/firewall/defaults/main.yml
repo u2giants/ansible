@@ -1,0 +1,12 @@
+---
+firewall_apply: false                  # second gate on top of enable_phase2
+firewall_ssh_port: 22
+firewall_tailscale_interface: "tailscale0"
+firewall_autorevert_seconds: 60
+firewall_allow_no_docker: false        # set true ONLY on a scratch box with no containers
+firewall_allowed_tcp:
+  - 22
+  - 80
+  - 443
+# firewall_rules_v4_raw: |             # paste captured `iptables-save` here for prod (mode A)
+# firewall_rules_v6_raw: |

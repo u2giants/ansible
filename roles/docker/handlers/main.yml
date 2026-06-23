@@ -1,0 +1,12 @@
+---
+# MANUAL-GATED handler. Ansible must NEVER auto-restart Docker (plan §4a): a restart hits
+# Coolify + ~20 containers and causes docker.sock staleness. This handler only WARNS.
+- name: Docker restart required (manual)
+  ansible.builtin.debug:
+    msg: >-
+      ⚠️ /etc/docker/daemon.json changed but Docker was NOT restarted (by design). For the
+      change to take effect, restart dockerd in a MAINTENANCE WINDOW:
+        sudo systemctl restart docker
+      Then bounce the backrest container to clear docker.sock staleness:
+        docker restart backrest
+      (The backrest-dump-watchdog timer also covers this — plan §3.4.)

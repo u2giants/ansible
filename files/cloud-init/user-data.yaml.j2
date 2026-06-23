@@ -1,0 +1,35 @@
+#cloud-config
+# First-boot bootstrap (plan §5.4) — makes a brand-new Hetzner Cloud box reachable by CI with
+# ZERO manual steps. Pass this as `user-data` at provision time (Hetzner console/API/Terraform).
+#
+# This is a TEMPLATE: render it injecting the Tailscale ephemeral auth key and CI public key
+# from 1Password at provision time. NEVER commit the rendered file (it contains a secret) —
+# .gitignore excludes *.rendered and user-data.yaml.
+#
+#   Render: TS_AUTHKEY=... CI_PUBKEY="ssh-ed25519 ..." \
+#           envsubst < files/cloud-init/user-data.yaml.j2 > user-data.yaml.rendered
+#   (or render with Ansible/Jinja; placeholders below use ${VAR} for envsubst convenience)
+
+users:
+  - name: ai
+    groups: [sudo]
+    shell: /bin/bash
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    ssh_authorized_keys:
+      - "${CI_PUBKEY}"          # CI deploy PUBLIC key (from op://vibe_coding/ci-deploy-ssh)
+
+package_update: true
+packages:
+  - python3            # required for Ansible
+  - curl
+  - ca-certificates
+
+runcmd:
+  # Install Tailscale and join the tailnet with the CI ephemeral key (tag:ci), enabling SSH.
+  - ['sh', '-c', 'curl -fsSL https://tailscale.com/install.sh | sh']
+  - ['tailscale', 'up', '--authkey=${TS_AUTHKEY}', '--ssh', '--hostname=hetz']
+  # After this, CI can reach the box over Tailscale and the rest is fully code-driven.
+
+# NOTE: Hetzner *dedicated/Robot* servers use installimage + a post-install script instead of
+# cloud-init user-data (plan §5.4 caveat). Confirm the product before relying on this file.
+# Fallback for any provider: a one-shot bootstrap.sh run once from a laptop.

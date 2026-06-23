@@ -1,0 +1,88 @@
+---
+# Non-secret variables shared across hosts. SECRETS DO NOT GO HERE — they are pulled
+# from 1Password at apply time (plan §5.2). Values marked "VERIFY" are seeded from the
+# audit and must be reconciled with `bin/discover.sh` output before trusting them.
+
+# ----------------------------------------------------------------------------------
+# Phase gating (plan §9). Risky (phase2) roles are skipped unless explicitly enabled,
+# so they cannot reach prod before being proven on the scratch host.
+# ----------------------------------------------------------------------------------
+enable_phase1: true
+enable_phase2: false        # flip to true ONLY on scratch, or in a prod maintenance window
+
+# ----------------------------------------------------------------------------------
+# Host facts (plan §2)
+# ----------------------------------------------------------------------------------
+host_timezone: "Etc/UTC"    # VERIFY against `timedatectl` on the box
+managed_user: "ai"
+
+# ----------------------------------------------------------------------------------
+# base role
+# ----------------------------------------------------------------------------------
+# Explicitly-installed packages to guarantee present. Reconcile with
+# discovery/.../packages-manual.txt — do NOT blindly add Coolify/app deps.
+base_packages:
+  - ca-certificates
+  - curl
+  - gnupg
+  - git
+  - jq
+  - htop
+  - fail2ban
+  - netfilter-persistent
+  - iptables-persistent
+  - unattended-upgrades
+  - python3
+  - python3-apt          # required for Ansible apt module idempotency
+base_unattended_upgrades: true
+base_journald_max_use: "1G"   # cap journald disk usage; VERIFY desired size
+
+# ----------------------------------------------------------------------------------
+# users role — PUBLIC keys only (plan §4). Real keys belong in 1Password/CI, not git.
+# ----------------------------------------------------------------------------------
+users_authorized_keys: []
+#  - "ssh-ed25519 AAAA... ci@github-actions"   # the CI deploy public key
+
+# ----------------------------------------------------------------------------------
+# dns_hardening role (plan §3.3) — keep the May 2026 outage fixes intact
+# ----------------------------------------------------------------------------------
+dns_fallback_servers: "1.1.1.1 1.0.0.1 8.8.8.8 8.8.4.4"
+docker_live_restore: true      # daemon.json must have live-restore:true and NO dns key
+
+# ----------------------------------------------------------------------------------
+# firewall role (plan §3.5, §4a) — Tailscale + SSH must always stay open
+# ----------------------------------------------------------------------------------
+firewall_apply: false                  # extra guard on top of enable_phase2
+firewall_ssh_port: 22
+firewall_tailscale_interface: "tailscale0"
+firewall_autorevert_seconds: 60        # wrong ruleset un-does itself
+# Public-facing TCP ports to allow (besides SSH). VERIFY against iptables-save.
+firewall_allowed_tcp:
+  - 22       # SSH
+  - 80       # HTTP (Traefik/Coolify)
+  - 443      # HTTPS (Traefik/Coolify)
+
+# ----------------------------------------------------------------------------------
+# docker role (plan §3.3, §4a) — manage daemon.json ONLY; pin engine; never auto-restart
+# ----------------------------------------------------------------------------------
+docker_manage_daemon_json: true
+docker_ce_version: ""          # VERIFY & PIN from `apt-cache policy docker-ce`, e.g. "5:27.3.1-1~ubuntu.24.04~noble"
+docker_auto_restart: false     # MUST stay false — a restart hits Coolify + ~20 containers
+
+# ----------------------------------------------------------------------------------
+# cron_glue role (plan §4a) — Ansible owns ENTRIES; keeper scripts stay in HiClaw repo
+# ----------------------------------------------------------------------------------
+cron_glue_entries:
+  - name: "sync infra docs to git"
+    user: "{{ managed_user }}"
+    job: "/home/ai/bin/sync-infra-docs.sh"
+    minute: "*/15"
+    # The script itself is NOT managed here — it lives in its source repo.
+
+# ----------------------------------------------------------------------------------
+# cloudflared_coolify role (plan §3.1, §4a) — Tunnel 1 ONLY. Never touch Tunnels 2/3.
+# ----------------------------------------------------------------------------------
+cloudflared_service_name: "cloudflared-coolify"
+cloudflared_env_path: "/etc/cloudflared/coolify-tunnel.env"
+# The tunnel TOKEN is a secret -> injected at apply time from 1Password
+# (op://vibe_coding/cf-tunnel-coolify), never stored here.

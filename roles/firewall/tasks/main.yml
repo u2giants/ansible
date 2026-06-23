@@ -1,0 +1,118 @@
+---
+# firewall — THE highest-risk role: a wrong rule locks you out of SSH and/or wipes Docker's
+# iptables chains and kills all container networking. Read roles/firewall/README.md and
+# plan §4a before touching this. Every guard below is load-bearing.
+#
+# Safety model (plan §4a):
+#   1. Double-gated: enable_phase2 AND firewall_apply must both be true.
+#   2. The ruleset is a CAPTURED iptables-save (preserves Docker's chains) + curated host
+#      INPUT rules — we never auto-generate a filter table from scratch.
+#   3. Assert the lifeline (tailscale0 + SSH) and Docker chains are present BEFORE applying.
+#   4. Apply behind a systemd AUTO-REVERT timer: if we get locked out and can't confirm,
+#      the last-known-good rules are restored in firewall_autorevert_seconds.
+
+- name: Refuse to run firewall without explicit double opt-in
+  ansible.builtin.assert:
+    that:
+      - enable_phase2 | bool
+      - firewall_apply | bool
+    fail_msg: >-
+      Firewall changes require enable_phase2=true AND firewall_apply=true. Prove on the
+      scratch host first (plan §8.3). Never apply firewall changes blind from CI (§4a).
+
+- name: Ensure iptables rules directory exists
+  ansible.builtin.file:
+    path: /etc/iptables
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Render candidate IPv4 ruleset
+  ansible.builtin.template:
+    src: rules.v4.j2
+    dest: /etc/iptables/rules.v4.candidate
+    owner: root
+    group: root
+    mode: "0640"
+    validate: "iptables-restore --test %s"     # syntax-check; will NOT apply
+  register: candidate_v4
+
+- name: Render candidate IPv6 ruleset
+  ansible.builtin.template:
+    src: rules.v6.j2
+    dest: /etc/iptables/rules.v6.candidate
+    owner: root
+    group: root
+    mode: "0640"
+    validate: "ip6tables-restore --test %s"
+
+- name: Read back candidate IPv4 ruleset for assertions
+  ansible.builtin.slurp:
+    src: /etc/iptables/rules.v4.candidate
+  register: candidate_v4_content
+  check_mode: false
+
+- name: Assert the lifeline and Docker chains are present (anti-lockout, anti-wipe)
+  ansible.builtin.assert:
+    that:
+      - "firewall_tailscale_interface in _rules"                 # Tailscale way back in
+      - "('--dport ' ~ firewall_ssh_port) in _rules"             # SSH stays open
+      - "':DOCKER' in _rules or firewall_allow_no_docker | bool" # don't wipe Docker chains
+    fail_msg: >-
+      Candidate ruleset is missing the Tailscale interface, the SSH allow, or Docker's chains.
+      Applying it could lock you out or kill all container networking. Aborting (plan §4a, §3).
+  vars:
+    _rules: "{{ candidate_v4_content.content | b64decode }}"
+
+# ----- staged apply, only past this point do we touch the live table -----
+- name: Snapshot current live rules as last-known-good
+  ansible.builtin.shell: "iptables-save > /etc/iptables/rules.v4.lkg && ip6tables-save > /etc/iptables/rules.v6.lkg"
+  changed_when: false   # capturing a snapshot changes no live state
+  check_mode: false
+
+- name: Arm auto-revert timer (restores last-known-good if we can't confirm)
+  ansible.builtin.command:
+    cmd: >-
+      systemd-run --unit=fw-autorevert --on-active={{ firewall_autorevert_seconds }}
+      /bin/sh -c 'iptables-restore < /etc/iptables/rules.v4.lkg;
+      ip6tables-restore < /etc/iptables/rules.v6.lkg'
+  changed_when: true
+  check_mode: false
+
+- name: Apply candidate ruleset
+  ansible.builtin.shell: >-
+    iptables-restore < /etc/iptables/rules.v4.candidate &&
+    ip6tables-restore < /etc/iptables/rules.v6.candidate
+  changed_when: true
+  check_mode: false
+
+- name: Confirm we still have a working connection (cancels nothing if this fails — revert fires)
+  ansible.builtin.ping:
+  # If the apply locked us out, this task can't run, we never cancel the timer, and the
+  # auto-revert restores the last-known-good rules. That is the safety net working.
+
+- name: Disarm auto-revert (we are still reachable)
+  ansible.builtin.command:
+    cmd: systemctl stop fw-autorevert.timer fw-autorevert.service
+  failed_when: false
+  changed_when: true
+  check_mode: false
+
+- name: Promote candidate to the persisted ruleset
+  ansible.builtin.copy:
+    remote_src: true
+    src: "/etc/iptables/{{ item.c }}"
+    dest: "/etc/iptables/{{ item.f }}"
+    owner: root
+    group: root
+    mode: "0640"
+  loop:
+    - { c: rules.v4.candidate, f: rules.v4 }
+    - { c: rules.v6.candidate, f: rules.v6 }
+
+- name: Ensure fail2ban is enabled and running
+  ansible.builtin.systemd:
+    name: fail2ban
+    enabled: true
+    state: started

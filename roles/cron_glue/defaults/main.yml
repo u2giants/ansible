@@ -1,0 +1,5 @@
+---
+managed_user: "ai"
+# Entries only. The minute-by-minute HiClaw "keeper" loops are an app-layer smell — do NOT
+# adopt them here (plan §4a). Add only genuine host-glue schedules.
+cron_glue_entries: []

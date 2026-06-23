@@ -1,0 +1,46 @@
+---
+# base — apt packages, timezone, unattended-upgrades, journald limits. Non-disruptive.
+
+- name: Read current timezone
+  ansible.builtin.command: timedatectl show -p Timezone --value
+  register: base_current_tz
+  changed_when: false
+  check_mode: false      # a genuine read; safe to run in --check (plan §4a)
+
+- name: Set system timezone (builtin only — no extra collections)
+  ansible.builtin.command: "timedatectl set-timezone {{ host_timezone }}"
+  when:
+    - host_timezone | length > 0
+    - base_current_tz.stdout != host_timezone
+  changed_when: true
+
+- name: Ensure base packages are present
+  ansible.builtin.apt:
+    name: "{{ base_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Configure unattended-upgrades (enable automatic security updates)
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      // Managed by Ansible (base role). Do not edit by hand.
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+  when: base_unattended_upgrades | bool
+
+- name: Cap journald disk usage
+  ansible.builtin.copy:
+    dest: /etc/systemd/journald.conf.d/00-ansible-limits.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by Ansible (base role).
+      [Journal]
+      SystemMaxUse={{ base_journald_max_use }}
+  notify: Restart journald

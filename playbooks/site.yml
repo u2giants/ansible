@@ -1,0 +1,61 @@
+---
+# site.yml — the single entrypoint that applies the host-layer roles to the Hetzner box.
+#
+# Roles are split into PHASES (plan §9) and tagged so CI / operators can run a subset:
+#   ansible-playbook playbooks/site.yml --tags phase1
+#   ansible-playbook playbooks/site.yml --tags firewall -l scratch -e enable_phase2=true
+#
+# Phase 2 (risky) roles are double-gated: by `enable_phase2` (default false) AND by their
+# own per-role guard. They CANNOT touch prod until both are explicitly enabled (§4a, §9).
+
+- name: Host-layer configuration
+  hosts: hetzner
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Fail fast if a phase2 role is requested without explicit opt-in
+      ansible.builtin.assert:
+        that:
+          - enable_phase2 | bool
+        fail_msg: >-
+          Phase 2 (risky) roles require `enable_phase2=true`. Prove them on the scratch
+          host first (plan §8.3, §9). Refusing to run firewall/docker/cloudflared on prod blind.
+        success_msg: "Phase 2 explicitly enabled — proceeding (hopefully on scratch or in a maintenance window)."
+      when: "'phase2' in ansible_run_tags or 'firewall' in ansible_run_tags or 'docker' in ansible_run_tags or 'cloudflared_coolify' in ansible_run_tags"
+      tags: [always]
+
+  roles:
+    # ---- Phase 1: non-disruptive (additive/low-risk) ----
+    - role: base
+      tags: [phase1, base]
+      when: enable_phase1 | bool
+
+    - role: users
+      tags: [phase1, users]
+      when: enable_phase1 | bool
+
+    - role: dns_hardening
+      tags: [phase1, dns_hardening]
+      when: enable_phase1 | bool
+
+    - role: backrest_watchdog
+      tags: [phase1, backrest_watchdog]
+      when: enable_phase1 | bool
+
+    # ---- Phase 2: risky live-service roles (can take the box down) ----
+    - role: firewall
+      tags: [phase2, firewall]
+      when: enable_phase2 | bool
+
+    - role: docker
+      tags: [phase2, docker]
+      when: enable_phase2 | bool
+
+    - role: cron_glue
+      tags: [phase2, cron_glue]
+      when: enable_phase2 | bool
+
+    - role: cloudflared_coolify
+      tags: [phase2, cloudflared_coolify]
+      when: enable_phase2 | bool

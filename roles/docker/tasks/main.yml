@@ -1,0 +1,35 @@
+---
+# docker — manage ONLY /etc/docker/daemon.json and PIN the engine version. A daemon restart
+# hits Coolify + ~20 containers and causes docker.sock staleness (June 2026 outage), so this
+# role NEVER restarts Docker. A daemon.json change only prints a manual-action notice.
+# Read plan §3.3 / §4a before editing.
+
+- name: Pin the docker-ce package version (do NOT upgrade Docker via this role)
+  ansible.builtin.dpkg_selections:
+    name: docker-ce
+    selection: hold
+  when: docker_ce_version | length > 0
+  # The version is pinned by holding the currently-installed package. To move versions,
+  # do it deliberately in a maintenance window — never as a side effect of an apply.
+
+- name: Assert daemon.json has live-restore and NO dns key (plan §3.3)
+  ansible.builtin.assert:
+    that:
+      - docker_live_restore | bool
+    fail_msg: >-
+      daemon.json must keep live-restore:true. Docker 27+ reads the real upstream resolver
+      automatically; adding a `dns` key pointing at 127.0.0.53 breaks ALL containers (§3.3).
+
+- name: Manage /etc/docker/daemon.json (the ONLY file this role owns)
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: "0644"
+    # Rendered from a dict so we can guarantee NO `dns` key is ever present.
+    content: "{{ _daemon_json | to_nice_json }}"
+  vars:
+    _daemon_json:
+      live-restore: "{{ docker_live_restore | bool }}"
+  when: docker_manage_daemon_json | bool
+  notify: Docker restart required (manual)

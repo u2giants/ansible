@@ -1,0 +1,43 @@
+---
+# backrest_watchdog — installs the systemd timer that self-heals the backup agent when a
+# host Docker restart leaves it holding a stale /var/run/docker.sock handle (plan §3.4,
+# the June 2026 outage that silently broke DB backups for 4 days).
+#
+# Canonical source of truth for these units is the `backrest-wiz` repo
+# (hetzner-producer/bin + systemd). This role vendors them so a rebuilt host re-creates the
+# watchdog. Keep them in sync with that repo.
+
+- name: Install backrest dump watchdog script
+  ansible.builtin.copy:
+    src: backrest-dump-watchdog.sh
+    dest: /usr/local/bin/backrest-dump-watchdog.sh
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install backrest watchdog service unit
+  ansible.builtin.template:
+    src: backrest-dump-watchdog.service.j2
+    dest: /etc/systemd/system/backrest-dump-watchdog.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Install backrest watchdog timer unit
+  ansible.builtin.template:
+    src: backrest-dump-watchdog.timer.j2
+    dest: /etc/systemd/system/backrest-dump-watchdog.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Flush handlers so the timer unit exists before we enable it
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start the backrest watchdog timer
+  ansible.builtin.systemd:
+    name: backrest-dump-watchdog.timer
+    enabled: true
+    state: started

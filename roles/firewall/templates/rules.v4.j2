@@ -1,0 +1,34 @@
+{#
+  IPv4 iptables ruleset (iptables-restore format).
+
+  TWO modes:
+
+  (A) PRODUCTION — set `firewall_rules_v4_raw` to the box's real `iptables-save` output
+      (captured by bin/discover.sh, lightly edited). This preserves Docker's *nat / *filter
+      DOCKER* chains verbatim so we never wipe container networking. The role asserts the
+      lifeline (tailscale0 + SSH) and ':DOCKER' are present before applying. PREFER THIS on
+      any host running Docker/Coolify.
+
+  (B) SCRATCH — no raw ruleset provided. We emit a minimal host-INPUT-only filter table.
+      This has NO Docker chains, so it is only allowed when `firewall_allow_no_docker: true`
+      (a throwaway box with no containers). Do NOT use mode B on prod.
+#}
+{% if firewall_rules_v4_raw is defined and firewall_rules_v4_raw | length > 0 %}
+# Managed by Ansible (firewall role) — mode A: captured production ruleset.
+{{ firewall_rules_v4_raw }}
+{% else %}
+# Managed by Ansible (firewall role) — mode B: minimal host-only INPUT (scratch hosts only).
+*filter
+:INPUT DROP [0:0]
+:FORWARD DROP [0:0]
+:OUTPUT ACCEPT [0:0]
+-A INPUT -i lo -j ACCEPT
+-A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+# Out-of-band lifeline — Tailscale must always be open (plan §4a).
+-A INPUT -i {{ firewall_tailscale_interface }} -j ACCEPT
+-A INPUT -p icmp --icmp-type echo-request -j ACCEPT
+{% for port in firewall_allowed_tcp %}
+-A INPUT -p tcp --dport {{ port }} -m conntrack --ctstate NEW -j ACCEPT
+{% endfor %}
+COMMIT
+{% endif %}

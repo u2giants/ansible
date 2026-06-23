@@ -1,0 +1,5 @@
+---
+cloudflared_service_name: "cloudflared-coolify"
+cloudflared_env_path: "/etc/cloudflared/coolify-tunnel.env"
+# Secret — injected at apply time from op://vibe_coding/cf-tunnel-coolify. Never set in git.
+cloudflared_tunnel_token: ""

@@ -1,0 +1,5 @@
+---
+managed_user: "ai"
+# PUBLIC keys only. Leave empty until the CI deploy key exists; an empty list is a no-op,
+# so this role will never strip existing keys and lock anyone out.
+users_authorized_keys: []

@@ -1,0 +1,61 @@
+name: drift-detection
+
+# Scheduled --check --diff to catch out-of-band manual changes (plan §5.5). Check-ONLY: it
+# must never apply. Fails (and thus alerts) if it detects drift between the repo and the box.
+
+on:
+  schedule:
+    - cron: "0 3 * * *"   # daily 03:00 UTC
+  workflow_dispatch: {}
+
+concurrency:
+  group: drift-hetzner
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ansible-core
+      - run: ansible-galaxy collection install -r requirements.yml
+
+      - name: Connect to Tailscale (ephemeral tag:ci)
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Load secrets from 1Password
+        uses: 1password/load-secrets-action@v2
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          SSH_PRIVATE_KEY: op://vibe_coding/ci-deploy-ssh/private_key
+
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      # Trust this most for phase1 (non-disruptive) roles; --check fidelity is weaker for the
+      # risky roles (§4a), so we only drift-check phase1 and treat its signal as "investigate".
+      - name: Detect drift (phase1, check-only)
+        run: |
+          set -o pipefail
+          ansible-playbook playbooks/site.yml -l hetzner --tags phase1 --check --diff \
+            | tee /tmp/drift.txt
+          if grep -qE '^changed:|=> \(item' /tmp/drift.txt; then
+            echo "::error::Drift detected between repo and live host — investigate (plan §5.5)."
+            # TODO(Phase 4): wire this to the owner's backup-alert channel.
+            exit 1
+          fi

@@ -1,0 +1,20 @@
+---
+# cron_glue — owns cron ENTRIES only (that they exist, on what schedule). The keeper SCRIPTS
+# they invoke (e.g. /worksp/hiclaw/*.sh, /home/ai/bin/sync-infra-docs.sh) belong to their
+# source repos, NOT host Ansible (plan §4a). We never create or edit those scripts here.
+
+- name: Manage cron entries (idempotent; scripts themselves are NOT managed here)
+  ansible.builtin.cron:
+    name: "{{ item.name }}"
+    user: "{{ item.user | default(managed_user) }}"
+    job: "{{ item.job }}"
+    minute: "{{ item.minute | default('*') }}"
+    hour: "{{ item.hour | default('*') }}"
+    day: "{{ item.day | default('*') }}"
+    month: "{{ item.month | default('*') }}"
+    weekday: "{{ item.weekday | default('*') }}"
+    state: "{{ item.state | default('present') }}"
+    disabled: "{{ item.disabled | default(false) }}"
+  loop: "{{ cron_glue_entries }}"
+  loop_control:
+    label: "{{ item.name }}"

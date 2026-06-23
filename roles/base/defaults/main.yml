@@ -1,0 +1,6 @@
+---
+# Overridable in group_vars/all.yml. Defaults are conservative.
+base_packages: []
+base_unattended_upgrades: true
+base_journald_max_use: "1G"
+host_timezone: "Etc/UTC"
