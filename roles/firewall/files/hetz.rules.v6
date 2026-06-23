@@ -1,0 +1,95 @@
+*mangle
+:PREROUTING ACCEPT [0:0]
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+-A PREROUTING -m conntrack --ctstate RELATED,ESTABLISHED -j CONNMARK --restore-mark --nfmask 0xff0000 --ctmask 0xff0000
+-A OUTPUT -m conntrack --ctstate NEW -m mark ! --mark 0x0/0xff0000 -j CONNMARK --save-mark --nfmask 0xff0000 --ctmask 0xff0000
+COMMIT
+*raw
+:PREROUTING ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+-A PREROUTING -d fdd4:1a51:f5e5::17/128 ! -i br-d4b3e6b3b0cf -j DROP
+-A PREROUTING -d fdd4:1a51:f5e5::2/128 ! -i br-d4b3e6b3b0cf -j DROP
+-A PREROUTING -d fdd4:1a51:f5e5::5/128 ! -i br-d4b3e6b3b0cf -j DROP
+-A PREROUTING -d fdd4:1a51:f5e5::7/128 ! -i br-d4b3e6b3b0cf -j DROP
+-A PREROUTING -d fdd4:1a51:f5e5::9/128 ! -i br-d4b3e6b3b0cf -j DROP
+-A PREROUTING -d fdd4:1a51:f5e5::a/128 ! -i br-d4b3e6b3b0cf -j DROP
+-A PREROUTING -d fdd4:1a51:f5e5::b/128 ! -i br-d4b3e6b3b0cf -j DROP
+-A PREROUTING -d fdd4:1a51:f5e5::e/128 ! -i br-d4b3e6b3b0cf -j DROP
+-A PREROUTING -d fdd4:1a51:f5e5::f/128 ! -i br-d4b3e6b3b0cf -j DROP
+-A PREROUTING -d fdd4:1a51:f5e5::10/128 ! -i br-d4b3e6b3b0cf -j DROP
+-A PREROUTING -d fdd4:1a51:f5e5::11/128 ! -i br-d4b3e6b3b0cf -j DROP
+-A PREROUTING -d fdd4:1a51:f5e5::6/128 ! -i br-d4b3e6b3b0cf -j DROP
+-A PREROUTING -d fdd4:1a51:f5e5::14/128 ! -i br-d4b3e6b3b0cf -j DROP
+-A PREROUTING -d fdd4:1a51:f5e5::c/128 ! -i br-d4b3e6b3b0cf -j DROP
+-A PREROUTING -d fdd4:1a51:f5e5::3/128 ! -i br-d4b3e6b3b0cf -j DROP
+-A PREROUTING -d fdd4:1a51:f5e5::4/128 ! -i br-d4b3e6b3b0cf -j DROP
+-A PREROUTING -d fdd4:1a51:f5e5::12/128 ! -i br-d4b3e6b3b0cf -j DROP
+COMMIT
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD DROP [0:0]
+:OUTPUT ACCEPT [0:0]
+:DOCKER - [0:0]
+:DOCKER-BRIDGE - [0:0]
+:DOCKER-CT - [0:0]
+:DOCKER-FORWARD - [0:0]
+:DOCKER-INTERNAL - [0:0]
+:DOCKER-USER - [0:0]
+:ts-forward - [0:0]
+:ts-input - [0:0]
+-A INPUT -j ts-input
+-A FORWARD -j DOCKER-USER
+-A FORWARD -j DOCKER-FORWARD
+-A FORWARD -j ts-forward
+-A DOCKER -d fdd4:1a51:f5e5::4/128 ! -i br-d4b3e6b3b0cf -o br-d4b3e6b3b0cf -p tcp -m tcp --dport 8080 -j ACCEPT
+-A DOCKER -d fdd4:1a51:f5e5::4/128 ! -i br-d4b3e6b3b0cf -o br-d4b3e6b3b0cf -p udp -m udp --dport 443 -j ACCEPT
+-A DOCKER -d fdd4:1a51:f5e5::4/128 ! -i br-d4b3e6b3b0cf -o br-d4b3e6b3b0cf -p tcp -m tcp --dport 443 -j ACCEPT
+-A DOCKER -d fdd4:1a51:f5e5::4/128 ! -i br-d4b3e6b3b0cf -o br-d4b3e6b3b0cf -p tcp -m tcp --dport 80 -j ACCEPT
+-A DOCKER -d fdd4:1a51:f5e5::7/128 ! -i br-d4b3e6b3b0cf -o br-d4b3e6b3b0cf -p tcp -m tcp --dport 15432 -j ACCEPT
+-A DOCKER -d fdd4:1a51:f5e5::9/128 ! -i br-d4b3e6b3b0cf -o br-d4b3e6b3b0cf -p tcp -m tcp --dport 6002 -j ACCEPT
+-A DOCKER -d fdd4:1a51:f5e5::9/128 ! -i br-d4b3e6b3b0cf -o br-d4b3e6b3b0cf -p tcp -m tcp --dport 6001 -j ACCEPT
+-A DOCKER -d fdd4:1a51:f5e5::f/128 ! -i br-d4b3e6b3b0cf -o br-d4b3e6b3b0cf -p tcp -m tcp --dport 8080 -j ACCEPT
+-A DOCKER -d fdd4:1a51:f5e5::10/128 ! -i br-d4b3e6b3b0cf -o br-d4b3e6b3b0cf -p tcp -m tcp --dport 8088 -j ACCEPT
+-A DOCKER -d fdd4:1a51:f5e5::10/128 ! -i br-d4b3e6b3b0cf -o br-d4b3e6b3b0cf -p tcp -m tcp --dport 8080 -j ACCEPT
+-A DOCKER -d fdd4:1a51:f5e5::10/128 ! -i br-d4b3e6b3b0cf -o br-d4b3e6b3b0cf -p tcp -m tcp --dport 8001 -j ACCEPT
+-A DOCKER ! -i br-d4b3e6b3b0cf -o br-d4b3e6b3b0cf -j DROP
+-A DOCKER-BRIDGE -o br-d4b3e6b3b0cf -j DOCKER
+-A DOCKER-CT -o br-d4b3e6b3b0cf -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A DOCKER-FORWARD -j DOCKER-CT
+-A DOCKER-FORWARD -j DOCKER-INTERNAL
+-A DOCKER-FORWARD -j DOCKER-BRIDGE
+-A DOCKER-FORWARD -i br-d4b3e6b3b0cf -j ACCEPT
+-A ts-forward -i tailscale0 -j MARK --set-xmark 0x40000/0xff0000
+-A ts-forward -m mark --mark 0x40000/0xff0000 -j ACCEPT
+-A ts-forward -o tailscale0 -j ACCEPT
+-A ts-input -s fd7a:115c:a1e0::5232:253a/128 -i lo -j ACCEPT
+-A ts-input -i tailscale0 -j ACCEPT
+-A ts-input -p udp -m udp --dport 41641 -j ACCEPT
+COMMIT
+*nat
+:PREROUTING ACCEPT [0:0]
+:INPUT ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+:DOCKER - [0:0]
+:ts-postrouting - [0:0]
+-A PREROUTING -m addrtype --dst-type LOCAL -j DOCKER
+-A OUTPUT ! -d ::1/128 -m addrtype --dst-type LOCAL -j DOCKER
+-A POSTROUTING -j ts-postrouting
+-A POSTROUTING -s fdd4:1a51:f5e5::/64 ! -o br-d4b3e6b3b0cf -j MASQUERADE
+-A DOCKER ! -s fe80::/10 ! -i br-d4b3e6b3b0cf -p tcp -m tcp --dport 18001 -j DNAT --to-destination [fdd4:1a51:f5e5::10]:8001
+-A DOCKER ! -s fe80::/10 ! -i br-d4b3e6b3b0cf -p tcp -m tcp --dport 18080 -j DNAT --to-destination [fdd4:1a51:f5e5::10]:8080
+-A DOCKER ! -s fe80::/10 ! -i br-d4b3e6b3b0cf -p tcp -m tcp --dport 18088 -j DNAT --to-destination [fdd4:1a51:f5e5::10]:8088
+-A DOCKER ! -s fe80::/10 ! -i br-d4b3e6b3b0cf -p tcp -m tcp --dport 8000 -j DNAT --to-destination [fdd4:1a51:f5e5::f]:8080
+-A DOCKER ! -s fe80::/10 ! -i br-d4b3e6b3b0cf -p tcp -m tcp --dport 6001 -j DNAT --to-destination [fdd4:1a51:f5e5::9]:6001
+-A DOCKER ! -s fe80::/10 ! -i br-d4b3e6b3b0cf -p tcp -m tcp --dport 6002 -j DNAT --to-destination [fdd4:1a51:f5e5::9]:6002
+-A DOCKER ! -s fe80::/10 ! -i br-d4b3e6b3b0cf -p tcp -m tcp --dport 15432 -j DNAT --to-destination [fdd4:1a51:f5e5::7]:15432
+-A DOCKER ! -s fe80::/10 ! -i br-d4b3e6b3b0cf -p tcp -m tcp --dport 80 -j DNAT --to-destination [fdd4:1a51:f5e5::4]:80
+-A DOCKER ! -s fe80::/10 ! -i br-d4b3e6b3b0cf -p tcp -m tcp --dport 443 -j DNAT --to-destination [fdd4:1a51:f5e5::4]:443
+-A DOCKER ! -s fe80::/10 ! -i br-d4b3e6b3b0cf -p udp -m udp --dport 443 -j DNAT --to-destination [fdd4:1a51:f5e5::4]:443
+-A DOCKER ! -s fe80::/10 ! -i br-d4b3e6b3b0cf -p tcp -m tcp --dport 8080 -j DNAT --to-destination [fdd4:1a51:f5e5::4]:8080
+-A ts-postrouting -m mark --mark 0x40000/0xff0000 -j MASQUERADE
+COMMIT

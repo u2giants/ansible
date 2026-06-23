@@ -21,6 +21,7 @@ see [`deployment.md`](deployment.md).
 | `enable_phase1` | `true` | runs the non-disruptive roles |
 | `enable_phase2` | `false` | gates the risky roles (firewall/docker/cron_glue/cloudflared); a pre-task asserts opt-in |
 | `firewall_apply` | `false` | second gate on top of `enable_phase2` for the firewall role |
+| `firewall_use_captured` | `true` | load the captured prod ruleset `roles/firewall/files/hetz.rules.v*` (mode A); `false` = scratch mode-B template |
 | `firewall_allow_no_docker` | `false` | allows the scratch-only "mode B" ruleset that has no Docker chains |
 | `docker_auto_restart` | `false` | MUST stay false — Ansible never restarts Docker |
 | `ENABLE_AUTO_APPLY` | unset | GitHub repo variable; gates real apply-on-merge in `apply.yml` |

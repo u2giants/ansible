@@ -27,8 +27,11 @@ cause drift. Phased plan with hard gates: [`docs/ANSIBLE-IMPLEMENTATION-PLAN.md`
 ## Partially done / current state
 
 - **`firewall` role** — authored with mode A (verbatim `iptables-save` capture) and mode B
-  (scratch). The live ruleset has **not** yet been captured into `firewall_rules_v4_raw` /
-  `_v6_raw`. INPUT policy is ACCEPT with SSH locked to Tailscale (see AGENTS quirks). Not applied.
+  (scratch). The live ruleset **is now captured** to `roles/firewall/files/hetz.rules.v4`/`.v6`
+  (2026-06-23, counters zeroed, timestamps stripped; both pass `iptables-restore --test`). The
+  role auto-loads them when `firewall_use_captured: true` (default). INPUT policy is ACCEPT with
+  SSH locked to Tailscale (see AGENTS quirks). **Captured but UNPROVEN — not applied; must be
+  validated on the scratch host first (do NOT run against prod even in `--check`).**
 - **`docker` role** — `daemon.json` captured verbatim; engine pinned. Gated, not applied.
 - **`cloudflared_coolify` role** — manages Tunnel 1 unit + token (from 1Password). Gated, not applied.
 - **CI workflows** — written and lint-clean, but **not active**: no GitHub secrets exist and
@@ -63,9 +66,10 @@ cause drift. Phased plan with hard gates: [`docs/ANSIBLE-IMPLEMENTATION-PLAN.md`
 Pick one (each needs an owner-provided resource):
 
 1. **Phase 2 (recommended):** owner spins up a cheap throwaway box (Hetzner/DO) → add it under
-   `[scratch]` in `inventory/hosts.ini` → capture the live `iptables-save`/`ip6tables-save` into
-   the firewall role's mode A → prove `firewall`/`docker`/`cloudflared_coolify` on scratch with a
-   rebuild-and-diff → apply to prod in a maintenance window (`-e enable_phase2=true`).
+   `[scratch]` in `inventory/hosts.ini` → prove `firewall`/`docker`/`cloudflared_coolify` on
+   scratch with a rebuild-and-diff (firewall ruleset already captured) → apply to prod in a
+   maintenance window (`-e enable_phase2=true`). On scratch, set `firewall_use_captured=false`
+   and `firewall_allow_no_docker=true` (the captured rules are hetz-specific).
 2. **Phase 4:** create the GitHub secrets + `ENABLE_AUTO_APPLY`, then the pipeline runs applies
    instead of manual WSL.
 3. **Phase 3:** migrate secrets into 1Password one at a time with validation/rollback (plan §5.2).

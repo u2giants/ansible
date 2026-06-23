@@ -28,6 +28,20 @@
     group: root
     mode: "0755"
 
+# Mode A: if a captured production ruleset exists for this host in files/, load it into the
+# raw vars so the template emits it verbatim (preserves Docker's nat/filter chains). Captured
+# from hetz 2026-06-23 (counters zeroed, timestamps stripped). UNPROVEN — must be validated on
+# the scratch host before any prod apply (plan §4a/§8.3). Set firewall_use_captured=false for
+# scratch hosts that should use the minimal mode-B template instead.
+- name: Load captured production ruleset (mode A) when present
+  ansible.builtin.set_fact:
+    firewall_rules_v4_raw: "{{ lookup('ansible.builtin.file', role_path ~ '/files/hetz.rules.v4') }}"
+    firewall_rules_v6_raw: "{{ lookup('ansible.builtin.file', role_path ~ '/files/hetz.rules.v6') }}"
+  when:
+    - firewall_use_captured | bool
+    - (role_path ~ '/files/hetz.rules.v4') is exists
+    - (role_path ~ '/files/hetz.rules.v6') is exists
+
 - name: Render candidate IPv4 ruleset
   ansible.builtin.template:
     src: rules.v4.j2

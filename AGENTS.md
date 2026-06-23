@@ -332,7 +332,7 @@ See `HANDOFF.md` for the detailed continuation state. Summary:
 | done | Phase 0 scaffold + live discovery/reconciliation | committed (`docs/DISCOVERY-2026-06-23.md`) |
 | done | Phase 1 applied to prod, idempotency gate passed | applied 2026-06-23 from WSL |
 | done | Agent governance rolled out (global memories + 12 repos + on-box motd) | merged/committed |
-| open | Phase 2: prove `firewall`/`docker`/`cloudflared_coolify` on a scratch host, then prod | needs a throwaway box; capture live `iptables-save` into firewall mode A |
+| open | Phase 2: prove `firewall`/`docker`/`cloudflared_coolify` on a scratch host, then prod | needs a throwaway box; firewall mode-A ruleset already captured (`roles/firewall/files/hetz.rules.v*`), still unproven |
 | open | Phase 3: migrate secrets into 1Password one at a time | needs 1Password vault access |
 | blocked | Phase 4: enable CI auto-apply + drift alerts | needs `OP_SERVICE_ACCOUNT_TOKEN`, Tailscale `tag:ci`, `ENABLE_AUTO_APPLY` as GitHub secrets/vars |
 

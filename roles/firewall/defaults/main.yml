@@ -4,6 +4,7 @@ firewall_ssh_port: 22
 firewall_tailscale_interface: "tailscale0"
 firewall_autorevert_seconds: 60
 firewall_allow_no_docker: false        # set true ONLY on a scratch box with no containers
+firewall_use_captured: true            # load roles/firewall/files/hetz.rules.v* (mode A); false = mode B template
 firewall_allowed_tcp:
   - 22
   - 80

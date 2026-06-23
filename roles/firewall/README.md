@@ -17,9 +17,19 @@ it on a **throwaway scratch host** with a full rebuild-and-diff before it ever t
    and the good rules come back automatically. Your way back in is Tailscale (`100.66.37.58`).
 
 ## Modes
-- **Mode A (production):** provide `firewall_rules_v4_raw`/`_v6_raw`. Preserves Docker chains.
-- **Mode B (scratch only):** no raw ruleset → emits a minimal host-INPUT-only table with no
-  Docker chains. Allowed only when `firewall_allow_no_docker: true`.
+- **Mode A (production):** uses a captured `iptables-save`. The live hetz ruleset is vendored in
+  `files/hetz.rules.v4` / `hetz.rules.v6` (captured 2026-06-23, counters zeroed, timestamps
+  stripped; both pass `iptables-restore --test`). The role auto-loads them into
+  `firewall_rules_v4_raw`/`_v6_raw` when `firewall_use_captured: true` (default). Preserves
+  Docker's `nat`/`filter` chains. **Captured but UNPROVEN — never applied to prod yet.**
+- **Mode B (scratch only):** set `firewall_use_captured: false` → emits a minimal
+  host-INPUT-only table with no Docker chains. Allowed only when `firewall_allow_no_docker: true`.
+
+## ⚠️ Captured ≠ proven
+`files/hetz.rules.v*` is a faithful snapshot, but applying it has **not** been tested. Do the
+scratch-host rebuild-and-diff (below) before any prod apply. Do not run this role against prod
+even in `--check`: its snapshot/arm-revert/apply tasks use `check_mode: false` and would touch
+the box.
 
 ## Proving it (do this first, on scratch)
 ```bash
