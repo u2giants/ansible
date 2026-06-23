@@ -5,8 +5,8 @@ throwaway host.** Each phase ends with a GATE that must pass before the next beg
 
 | Phase | What | State |
 |---|---|---|
-| **0** | Observe & scaffold (zero host changes) | 🟡 **scaffold done; live discovery + scratch host pending** |
-| **1** | Non-disruptive roles: `base` → `users` → `dns_hardening` → `backrest_watchdog` | ⏳ roles authored, not applied |
+| **0** | Observe & scaffold (zero host changes) | ✅ **done** — scaffold + live discovery reconciled (DISCOVERY-2026-06-23) |
+| **1** | Non-disruptive roles: `motd` → `base` → `users` → `dns_hardening` → `backrest_watchdog` | ✅ **APPLIED to prod 2026-06-23; gate passed** (2nd run = 0 changes) |
 | **2** | Risky roles: `firewall` → `docker` → `cloudflared_coolify` (+`cron_glue`) | ⏳ roles authored & gated (`enable_phase2`), not applied |
 | **3** | Secrets migration to 1Password, one at a time (table in plan §5.2) | ⛔ not started |
 | **4** | CI auto-apply (`ENABLE_AUTO_APPLY`), drift detection on, fold in DO droplet | ⛔ not started |
@@ -25,11 +25,16 @@ throwaway host.** Each phase ends with a GATE that must pass before the next beg
 - **Local validation passed (2026-06-23):** `ansible-lint` clean (2 intentional warnings) and
   `ansible-playbook --syntax-check` green, run from WSL.
 
-## Immediate next steps (require the live box + owner)
-1. Run `bin/discover.sh` on `hetz`; reconcile `inventory/group_vars/all.yml` and role vars with reality.
-2. Stand up a cheap throwaway scratch host; add it to `inventory/hosts.ini` under `[scratch]`.
-3. Provision CI access: Tailscale `tag:ci` ephemeral auth + 1Password Service-Account token.
-4. Prove Phase 1 roles on scratch, then prod (`--check` then real). **GATE:** second run = 0 changes.
+## Immediate next steps
+1. ~~Run discovery; reconcile vars.~~ ✅ done (DISCOVERY-2026-06-23).
+2. ~~Apply Phase 1 to prod; prove idempotency.~~ ✅ done — applied as root over Tailscale from
+   WSL; second run = 0 changes. Governance banner live in `/etc/motd`.
+3. **Phase 2 (risky):** stand up a scratch host, prove `firewall`/`docker`/`cloudflared_coolify`
+   there (rebuild-and-diff), then prod in a maintenance window. `docker`/`cloudflared` daemon.json
+   + units already captured verbatim; firewall needs the live `iptables-save` captured into mode A.
+4. **CI access (Phase 4 enabler):** Tailscale `tag:ci` ephemeral auth + 1Password SA token as
+   GitHub secrets, so the pipeline runs instead of local WSL.
+5. Merge the 9 governance PRs in the app repos when ready (each may trigger a Coolify redeploy).
 
 ## Open questions for the owner (plan §10)
 - CI runner network path: Tailscale (recommended) vs public-IP SSH.
