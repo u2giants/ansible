@@ -10,7 +10,7 @@
 
 ## 0. TL;DR of what you are building
 
-1. An **Ansible** project (in this repo, `u2giants/albert-standards (this repo, ansible/ folder)`) that declaratively manages the
+1. An **Ansible** project (this repo, `u2giants/Ansible`) that declaratively manages the
    **host/OS layer** of one Hetzner VPS — packages, users, firewall, systemd units, cron,
    Docker, and the "glue" scripts — so the box can be rebuilt from code.
 2. A **GitHub Actions workflow** that is the **single, serialized apply point**: changes land as
@@ -170,10 +170,10 @@ The authoritative live reference is `/worksp/infra/CLAUDE.md` and `/home/ai/CLAU
 
 ---
 
-## 4. Target repository layout (build this under ansible/ in this repo)
+## 4. Target repository layout (this is the root of the `u2giants/Ansible` repo)
 
 ```
-ansible/                          # this project lives at albert-standards/ansible/ in this repo
+.                                 # repo root of u2giants/Ansible (its own dedicated repo)
 ├── README.md                     # what this is, how to apply, how to add a change (non-engineer level)
 ├── ansible.cfg                   # inventory path, ssh settings, no host key prompt in CI
 ├── inventory/
@@ -446,8 +446,8 @@ fresh throwaway box rebuilt entirely from bootstrap + pipeline **diffs clean** a
 - **CI runner network path** — Tailscale (recommended) vs public-IP SSH. Needs a CI key/auth method
   the owner provisions. (Tailscale is also the firewall out-of-band lifeline — §4a.)
 - **Repo push approval** — pushing here requires the owner's explicit OK (the classifier blocks
-  agent-initiated repo creation/bulk push). This repo (`u2giants/albert-standards`, `ansible/` folder)
-  already exists — commit here, don't create new repos.
+  agent-initiated repo creation/bulk push). This project lives in its own dedicated repo
+  (`u2giants/Ansible`) — commit to its `main` branch, don't create new repos.
 - **Directus teardown** — deprecated (PopPIM migrating to hosted supabase.com); a scheduled reminder
   (2026-07-22) handles decommission via Coolify (not Ansible). Don't add a Directus role.
 
