@@ -1,0 +1,12 @@
+# Mirror of .claudeignore — keep AI context high-signal (see AGENTS.md "What to ignore").
+discovery/
+.ansible/
+fact_cache/
+*.retry
+*.log
+.git/
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+docs/ANSIBLE-IMPLEMENTATION-PLAN.md

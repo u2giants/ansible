@@ -1,0 +1,19 @@
+# Keep AI context high-signal. Aligns with AGENTS.md "What to ignore".
+# Local host-state dumps (ports/iptables/configs) — never needed for editing roles:
+discovery/
+
+# Ansible runtime cruft:
+.ansible/
+fact_cache/
+*.retry
+*.log
+
+# VCS / OS / editor:
+.git/
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Long-form reference — load deliberately, not by default (see AGENTS.md Documentation map):
+docs/ANSIBLE-IMPLEMENTATION-PLAN.md
