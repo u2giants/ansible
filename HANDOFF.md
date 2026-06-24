@@ -12,6 +12,13 @@ cause drift. Phased plan with hard gates: [`docs/ANSIBLE-IMPLEMENTATION-PLAN.md`
 
 ## Fully done
 
+- **`ssh_hardening` — APPLIED TO PROD 2026-06-24, idempotent.** root is refused from the public
+  internet (verified with a real refused connection + `sshd -T`); allowed key-only from trusted
+  sources (Tailscale + localhost/cloudflared); VPS console is root's break-glass. `ai` is allowed
+  from anywhere by key **or** password; only `ai` is permitted from the public net; passwords off
+  for everyone else. The `ai` password is in 1Password (`vibe_coding/hetz-ai-ssh`).
+
+
 - **Phase 0 — scaffold + discovery.** Full repo structure; live state captured and reconciled
   into the roles ([`docs/DISCOVERY-2026-06-23.md`](docs/DISCOVERY-2026-06-23.md)). Corrected a
   near-miss where the `docker` role would have wiped the real `daemon.json` (see AGENTS §13).
@@ -75,8 +82,15 @@ The scratch box (`165.227.208.178`) is to be **destroyed** by the owner once res
 Phase 2 is proven on scratch. Remaining, in order of safety:
 
 1. ~~**Apply `docker` to prod**~~ ✅ done 2026-06-24 (no-op + package hold; no restart).
-2. **Apply `firewall` to prod** in a maintenance window — uses mode A (captured hetz ruleset);
-   the auto-revert (proven on scratch) is the safety net. Watch SSH/Tailscale + Docker networking.
+2. **`firewall` role needs a REWORK before prod** (finding 2026-06-24). The mode-A full-ruleset
+   capture **drifts daily**: Docker rewrites its `nat` PREROUTING chains every time a container
+   cycles (confirmed — the captured file changed within one day). Re-applying a stale full capture
+   would fight Docker and could disrupt container networking. **Recommended fix:** have the role
+   manage only the *host-owned* INPUT rules (the port-22 Tailscale lockdown; optionally the 1904
+   allow) using `ansible.builtin.iptables` (additive), and leave Docker/Tailscale/fail2ban chains
+   alone (they self-rebuild on boot). Note: root-from-public is *already* closed at the SSH layer
+   by `ssh_hardening`, so the firewall is now defense-in-depth, not the only guard. The captured
+   `roles/firewall/files/hetz.rules.v*` remain a useful disaster-recovery snapshot.
 3. **Apply `cloudflared_coolify` to prod** — needs the real Tunnel 1 token from 1Password
    (`op://vibe_coding/cf-tunnel-coolify`); restarts the live tunnel, so validate reconnect.
    Overlaps with Phase 3 (secrets).

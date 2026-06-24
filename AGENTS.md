@@ -334,7 +334,9 @@ See `HANDOFF.md` for the detailed continuation state. Summary:
 | done | Agent governance rolled out (global memories + 12 repos + on-box motd) | merged/committed |
 | done | Phase 2 risky roles **proven on a scratch box** (2026-06-24) — firewall lockout/auto-revert mechanics, docker no-restart+idempotent, cloudflared deploy idempotent | see `HANDOFF.md` |
 | done | Phase 2 `docker` **applied to prod** (2026-06-24) — package hold only, no restart, 27 containers stayed up, idempotent | — |
-| open | Phase 2 `firewall` (mode A, maintenance window) then `cloudflared` (needs real token) to prod | maintenance window + 1Password token for cloudflared |
+| done | `ssh_hardening` **applied to prod** (2026-06-24) — root off the public internet; `ai` on (key/password, in 1Password); idempotent | — |
+| open | `firewall` role needs **rework** — full-table mode A drifts daily (Docker chains); manage only host-owned INPUT rules instead. See `HANDOFF.md` | — |
+| open | `cloudflared` to prod | real tunnel token (1Password) |
 | open | Phase 3: migrate secrets into 1Password one at a time | needs 1Password vault access |
 | blocked | Phase 4: enable CI auto-apply + drift alerts | needs `OP_SERVICE_ACCOUNT_TOKEN`, Tailscale `tag:ci`, `ENABLE_AUTO_APPLY` as GitHub secrets/vars |
 
