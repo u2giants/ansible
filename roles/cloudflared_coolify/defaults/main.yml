@@ -3,7 +3,7 @@ cloudflared_service_name: "cloudflared-coolify"
 cloudflared_env_path: "/etc/cloudflared/coolify-tunnel.env"
 # Deploy the unit/env without enabling the tunnel (scratch testing). Prod = false.
 cloudflared_deploy_only: false
-# Token is now reconciled in 1Password as op://vibe_coding/cf-tunnel-coolify/password
+# Token is now reconciled in 1Password as op://vibe_coding/cf-tunnel-hetz/password
 # (matches the live tunnel token, verified 2026-06-24). It is injected at apply time via the
 # CLOUDFLARED_TUNNEL_TOKEN env var (manual: export it from `op read`; CI: 1password/load-secrets).
 cloudflared_tunnel_token: "{{ lookup('ansible.builtin.env', 'CLOUDFLARED_TUNNEL_TOKEN') | default('', true) }}"

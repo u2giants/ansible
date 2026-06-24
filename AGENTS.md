@@ -242,7 +242,7 @@ are injected at apply time. See `docs/configuration.md` for the full table.
 | Variable / reference | Purpose | Stored where | Required (local apply) | Required (CI) |
 |---|---|---|---|---|
 | `op://vibe_coding/ci-deploy-ssh/private_key` | SSH to the host | 1Password | no (uses owner's key today) | yes (Phase 4) |
-| `op://vibe_coding/cf-tunnel-coolify` | Cloudflare Tunnel 1 token | 1Password | only for `cloudflared_coolify` | yes |
+| `op://vibe_coding/cf-tunnel-hetz` | Cloudflare Tunnel 1 token | 1Password | only for `cloudflared_coolify` | yes |
 | `OP_SERVICE_ACCOUNT_TOKEN` | 1Password access in CI | **GitHub secret (planned)** | no | yes (Phase 4) |
 | `TS_OAUTH_CLIENT_ID` / `TS_OAUTH_SECRET` | Tailscale `tag:ci` ephemeral node | **GitHub secret (planned)** | no | yes (Phase 4) |
 | `ENABLE_AUTO_APPLY` | GH repo variable gating real applies | **GitHub repo variable (unset)** | n/a | yes to enable apply-on-merge |
@@ -337,7 +337,7 @@ See `HANDOFF.md` for the detailed continuation state. Summary:
 | done | Phase 2 `docker` **applied to prod** (2026-06-24) — package hold only, no restart, 27 containers stayed up, idempotent | — |
 | done | `ssh_hardening` **applied to prod** (2026-06-24) — root off the public internet; `ai` on (key/password, in 1Password); idempotent | — |
 | done | `firewall` **reworked + applied to prod** (2026-06-24) — declarative SSH lockdown only (no full-table drift); no-op on IPv4, closed an IPv6 gap; idempotent | — |
-| done | `cloudflared` applied to prod (2026-06-24) — unit verbatim (no restart); token reconciled into `op://vibe_coding/cf-tunnel-coolify` (no-op verified) | — |
+| done | `cloudflared` applied to prod (2026-06-24) — unit verbatim (no restart); token reconciled into `op://vibe_coding/cf-tunnel-hetz` (no-op verified) | — |
 | done | **Phase 2 complete** — firewall, docker, ssh_hardening, cloudflared all live on prod | — |
 | open | Phase 3 (migrate remaining secrets → 1Password) and Phase 4 (CI auto-apply + drift) | 1Password / GitHub secrets |
 | open | Phase 3: migrate secrets into 1Password one at a time | needs 1Password vault access |

@@ -290,7 +290,7 @@ This is the heart of the "7 AI sessions can't collide" guarantee. Design:
 | Restic repo password | `/opt/backrest/config/config.json` (`repos[0].password`) | `vibe_coding/restic-hetzner` | backrest / restic | `restic snapshots` succeeds | restore `config.json` backup |
 | DO Spaces access+secret keys | `config.json` env (`AWS_*`); `restore-wizard/.env` (`DO_SPACES_*`) | `vibe_coding/do-spaces` | backrest→S3, restore-wizard | `restic snapshots` / S3 list | restore config/.env backup |
 | Cloudflare DNS API token | `coolify-proxy` env + `/data/coolify/proxy/docker-compose.yml` (`CF_DNS_API_TOKEN`) | `vibe_coding/cf-dns-token` | Traefik DNS-01 certs | cert renew / CF API test | restore compose backup |
-| CF Tunnel 1 token | `/etc/cloudflared/coolify-tunnel.env` | `vibe_coding/cf-tunnel-coolify` | `cloudflared-coolify.service` | tunnel reconnects | restore env backup |
+| CF Tunnel 1 token | `/etc/cloudflared/coolify-tunnel.env` | `vibe_coding/cf-tunnel-hetz` | `cloudflared-coolify.service` | tunnel reconnects | restore env backup |
 | GHCR PAT | GitHub Actions secret + `/root/.docker/config.json` | `vibe_coding/ghcr-pat` | image pulls / deploy | `docker pull` a private image | `docker login` again |
 | restore-wizard app secrets (~25: OpenRouter, Google OAuth id/secret, `SESSION_SECRET`, …) | `restore-wizard/.env` (DO droplet) | one `op` item per secret | restore-wizard app | app boots + Google login works | restore `.env` backup |
 | oauth2-proxy secrets | `/worksp/hiclaw/oauth2-proxy/.env` | `vibe_coding/oauth2-proxy` | `oauth2-proxy` | OIDC discovery succeeds at startup | restore `.env` backup |

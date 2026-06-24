@@ -46,7 +46,7 @@ CLI (already installed on the box). Values are **not** recorded here — only in
 | Secret (1Password item) | Purpose | Consumed by | Status |
 |---|---|---|---|
 | `ci-deploy-ssh` (private key) | CI → host SSH | CI runner (Phase 4) | planned |
-| `cf-tunnel-coolify` | Cloudflare Tunnel 1 token | `cloudflared_coolify` role | in 1Password (per plan); not yet wired by Ansible |
+| `cf-tunnel-hetz` | Cloudflare Tunnel 1 token | `cloudflared_coolify` role | in 1Password (per plan); not yet wired by Ansible |
 | `github-pat` | git/GitHub | git, MCP | migrated (per plan) |
 | `restic-hetzner`, `do-spaces`, `cf-dns-token`, `ghcr-pat`, `oauth2-proxy`, app secrets | backups, certs, image pulls, app | various | **Phase 3, not yet migrated** |
 

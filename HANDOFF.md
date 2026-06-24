@@ -49,7 +49,7 @@ cause drift. Phased plan with hard gates: [`docs/ANSIBLE-IMPLEMENTATION-PLAN.md`
 - **`cloudflared_coolify`** — DONE 2026-06-24. UNIT applied to prod (verbatim copy of the live
   unit → no-op; tunnel NOT restarted; dir tightened to 0750; idempotent). TOKEN reconciled: the
   live token (180 ch) didn't match the older `cloudflare-tunnel-tokens` fields (240 ch), so the
-  live working token was stored in a new item `op://vibe_coding/cf-tunnel-coolify/password`
+  live working token was stored in a new item `op://vibe_coding/cf-tunnel-hetz/password`
   (hash-verified == live). Verified that managing the token is a no-op (`--check` with the token
   injected = 0 changes). `cloudflared_manage_token` stays FALSE by default (routine runs manage
   only the unit; rebuild/CI sets it true + injects the token). The earlier scaffolded unit had the
@@ -96,7 +96,7 @@ Phase 2 is proven on scratch. Remaining, in order of safety:
    v6 had no port-22 restriction — now locked to Tailscale-v6/localhost). Idempotent (2nd run = 0
    changes), no drift. `files/hetz.rules.v*` kept only as a disaster-recovery snapshot.
 3. **Apply `cloudflared_coolify` to prod** — needs the real Tunnel 1 token from 1Password
-   (`op://vibe_coding/cf-tunnel-coolify`); restarts the live tunnel, so validate reconnect.
+   (`op://vibe_coding/cf-tunnel-hetz`); restarts the live tunnel, so validate reconnect.
    Overlaps with Phase 3 (secrets).
 
 Then Phase 3 (secrets) and Phase 4 (CI auto-apply). Other options if not continuing Phase 2:

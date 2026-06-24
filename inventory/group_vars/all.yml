@@ -94,4 +94,4 @@ cron_glue_entries:
 cloudflared_service_name: "cloudflared-coolify"
 cloudflared_env_path: "/etc/cloudflared/coolify-tunnel.env"
 # The tunnel TOKEN is a secret -> injected at apply time from 1Password
-# (op://vibe_coding/cf-tunnel-coolify), never stored here.
+# (op://vibe_coding/cf-tunnel-hetz), never stored here.
