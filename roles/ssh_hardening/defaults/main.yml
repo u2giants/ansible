@@ -1,6 +1,9 @@
 ---
 # The account allowed in from the public internet (root is never allowed from there).
 ssh_internet_user: "ai"
+# Allow root to log in by PASSWORD (not just key) from trusted sources (Tailscale/cloudflared),
+# so a machine with no SSH key can still get in as root. Set false for key-only root.
+ssh_trusted_root_password: true
 # May the internet user also use a password (in addition to a key)? On a public port this is a
 # brute-force surface — fail2ban mitigates; use a strong password. Owner's explicit choice.
 ssh_ai_allow_password: true

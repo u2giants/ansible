@@ -6,10 +6,13 @@ Enforces the SSH access policy via a `/etc/ssh/sshd_config.d/20-access-policy.co
 
 | | Public internet | Trusted (Tailscale / Cloudflared / localhost) | VPS console |
 |---|---|---|---|
-| **root** | ❌ never | ✅ key-only | ✅ always (local login, not sshd) |
+| **root** | ❌ never | ✅ key **or** password (`ssh_trusted_root_password`) | ✅ always (local login, not sshd) |
 | **`ai`** (`ssh_internet_user`) | ✅ key or password | ✅ key or password | n/a |
-| other users | ❌ | key-only | n/a |
-| passwords | off, except `ai` | off, except `ai` | n/a |
+| other users | ❌ | key or password | n/a |
+| passwords | off, except `ai` | **on** (trusted network) | n/a |
+
+Rationale for passwords-on-trusted: a machine with no SSH key can still get in over Tailscale
+(the break-glass the owner asked for). Set `ssh_trusted_root_password: false` for key-only root.
 
 "Trusted" = `ssh_trusted_sources` (Tailscale v4/v6 ranges + `127.0.0.1`/`::1`). Cloudflared SSH
 hands off from localhost, so it counts as trusted. The **VPS provider console** is a local

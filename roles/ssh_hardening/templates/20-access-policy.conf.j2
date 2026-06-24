@@ -9,9 +9,15 @@ PubkeyAuthentication yes
 PasswordAuthentication no
 PermitRootLogin no
 
-# Trusted sources: root may log in here, key-only.
+# Trusted sources (Tailscale + localhost/cloudflared): full access by key OR password,
+# including root — so a machine with NO ssh key can still get in over Tailscale (break-glass).
 Match Address {{ ssh_trusted_sources | join(',') }}
+{% if ssh_trusted_root_password %}
+    PermitRootLogin yes
+    PasswordAuthentication yes
+{% else %}
     PermitRootLogin prohibit-password
+{% endif %}
 
 # Public internet (everything NOT trusted): only the {{ ssh_internet_user }} account, never root.
 Match Address {{ (['*'] + (ssh_trusted_sources | map('regex_replace', '^', '!') | list)) | join(',') }}

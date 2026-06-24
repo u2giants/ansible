@@ -13,10 +13,13 @@ cause drift. Phased plan with hard gates: [`docs/ANSIBLE-IMPLEMENTATION-PLAN.md`
 ## Fully done
 
 - **`ssh_hardening` — APPLIED TO PROD 2026-06-24, idempotent.** root is refused from the public
-  internet (verified with a real refused connection + `sshd -T`); allowed key-only from trusted
-  sources (Tailscale + localhost/cloudflared); VPS console is root's break-glass. `ai` is allowed
-  from anywhere by key **or** password; only `ai` is permitted from the public net; passwords off
-  for everyone else. The `ai` password is in 1Password (`vibe_coding/hetz-ai-ssh`).
+  internet (verified with a real refused connection + `sshd -T`); allowed by key **or password**
+  from trusted sources (Tailscale + localhost/cloudflared) so a no-key machine can still get in
+  (`ssh_trusted_root_password: true`); VPS console is root's break-glass. `ai` is allowed from
+  anywhere by key **or** password; only `ai` is permitted from the public net; passwords are off
+  to the public internet (on for trusted). The `ai` password is in 1Password
+  (`vibe_coding/hetz-ai-ssh`). NOTE: applying this OVERWROTE the pre-existing `ai` password
+  (there was no prior 1Password item) — the new generated one is the live value.
 
 
 - **Phase 0 — scaffold + discovery.** Full repo structure; live state captured and reconciled
