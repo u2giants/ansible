@@ -26,7 +26,10 @@ risk, and the *real* proof is a **rebuild-and-diff on a throwaway box** (R7).
 
 ## The plan (recovery phases R1–R7)
 
-### R1 — Vendor apt repos + their packages  ⭐ highest value, lowest risk
+### R1 — Vendor apt repos + their packages  ✅ DONE (2026-06-24)
+Built `apt_repos` (10 repos + 9 keys, verbatim) and `packages` (gcloud, az, gh, op, nodejs,
+postgresql-client, restic, ripgrep, tailscale, google-chrome-stable) roles; applied to prod via
+the live CI pipeline as a clean no-op (keys/sources matched byte-for-byte). Original plan below:
 - New role **`apt_repos`**: declare all 10 vendor repos + GPG keys (`ansible.builtin.deb822_repository`).
 - New role **`packages`** (or extend `base`): install everything from them — `google-cloud-cli`,
   `azure-cli`, `gh`, `1password-cli`, `nodejs`, `postgresql-client`, `restic`, `ripgrep`,
