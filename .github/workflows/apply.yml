@@ -52,8 +52,9 @@ jobs:
       - name: Install SSH key
         run: |
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
+          ssh-keygen -y -f ~/.ssh/id_ed25519 >/dev/null && echo "ssh key OK" || { echo "SSH KEY INVALID"; exit 1; }
 
       # --- GATE: apply for real only when explicitly enabled (plan §9, Phase 4) ---
       - name: Apply (REAL) — phase1 only, serialized

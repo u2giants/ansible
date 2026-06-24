@@ -62,8 +62,9 @@ jobs:
       - name: Install SSH key
         run: |
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
+          ssh-keygen -y -f ~/.ssh/id_ed25519 >/dev/null && echo "ssh key OK" || { echo "SSH KEY INVALID"; exit 1; }
 
       # Phase 1 only. --check fidelity is weak for phase2 risky roles (§4a), so we don't run
       # them here — they are proven on the scratch host, not via prod --check.
