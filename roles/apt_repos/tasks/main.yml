@@ -1,0 +1,38 @@
+---
+# apt_repos — recreate the third-party APT repositories + signing keys that the host's CLIs come
+# from (gcloud, az, gh, op, node, postgres-client, tailscale, cloudflared, chrome, docker). Files
+# are vendored VERBATIM from the live box (files/sources/*, files/keyrings/*), so a rebuild gets
+# the exact repos and applying to the existing box is a no-op. Runs FIRST in phase1 so later roles
+# (base, packages, docker) can install from these repos. See docs/RECOVERY-GAP-PLAN.md (R1).
+
+- name: Ensure /etc/apt/keyrings exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy APT signing keys (verbatim from the box)
+  ansible.builtin.copy:
+    src: "keyrings/{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ apt_repos_keyrings }}"
+  loop_control:
+    label: "{{ item.dest }}"
+  notify: Update apt cache
+
+- name: Deploy third-party APT source files (verbatim from the box)
+  ansible.builtin.copy:
+    src: sources/
+    dest: /etc/apt/sources.list.d/
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Update apt cache
+
+- name: Refresh apt cache now so later roles see the repos
+  ansible.builtin.meta: flush_handlers

@@ -29,12 +29,21 @@
 
   roles:
     # ---- Phase 1: non-disruptive (additive/low-risk) ----
+    # apt_repos FIRST so base/packages/docker can install from the vendor repos (recovery R1).
+    - role: apt_repos
+      tags: [phase1, apt_repos]
+      when: enable_phase1 | bool
+
     - role: motd
       tags: [phase1, motd]
       when: enable_phase1 | bool
 
     - role: base
       tags: [phase1, base]
+      when: enable_phase1 | bool
+
+    - role: packages
+      tags: [phase1, packages]
       when: enable_phase1 | bool
 
     - role: users

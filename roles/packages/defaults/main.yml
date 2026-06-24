@@ -1,0 +1,16 @@
+---
+# Host CLIs / tooling installed from the vendor repos configured by the apt_repos role.
+# These are the tools the owner's AI sessions + MCP servers rely on. Confirmed installed on
+# hetz 2026-06-24. Docker engine is handled by the `docker` role; non-apt tools (go, supabase,
+# codex, gemini/claude npm CLIs, cloudflared binary) are handled by the `dev_tools` role (R2).
+tooling_packages:
+  - google-cloud-cli       # gcloud
+  - azure-cli              # az
+  - gh                     # GitHub CLI
+  - 1password-cli          # op
+  - nodejs                 # node + npm (NodeSource 20.x)
+  - postgresql-client      # psql
+  - restic                 # backups CLI
+  - ripgrep                # rg
+  - tailscale              # already core to connectivity; declared for rebuild completeness
+  - google-chrome-stable   # used for browser automation

@@ -1,0 +1,12 @@
+---
+# Signing keys captured verbatim from hetz (2026-06-24). src = file under files/keyrings/.
+apt_repos_keyrings:
+  - { src: "1password-archive-keyring.gpg", dest: "/usr/share/keyrings/1password-archive-keyring.gpg" }
+  - { src: "cloudflare-main.gpg", dest: "/usr/share/keyrings/cloudflare-main.gpg" }
+  - { src: "cloud.google.gpg", dest: "/usr/share/keyrings/cloud.google.gpg" }
+  - { src: "google-chrome.gpg", dest: "/usr/share/keyrings/google-chrome.gpg" }
+  - { src: "nodesource.gpg", dest: "/usr/share/keyrings/nodesource.gpg" }
+  - { src: "pgdg.gpg", dest: "/usr/share/keyrings/pgdg.gpg" }
+  - { src: "tailscale-archive-keyring.gpg", dest: "/usr/share/keyrings/tailscale-archive-keyring.gpg" }
+  - { src: "docker.asc", dest: "/etc/apt/keyrings/docker.asc" }
+  - { src: "microsoft.gpg", dest: "/etc/apt/keyrings/microsoft.gpg" }

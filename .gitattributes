@@ -8,3 +8,7 @@
 *.cfg       text eol=lf
 *.ini       text eol=lf
 Makefile    text eol=lf
+
+# Binary signing keys — must NEVER get line-ending normalization (would corrupt them).
+*.gpg       binary
+roles/apt_repos/files/keyrings/** binary
