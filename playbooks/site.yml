@@ -46,6 +46,10 @@
       tags: [phase1, packages]
       when: enable_phase1 | bool
 
+    - role: dev_tools
+      tags: [phase1, dev_tools]
+      when: enable_phase1 | bool
+
     - role: users
       tags: [phase1, users]
       when: enable_phase1 | bool

@@ -14,3 +14,4 @@ tooling_packages:
   - ripgrep                # rg
   - tailscale              # already core to connectivity; declared for rebuild completeness
   - google-chrome-stable   # used for browser automation
+  - cloudflared            # /usr/bin/cloudflared; dev_tools symlinks it to /usr/local/bin for Tunnel 1

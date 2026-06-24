@@ -9,3 +9,6 @@
 collections:
   - name: ansible.posix
     version: ">=1.5.0"
+  # For the idempotent global-npm install in the dev_tools role (recovery R2).
+  - name: community.general
+    version: ">=8.0.0"

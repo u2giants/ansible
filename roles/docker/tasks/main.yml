@@ -9,6 +9,17 @@
 # May 2026 outage) is: the `dns` key must NOT point at 127.0.0.53 (the host resolved stub,
 # unreachable from containers). Public resolvers (1.1.1.1/8.8.8.8) are fine and ARE deployed.
 
+# Install the engine from the Docker apt repo (configured by the apt_repos role). Additive +
+# idempotent: a no-op on the live box (already installed). Needed so a REBUILD gets Docker.
+# Recovery gap R3. The version pin below keeps these from being upgraded by an apply.
+- name: Install the Docker engine + plugins
+  ansible.builtin.apt:
+    name: "{{ docker_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: docker_install | bool
+
 - name: Pin the docker-ce package version (do NOT upgrade Docker via this role)
   ansible.builtin.dpkg_selections:
     name: docker-ce

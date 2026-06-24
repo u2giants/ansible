@@ -37,13 +37,20 @@ the live CI pipeline as a clean no-op (keys/sources matched byte-for-byte). Orig
   packages.
 - Verify: `apt install` of already-present packages = 0 changes (idempotent) on prod.
 
-### R2 — Non-apt CLIs (binaries / scripts / npm)
+### R2 — Non-apt CLIs (binaries / scripts / npm)  ✅ DONE (2026-06-24)
+Built `dev_tools` role: Go 1.26.4 (tarball), supabase 2.98.2 (.deb), global npm CLIs
+(`claude-code` 2.1.160, `gemini-cli` 0.44.1, `corepack`, `npm-check-updates`), codex 0.141.0
+(`@openai/codex`), and the `cloudflared` symlink. All version-guarded → no-op on prod (verified).
+Original plan below:
 - New role **`dev_tools`**: install `go` (Go toolchain), `supabase`, `codex`, the global npm tools
   (`@anthropic-ai/claude-code`, `@google/gemini-cli`) — each from its official binary/script,
   **version-pinned** to what's live now (captured during the work).
 - Verify: versions match; re-run = 0 changes.
 
-### R3 — Docker engine install (not just config)
+### R3 — Docker engine install (not just config)  ✅ DONE (2026-06-24)
+Extended the `docker` role to install `docker-ce`/`-cli`/`containerd.io`/buildx/compose from the
+Docker apt repo (configured by `apt_repos`), ahead of the pin. No-op on prod (verified). Original
+plan below:
 - Extend the **`docker`** role: add the Docker apt repo + `docker-ce` install ahead of the pin, so
   a **bare** box gets the engine (today the role assumes it's already there). Keep the version pin
   and never-auto-restart guards.

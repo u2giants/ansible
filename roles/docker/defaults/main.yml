@@ -1,4 +1,11 @@
 ---
+docker_install: true             # install the engine from the Docker apt repo (no-op if present)
+docker_packages:                 # the engine + plugins (recovery R3)
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin
 docker_manage_daemon_json: true
 # Pinned to the version live on hetz (2026-06-23). Update deliberately in a maintenance window.
 docker_ce_version: "5:29.6.0-1~ubuntu.24.04~noble"

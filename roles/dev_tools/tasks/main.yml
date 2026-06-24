@@ -1,0 +1,85 @@
+---
+# dev_tools — install the NON-apt host tools, version-pinned, so a rebuild reproduces them
+# (Go, supabase, the global npm CLIs, codex, and the cloudflared symlink). Each task is guarded
+# by a version check so applying to the live box is a no-op. Recovery gap R2
+# (docs/RECOVERY-GAP-PLAN.md). Authenticating these tools after a rebuild stays a manual step.
+
+# ---- Go toolchain (tarball -> /usr/local/go, symlinked into /usr/local/bin) ----
+- name: Check installed Go version
+  ansible.builtin.command: /usr/local/go/bin/go version
+  register: dt_go
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Install Go {{ go_version }}
+  when: ('go' ~ go_version) not in (dt_go.stdout | default(''))
+  block:
+    - name: Download Go {{ go_version }}
+      ansible.builtin.get_url:
+        url: "https://go.dev/dl/go{{ go_version }}.linux-{{ dev_tools_arch }}.tar.gz"
+        dest: "/tmp/go{{ go_version }}.tar.gz"
+        mode: "0644"
+    - name: Remove any previous Go
+      ansible.builtin.file:
+        path: /usr/local/go
+        state: absent
+    - name: Extract Go to /usr/local
+      ansible.builtin.unarchive:
+        src: "/tmp/go{{ go_version }}.tar.gz"
+        dest: /usr/local
+        remote_src: true
+    - name: Symlink go and gofmt into /usr/local/bin
+      ansible.builtin.file:
+        src: "/usr/local/go/bin/{{ item }}"
+        dest: "/usr/local/bin/{{ item }}"
+        state: link
+      loop: [go, gofmt]
+
+# ---- supabase CLI (official .deb) ----
+- name: Check installed supabase version
+  ansible.builtin.command: supabase --version
+  register: dt_sb
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Install supabase CLI from the official .deb
+  ansible.builtin.apt:
+    deb: "https://github.com/supabase/cli/releases/download/v{{ supabase_version }}/supabase_{{ supabase_version }}_linux_{{ dev_tools_arch }}.deb"
+  when: supabase_version not in (dt_sb.stdout | default(''))
+
+# ---- global npm CLIs (idempotent) ----
+- name: Install global npm CLIs (pinned)
+  community.general.npm:
+    name: "{{ item.name }}"
+    version: "{{ item.version }}"
+    global: true
+    state: present
+  loop: "{{ dev_tools_npm }}"
+  loop_control:
+    label: "{{ item.name }}@{{ item.version }}"
+
+# ---- codex (standalone, via @openai/codex; guarded so prod is a no-op) ----
+- name: Check installed codex version
+  ansible.builtin.command: codex --version
+  register: dt_codex
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Install codex {{ codex_version }}
+  community.general.npm:
+    name: "@openai/codex"
+    version: "{{ codex_version }}"
+    global: true
+    state: present
+  when: codex_version not in (dt_codex.stdout | default(''))
+
+# ---- cloudflared symlink (binary is apt-installed by the packages role to /usr/bin) ----
+- name: Symlink /usr/local/bin/cloudflared -> /usr/bin/cloudflared (used by Tunnel 1 unit)
+  ansible.builtin.file:
+    src: /usr/bin/cloudflared
+    dest: /usr/local/bin/cloudflared
+    state: link
+    force: true

@@ -1,0 +1,13 @@
+---
+# Non-apt tools, version-pinned to what's live on hetz (2026-06-24). Recovery gap R2.
+# Bump these when the tools are upgraded so a rebuild reproduces the current versions.
+dev_tools_arch: "amd64"          # x86_64
+go_version: "1.26.4"
+supabase_version: "2.98.2"
+codex_version: "0.141.0"         # @openai/codex (standalone, installs under /opt/codex)
+# Global npm CLIs (idempotent via community.general.npm). codex is handled separately (guarded).
+dev_tools_npm:
+  - { name: "@anthropic-ai/claude-code", version: "2.1.160" }
+  - { name: "@google/gemini-cli", version: "0.44.1" }
+  - { name: "corepack", version: "0.34.7" }
+  - { name: "npm-check-updates", version: "22.2.1" }
