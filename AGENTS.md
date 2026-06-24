@@ -339,7 +339,9 @@ See `HANDOFF.md` for the detailed continuation state. Summary:
 | done | `firewall` **reworked + applied to prod** (2026-06-24) — declarative SSH lockdown only (no full-table drift); no-op on IPv4, closed an IPv6 gap; idempotent | — |
 | done | `cloudflared` applied to prod (2026-06-24) — unit verbatim (no restart); token reconciled into `op://vibe_coding/cf-tunnel-hetz` (no-op verified) | — |
 | done | **Phase 2 complete** — firewall, docker, ssh_hardening, cloudflared all live on prod | — |
-| open | Phase 3 (migrate remaining secrets → 1Password) and Phase 4 (CI auto-apply + drift) | 1Password / GitHub secrets |
+| done | Phase 3 (host-layer scope) — secrets in 1Password; app-layer secrets out of scope (their repos) | — |
+| done | Phase 4 CI **pipeline working** (2026-06-24) — Tailscale tag:ci + 1Password + CI key; **drift detection LIVE** (daily); PR diffs via check.yml | — |
+| open | Flip `ENABLE_AUTO_APPLY=true` (auto-apply on merge) + run the self-test — the last switch | owner decision |
 | open | Phase 3: migrate secrets into 1Password one at a time | needs 1Password vault access |
 | blocked | Phase 4: enable CI auto-apply + drift alerts | needs `OP_SERVICE_ACCOUNT_TOKEN`, Tailscale `tag:ci`, `ENABLE_AUTO_APPLY` as GitHub secrets/vars |
 

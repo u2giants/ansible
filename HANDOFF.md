@@ -54,8 +54,15 @@ cause drift. Phased plan with hard gates: [`docs/ANSIBLE-IMPLEMENTATION-PLAN.md`
   injected = 0 changes). `cloudflared_manage_token` stays FALSE by default (routine runs manage
   only the unit; rebuild/CI sets it true + injects the token). The earlier scaffolded unit had the
   wrong binary path (`/usr/bin` vs real `/usr/local/bin/cloudflared`) — replaced by the verbatim file.
-- **CI workflows** — written and lint-clean, but **not active**: no GitHub secrets exist and
-  `ENABLE_AUTO_APPLY` is unset, so `apply.yml` is check-only. Applies are manual from WSL for now.
+- **CI pipeline — WORKING end-to-end as of 2026-06-24.** GitHub secrets set
+  (`OP_SERVICE_ACCOUNT_TOKEN` from `vibe_coding-service-account`; `TS_OAUTH_CLIENT_ID`/`SECRET`
+  from `tailscale oauth for github for ansible`). A dedicated CI key (`op://vibe_coding/ci-deploy-ssh`)
+  logs in as `ai` over Tailscale (tag:ci) and sudo-roots. `drift.yml` ran green (joins Tailscale →
+  loads secrets → SSH → `--check` → 0 changes). **Drift detection is LIVE** (daily 03:00 UTC).
+  `check.yml` posts the dry-run diff on PRs. Fixed along the way: INI inline-comment in inventory
+  (broke the SSH username), SSH key trailing newline, and the drift grep (matched loop items).
+  REMAINING: `apply.yml` auto-apply is still gated by `ENABLE_AUTO_APPLY` (unset → check-only on
+  merge); flip it on + run the self-test to finish full automation.
 
 The scratch box (`165.227.208.178`) is to be **destroyed** by the owner once results are reviewed.
 
