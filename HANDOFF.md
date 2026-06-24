@@ -35,8 +35,9 @@ cause drift. Phased plan with hard gates: [`docs/ANSIBLE-IMPLEMENTATION-PLAN.md`
   tasks; the end state is stable.) Prod uses **mode A** (the captured hetz ruleset), which passed
   `iptables-restore --test` but has NOT been applied to prod.
 - **`docker`** — deployed `daemon.json` verbatim, held the package, did **not** restart the
-  daemon; **idempotent** (2nd run = 0 changes). On prod this is near-no-op (the captured
-  `daemon.json` already matches the live file).
+  daemon; **idempotent** (2nd run = 0 changes). **APPLIED TO PROD 2026-06-24**: only change was
+  the package hold (`daemon.json` already matched); Docker not restarted (27 containers stayed
+  up); re-run = 0 changes.
 - **`cloudflared_coolify`** — added `cloudflared_deploy_only` (default false) to deploy the
   unit+env+reload without bringing the tunnel up; proven on scratch (secure env `600 root`, valid
   unit); **idempotent**. Prod still needs the real token (1Password) + a careful tunnel restart.
@@ -73,9 +74,7 @@ The scratch box (`165.227.208.178`) is to be **destroyed** by the owner once res
 
 Phase 2 is proven on scratch. Remaining, in order of safety:
 
-1. **Apply `docker` to prod** — lowest risk (the captured `daemon.json` already matches live, so
-   it's effectively a no-op that just adds the package hold; no restart):
-   `ansible-playbook playbooks/site.yml -l hetzner --tags docker -e enable_phase2=true --user root --private-key ~/.ssh/916-alien -e ansible_user=root`
+1. ~~**Apply `docker` to prod**~~ ✅ done 2026-06-24 (no-op + package hold; no restart).
 2. **Apply `firewall` to prod** in a maintenance window — uses mode A (captured hetz ruleset);
    the auto-revert (proven on scratch) is the safety net. Watch SSH/Tailscale + Docker networking.
 3. **Apply `cloudflared_coolify` to prod** — needs the real Tunnel 1 token from 1Password

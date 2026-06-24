@@ -333,7 +333,8 @@ See `HANDOFF.md` for the detailed continuation state. Summary:
 | done | Phase 1 applied to prod, idempotency gate passed | applied 2026-06-23 from WSL |
 | done | Agent governance rolled out (global memories + 12 repos + on-box motd) | merged/committed |
 | done | Phase 2 risky roles **proven on a scratch box** (2026-06-24) — firewall lockout/auto-revert mechanics, docker no-restart+idempotent, cloudflared deploy idempotent | see `HANDOFF.md` |
-| open | Phase 2 **apply to prod** — `docker` (near-no-op), then `firewall` (mode A, maintenance window), then `cloudflared` (needs real token) | maintenance window + 1Password token for cloudflared |
+| done | Phase 2 `docker` **applied to prod** (2026-06-24) — package hold only, no restart, 27 containers stayed up, idempotent | — |
+| open | Phase 2 `firewall` (mode A, maintenance window) then `cloudflared` (needs real token) to prod | maintenance window + 1Password token for cloudflared |
 | open | Phase 3: migrate secrets into 1Password one at a time | needs 1Password vault access |
 | blocked | Phase 4: enable CI auto-apply + drift alerts | needs `OP_SERVICE_ACCOUNT_TOKEN`, Tailscale `tag:ci`, `ENABLE_AUTO_APPLY` as GitHub secrets/vars |
 
