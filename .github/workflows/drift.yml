@@ -55,8 +55,11 @@ jobs:
           set -o pipefail
           ansible-playbook playbooks/site.yml -l hetzner --tags phase1 --check --diff \
             | tee /tmp/drift.txt
-          if grep -qE '^changed:|=> \(item' /tmp/drift.txt; then
+          # Read the actual change count from the PLAY RECAP (changed=N). A loop's
+          # "ok: => (item=...)" lines are NOT drift, so we must not grep for those.
+          if grep -qE 'changed=[1-9]' /tmp/drift.txt; then
             echo "::error::Drift detected between repo and live host — investigate (plan §5.5)."
-            # TODO(Phase 4): wire this to the owner's backup-alert channel.
+            # TODO: wire this to the owner's backup-alert channel.
             exit 1
           fi
+          echo "No drift — live host matches the repo."
