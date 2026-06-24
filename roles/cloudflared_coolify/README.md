@@ -3,20 +3,21 @@
 Manages **only Tunnel 1** (`coolify.designflow.app`): its systemd unit and (optionally) its
 root-only env file holding the tunnel token. Never touches Coolify-managed Tunnels 2 & 3.
 
-## ⚠️ Token blocker (2026-06-24) — not fully applied
-The live token in `/etc/cloudflared/coolify-tunnel.env` (180 chars) does **not** match the
-1Password values (`cloudflare-tunnel-tokens` → `cloudflare_tunnel_token` / `cf_gw_tunnel_token`,
-both 240 chars). Until the owner reconciles which token is correct:
-- `cloudflared_manage_token: false` (default) — the role **does not** write the env/token, so it
-  can never overwrite the live, working token (which would restart and possibly break the tunnel).
-- The role manages **only the systemd unit**, deployed **verbatim** from `files/cloudflared-coolify.service`
-  (captured from the live box), so applying it is a no-op.
+## Token — reconciled (2026-06-24)
+The live tunnel token (180 chars) didn't match the older `cloudflare-tunnel-tokens` 1Password
+fields (240 chars). Resolved by storing the **live, working** token in a dedicated item
+**`op://vibe_coding/cf-tunnel-coolify/password`** (hash-verified to equal the live token). The
+older fields were left untouched.
 
-### To finish this role
-1. Owner decides the source of truth: almost certainly the **live** token is correct (it's
-   serving traffic). Update 1Password to store the live token in a dedicated field/item.
-2. Point `cloudflared_tunnel_token` at that 1Password reference (injected at apply time).
-3. Set `cloudflared_manage_token: true`. The env will then match live → still a no-op.
+- `cloudflared_manage_token: false` (default) — routine runs manage only the unit and leave the
+  already-correct live env alone, so a full apply never needs the token and never restarts the
+  tunnel.
+- The unit is deployed **verbatim** from `files/cloudflared-coolify.service` (captured from the
+  live box) → applying it is a no-op.
+- For a **rebuild / CI** run that must recreate the env: inject the token
+  (`export CLOUDFLARED_TUNNEL_TOKEN="$(op read op://vibe_coding/cf-tunnel-coolify/password)"`,
+  or via `1password/load-secrets-action`) and set `cloudflared_manage_token: true`. It writes the
+  same token → still a no-op on the existing box.
 
 ## Boundaries
 - **Tunnel 1 only.** Tunnels 2 & 3 are Coolify-managed — never referenced here.

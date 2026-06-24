@@ -337,9 +337,9 @@ See `HANDOFF.md` for the detailed continuation state. Summary:
 | done | Phase 2 `docker` **applied to prod** (2026-06-24) — package hold only, no restart, 27 containers stayed up, idempotent | — |
 | done | `ssh_hardening` **applied to prod** (2026-06-24) — root off the public internet; `ai` on (key/password, in 1Password); idempotent | — |
 | done | `firewall` **reworked + applied to prod** (2026-06-24) — declarative SSH lockdown only (no full-table drift); no-op on IPv4, closed an IPv6 gap; idempotent | — |
-| done | `cloudflared` **unit** applied to prod (2026-06-24) — verbatim, no restart, idempotent | — |
-| blocked | `cloudflared` **token** — live token ≠ 1Password values; owner must reconcile before `cloudflared_manage_token: true` | owner decision |
-| open | Phase 3 (secrets → 1Password) and Phase 4 (CI auto-apply + drift) | 1Password / GitHub secrets |
+| done | `cloudflared` applied to prod (2026-06-24) — unit verbatim (no restart); token reconciled into `op://vibe_coding/cf-tunnel-coolify` (no-op verified) | — |
+| done | **Phase 2 complete** — firewall, docker, ssh_hardening, cloudflared all live on prod | — |
+| open | Phase 3 (migrate remaining secrets → 1Password) and Phase 4 (CI auto-apply + drift) | 1Password / GitHub secrets |
 | open | Phase 3: migrate secrets into 1Password one at a time | needs 1Password vault access |
 | blocked | Phase 4: enable CI auto-apply + drift alerts | needs `OP_SERVICE_ACCOUNT_TOKEN`, Tailscale `tag:ci`, `ENABLE_AUTO_APPLY` as GitHub secrets/vars |
 

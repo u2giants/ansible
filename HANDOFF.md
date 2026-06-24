@@ -46,14 +46,14 @@ cause drift. Phased plan with hard gates: [`docs/ANSIBLE-IMPLEMENTATION-PLAN.md`
   daemon; **idempotent** (2nd run = 0 changes). **APPLIED TO PROD 2026-06-24**: only change was
   the package hold (`daemon.json` already matched); Docker not restarted (27 containers stayed
   up); re-run = 0 changes.
-- **`cloudflared_coolify`** — UNIT applied to prod 2026-06-24 (verbatim copy of the live unit →
-  no-op; tunnel NOT restarted; config dir tightened to 0750; idempotent). **TOKEN BLOCKED:** the
-  live tunnel token (180 chars) does NOT match the 1Password values (`cloudflare-tunnel-tokens` →
-  `cloudflare_tunnel_token`/`cf_gw_tunnel_token`, both 240 chars). `cloudflared_manage_token` stays
-  FALSE so the role never overwrites the live working token. **Owner must reconcile the token**
-  (almost certainly the live one is correct → store it in 1Password) before setting
-  `cloudflared_manage_token: true`. The earlier scaffolded unit had the wrong binary path
-  (`/usr/bin` vs the real `/usr/local/bin/cloudflared`) — replaced by the verbatim file.
+- **`cloudflared_coolify`** — DONE 2026-06-24. UNIT applied to prod (verbatim copy of the live
+  unit → no-op; tunnel NOT restarted; dir tightened to 0750; idempotent). TOKEN reconciled: the
+  live token (180 ch) didn't match the older `cloudflare-tunnel-tokens` fields (240 ch), so the
+  live working token was stored in a new item `op://vibe_coding/cf-tunnel-coolify/password`
+  (hash-verified == live). Verified that managing the token is a no-op (`--check` with the token
+  injected = 0 changes). `cloudflared_manage_token` stays FALSE by default (routine runs manage
+  only the unit; rebuild/CI sets it true + injects the token). The earlier scaffolded unit had the
+  wrong binary path (`/usr/bin` vs real `/usr/local/bin/cloudflared`) — replaced by the verbatim file.
 - **CI workflows** — written and lint-clean, but **not active**: no GitHub secrets exist and
   `ENABLE_AUTO_APPLY` is unset, so `apply.yml` is check-only. Applies are manual from WSL for now.
 
