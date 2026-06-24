@@ -5,6 +5,7 @@
 
   To change this server, change the repo:  {{ motd_repo_url }}
   Open a PR -> CI shows the diff -> merge -> the change is applied, serialized.
+  (CI auto-apply is ACTIVE: pushes to main are applied automatically by GitHub Actions.)
 
   Do NOT  apt install / crontab -e / edit /etc / change firewall or systemd here.
   Manual changes are DRIFT and get reverted by the next apply. App changes go in
