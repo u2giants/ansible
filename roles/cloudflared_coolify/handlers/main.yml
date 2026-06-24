@@ -7,5 +7,6 @@
   ansible.builtin.systemd:
     name: "{{ cloudflared_service_name }}"
     state: restarted
+  when: not cloudflared_deploy_only | bool
   # Restarts ONLY Tunnel 1. Never touches Coolify-managed Tunnels 2/3 (§3.1). The task list
   # validates the tunnel goes back to active afterwards.

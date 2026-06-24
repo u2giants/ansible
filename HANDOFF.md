@@ -26,16 +26,24 @@ cause drift. Phased plan with hard gates: [`docs/ANSIBLE-IMPLEMENTATION-PLAN.md`
 
 ## Partially done / current state
 
-- **`firewall` role** — authored with mode A (verbatim `iptables-save` capture) and mode B
-  (scratch). The live ruleset **is now captured** to `roles/firewall/files/hetz.rules.v4`/`.v6`
-  (2026-06-23, counters zeroed, timestamps stripped; both pass `iptables-restore --test`). The
-  role auto-loads them when `firewall_use_captured: true` (default). INPUT policy is ACCEPT with
-  SSH locked to Tailscale (see AGENTS quirks). **Captured but UNPROVEN — not applied; must be
-  validated on the scratch host first (do NOT run against prod even in `--check`).**
-- **`docker` role** — `daemon.json` captured verbatim; engine pinned. Gated, not applied.
-- **`cloudflared_coolify` role** — manages Tunnel 1 unit + token (from 1Password). Gated, not applied.
+**Phase 2 risky roles were PROVEN on a throwaway DigitalOcean scratch box on 2026-06-24**
+(Ubuntu 24.04, Docker 29.6.0). Results:
+- **`firewall`** — applied mode B (generic default-DROP) with the auto-revert armed: box stayed
+  reachable, SSH/80/443/loopback/established/tailscale0 allowed, auto-revert timer armed then
+  disarmed cleanly. The risky lockout/auto-revert mechanics work. (Note: the role is intentionally
+  **not** "0 changes on re-run" — its staged snapshot/arm/apply/disarm are imperative command
+  tasks; the end state is stable.) Prod uses **mode A** (the captured hetz ruleset), which passed
+  `iptables-restore --test` but has NOT been applied to prod.
+- **`docker`** — deployed `daemon.json` verbatim, held the package, did **not** restart the
+  daemon; **idempotent** (2nd run = 0 changes). On prod this is near-no-op (the captured
+  `daemon.json` already matches the live file).
+- **`cloudflared_coolify`** — added `cloudflared_deploy_only` (default false) to deploy the
+  unit+env+reload without bringing the tunnel up; proven on scratch (secure env `600 root`, valid
+  unit); **idempotent**. Prod still needs the real token (1Password) + a careful tunnel restart.
 - **CI workflows** — written and lint-clean, but **not active**: no GitHub secrets exist and
   `ENABLE_AUTO_APPLY` is unset, so `apply.yml` is check-only. Applies are manual from WSL for now.
+
+The scratch box (`165.227.208.178`) is to be **destroyed** by the owner once results are reviewed.
 
 ## Not started
 
@@ -63,13 +71,18 @@ cause drift. Phased plan with hard gates: [`docs/ANSIBLE-IMPLEMENTATION-PLAN.md`
 
 ## Exact next action
 
-Pick one (each needs an owner-provided resource):
+Phase 2 is proven on scratch. Remaining, in order of safety:
 
-1. **Phase 2 (recommended):** owner spins up a cheap throwaway box (Hetzner/DO) → add it under
-   `[scratch]` in `inventory/hosts.ini` → prove `firewall`/`docker`/`cloudflared_coolify` on
-   scratch with a rebuild-and-diff (firewall ruleset already captured) → apply to prod in a
-   maintenance window (`-e enable_phase2=true`). On scratch, set `firewall_use_captured=false`
-   and `firewall_allow_no_docker=true` (the captured rules are hetz-specific).
+1. **Apply `docker` to prod** — lowest risk (the captured `daemon.json` already matches live, so
+   it's effectively a no-op that just adds the package hold; no restart):
+   `ansible-playbook playbooks/site.yml -l hetzner --tags docker -e enable_phase2=true --user root --private-key ~/.ssh/916-alien -e ansible_user=root`
+2. **Apply `firewall` to prod** in a maintenance window — uses mode A (captured hetz ruleset);
+   the auto-revert (proven on scratch) is the safety net. Watch SSH/Tailscale + Docker networking.
+3. **Apply `cloudflared_coolify` to prod** — needs the real Tunnel 1 token from 1Password
+   (`op://vibe_coding/cf-tunnel-coolify`); restarts the live tunnel, so validate reconnect.
+   Overlaps with Phase 3 (secrets).
+
+Then Phase 3 (secrets) and Phase 4 (CI auto-apply). Other options if not continuing Phase 2:
 2. **Phase 4:** create the GitHub secrets + `ENABLE_AUTO_APPLY`, then the pipeline runs applies
    instead of manual WSL.
 3. **Phase 3:** migrate secrets into 1Password one at a time with validation/rollback (plan §5.2).

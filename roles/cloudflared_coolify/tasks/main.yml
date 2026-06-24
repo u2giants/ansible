@@ -46,11 +46,15 @@
 - name: Flush handlers so the unit is reloaded before we enable it
   ansible.builtin.meta: flush_handlers
 
+# cloudflared_deploy_only (default false) deploys the unit + env + reload but does NOT bring the
+# tunnel up. Used on the scratch host, where there is no real tunnel/token to validate against.
+# On prod it stays false so the tunnel is enabled and its reconnect is validated.
 - name: Enable and start Tunnel 1
   ansible.builtin.systemd:
     name: "{{ cloudflared_service_name }}"
     enabled: true
     state: started
+  when: not cloudflared_deploy_only | bool
 
 - name: Validate Tunnel 1 is active after any change (plan §4a)
   ansible.builtin.command:
@@ -61,3 +65,4 @@
   retries: 5
   delay: 3
   until: cf_active.stdout == "active"
+  when: not cloudflared_deploy_only | bool

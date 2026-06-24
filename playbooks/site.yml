@@ -9,7 +9,9 @@
 # own per-role guard. They CANNOT touch prod until both are explicitly enabled (§4a, §9).
 
 - name: Host-layer configuration
-  hosts: hetzner
+  # Defaults to the prod group; override for the scratch host with
+  # `-e target_hosts=scratch` (plan §8.3 rebuild-and-diff). CI/normal runs are unaffected.
+  hosts: "{{ target_hosts | default('hetzner') }}"
   become: true
   gather_facts: true
 
