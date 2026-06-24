@@ -1,16 +1,14 @@
 ---
 # cloudflared_coolify — manage ONLY Tunnel 1 (coolify.designflow.app): its systemd unit and
-# its root-only env file. NEVER touch Coolify-managed Tunnels 2 & 3 (mcp/mcpgw), which are
-# containers Coolify owns (plan §3.1, §4a). Tunnel 1's routing config lives REMOTELY in
-# Cloudflare, not in a local file — so we only manage the unit + token here.
-
-- name: Refuse to run without the tunnel token (must come from 1Password at apply time)
-  ansible.builtin.assert:
-    that:
-      - cloudflared_tunnel_token | default('') | length > 0
-    fail_msg: >-
-      cloudflared_tunnel_token is empty. It must be injected at apply time from
-      op://vibe_coding/cf-tunnel-coolify (plan §5.2). Never commit the token.
+# (optionally) its root-only env file. NEVER touch Coolify-managed Tunnels 2 & 3 (mcp/mcpgw).
+# Tunnel 1's routing config lives REMOTELY in Cloudflare, so we only manage the unit + token.
+#
+# ⚠️ TOKEN BLOCKER (2026-06-24): the live token in /etc/cloudflared/coolify-tunnel.env does NOT
+# match the 1Password values (`cloudflare-tunnel-tokens` → `cloudflare_tunnel_token`/`cf_gw...`,
+# 240 chars vs the live 180). Until the correct token source is reconciled by the owner,
+# `cloudflared_manage_token` stays FALSE so this role never overwrites the live, working token
+# (doing so would restart and possibly break coolify.designflow.app). The role manages the UNIT
+# only (a verbatim copy of the live unit → no-op), which is safe.
 
 - name: Ensure cloudflared config directory exists
   ansible.builtin.file:
@@ -20,6 +18,17 @@
     group: root
     mode: "0750"
 
+- name: Install Tunnel 1 systemd unit (verbatim copy of the live unit)
+  ansible.builtin.copy:
+    src: cloudflared-coolify.service
+    dest: "/etc/systemd/system/{{ cloudflared_service_name }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+# Token/env: GATED OFF by default (see TOKEN BLOCKER above). Only writes when the owner has
+# reconciled the token and sets cloudflared_manage_token=true with a verified token.
 - name: Write Tunnel 1 env file (root-only secret)
   ansible.builtin.copy:
     dest: "{{ cloudflared_env_path }}"
@@ -27,28 +36,23 @@
     group: root
     mode: "0600"
     content: |
-      # Managed by Ansible (cloudflared_coolify role). Token injected from 1Password.
       TUNNEL_TOKEN={{ cloudflared_tunnel_token }}
   no_log: true
+  when: cloudflared_manage_token | bool
   notify: Restart cloudflared coolify tunnel
 
-- name: Install Tunnel 1 systemd unit
-  ansible.builtin.template:
-    src: cloudflared-coolify.service.j2
-    dest: "/etc/systemd/system/{{ cloudflared_service_name }}.service"
-    owner: root
-    group: root
-    mode: "0644"
-  notify:
-    - Reload systemd
-    - Restart cloudflared coolify tunnel
+- name: Assert a token was provided when managing it
+  ansible.builtin.assert:
+    that:
+      - cloudflared_tunnel_token | default('') | length > 0
+    fail_msg: "cloudflared_manage_token is true but no token was injected (from 1Password)."
+  when: cloudflared_manage_token | bool
 
 - name: Flush handlers so the unit is reloaded before we enable it
   ansible.builtin.meta: flush_handlers
 
-# cloudflared_deploy_only (default false) deploys the unit + env + reload but does NOT bring the
-# tunnel up. Used on the scratch host, where there is no real tunnel/token to validate against.
-# On prod it stays false so the tunnel is enabled and its reconnect is validated.
+# cloudflared_deploy_only (default false) deploys the unit/env + reload but does NOT bring the
+# tunnel up (used on a scratch host with no real tunnel). On prod it stays false.
 - name: Enable and start Tunnel 1
   ansible.builtin.systemd:
     name: "{{ cloudflared_service_name }}"

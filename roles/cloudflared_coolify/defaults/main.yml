@@ -1,7 +1,12 @@
 ---
 cloudflared_service_name: "cloudflared-coolify"
 cloudflared_env_path: "/etc/cloudflared/coolify-tunnel.env"
-# Secret — injected at apply time from op://vibe_coding/cf-tunnel-coolify. Never set in git.
-cloudflared_tunnel_token: ""
-# Deploy the unit/env/reload without enabling the tunnel (scratch testing). Prod = false.
+# Deploy the unit/env without enabling the tunnel (scratch testing). Prod = false.
 cloudflared_deploy_only: false
+# ⚠️ TOKEN BLOCKER: false until the owner reconciles the token. The live token does NOT match
+# the 1Password values, so writing one would restart/break the live tunnel. While false, the
+# role manages only the (verbatim) unit and leaves the live env/token untouched.
+cloudflared_manage_token: false
+# When the token is reconciled, inject it at apply time from 1Password (the CORRECT field, TBD):
+#   op://vibe_coding/cloudflare-tunnel-tokens/<verified-field>
+cloudflared_tunnel_token: ""
