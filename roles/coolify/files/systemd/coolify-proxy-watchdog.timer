@@ -1,0 +1,11 @@
+[Unit]
+Description=Run coolify-proxy socket watchdog every 3 minutes
+
+[Timer]
+OnBootSec=2min
+OnCalendar=*:0/3
+AccuracySec=20s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

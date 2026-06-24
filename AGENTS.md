@@ -46,6 +46,7 @@ Then load additional docs only when relevant:
 | Task / question | Read these docs | Usually do not need |
 |---|---|---|
 | Understand WHY this project exists (the mission) | `docs/DISASTER-RECOVERY.md`, `docs/RECOVERY-GAP-PLAN.md` | role internals until needed |
+| Actually rebuild the server from scratch | `docs/RUNBOOK-REBUILD.md`, `docs/DISASTER-RECOVERY.md` | individual role READMEs |
 | Quick repo orientation | `README.md`, `AGENTS.md` | `docs/ANSIBLE-IMPLEMENTATION-PLAN.md` (long); role READMEs |
 | Modify a host role's behavior | `AGENTS.md`, the relevant `roles/<role>/README.md`, `docs/architecture.md` | `docs/deployment.md` unless the apply flow changes |
 | Add/change config, vars, secrets, runtime settings | `AGENTS.md`, `docs/configuration.md`, `docs/deployment.md` if CI/runtime is affected | unrelated role READMEs |

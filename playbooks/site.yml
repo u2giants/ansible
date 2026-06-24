@@ -67,6 +67,10 @@
       when: enable_phase1 | bool
 
     # ---- Phase 2: risky live-service roles (can take the box down) ----
+    - role: coolify
+      tags: [phase2, coolify]
+      when: enable_phase2 | bool
+
     - role: firewall
       tags: [phase2, firewall]
       when: enable_phase2 | bool

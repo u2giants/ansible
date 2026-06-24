@@ -55,14 +55,21 @@ plan below:
   a **bare** box gets the engine (today the role assumes it's already there). Keep the version pin
   and never-auto-restart guards.
 
-### R4 — Coolify
+### R4 — Coolify  ✅ glue done / install written (unproven until R7) (2026-06-24)
+Built `coolify` role: 4 custom glue scripts + 4 systemd units vendored verbatim (no-op on prod),
+and a guarded install task (pinned 4.1.2; runs only when `/data/coolify` is absent, so the live
+box is never reinstalled). Coolify app *state* = backrest data, not code. Install path proven at
+R7. Original plan below:
 - New role **`coolify`**: reproduce the Coolify install (its installer), and vendor the host-level
   Coolify glue scripts (the four in `/usr/local/bin`). Document that Coolify's *state* (which apps,
   their env) is **data**, restored from backrest (Pillar 4), not code.
 - This is the most involved role — Coolify owns a lot; we manage its **install + host glue**, not
   its internal app state.
 
-### R5 — The "rebuild everything" runbook
+### R5 — The "rebuild everything" runbook  ✅ DONE (2026-06-24)
+Written: [`RUNBOOK-REBUILD.md`](RUNBOOK-REBUILD.md) — the ordered provision → bootstrap → Ansible →
+backrest restore → Coolify redeploy → authenticate → verify procedure. Proven end-to-end at R7.
+Original plan below:
 - New doc **`RUNBOOK-REBUILD.md`**: the exact ordered procedure (provision → cloud-init bootstrap →
   Ansible host+tools+Coolify → backrest restore → Coolify redeploys from GitHub → authenticate →
   verify), with the commands a future session runs. Include the **app-repo inventory** and the

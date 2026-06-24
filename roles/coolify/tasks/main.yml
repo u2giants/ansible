@@ -1,0 +1,54 @@
+---
+# coolify — capture the HOST side of Coolify so a rebuild can stand it back up. On the LIVE box
+# this is a no-op: the install is guarded (skipped when Coolify is present) and the glue
+# scripts/units are vendored verbatim. Coolify's app *state* is restored from backrest, not here.
+# Read docs/RECOVERY-GAP-PLAN.md (R4). ⚠️ The install path is UNPROVEN until the R7 rebuild test.
+
+# ---- Install (REBUILD ONLY — never reinstalls the running box) ----
+- name: Check whether Coolify is already installed
+  ansible.builtin.stat:
+    path: /data/coolify
+  register: coolify_dir
+
+- name: Install Coolify (only on a fresh box where /data/coolify is absent)
+  ansible.builtin.shell: |
+    set -o pipefail
+    curl -fsSL https://cdn.coollabs.io/coolify/install.sh | bash -s {{ coolify_version }}
+  args:
+    executable: /bin/bash
+    creates: /data/coolify
+  when:
+    - coolify_install | bool
+    - not coolify_dir.stat.exists
+  # On a rebuild this installs Docker + Coolify + its containers. Then app state is restored from
+  # backrest (coolify-db + /data/coolify) and Coolify redeploys the apps from their GitHub repos.
+  # VERIFY the installer's version-arg syntax during the R7 rebuild test.
+
+# ---- Custom host glue (verbatim — safe no-op on the live box) ----
+- name: Deploy Coolify host glue scripts
+  ansible.builtin.copy:
+    src: "bin/{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    owner: root
+    group: root
+    mode: "0755"
+  loop: "{{ coolify_scripts }}"
+
+- name: Deploy Coolify systemd units
+  ansible.builtin.copy:
+    src: "systemd/{{ item }}"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ coolify_units }}"
+  notify: Reload systemd
+
+- name: Flush handlers so units are reloaded before enabling
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable Coolify units
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+  loop: "{{ coolify_enable_units }}"

@@ -1,0 +1,23 @@
+---
+# Coolify (the app-orchestration platform). This role captures the HOST side of Coolify: its
+# install + the custom host glue scripts/units. Coolify's *state* (which apps exist, their env)
+# is DATA in /data/coolify + coolify-db, restored from backrest — NOT managed here. See
+# docs/DISASTER-RECOVERY.md (Pillars 2+4) and RECOVERY-GAP-PLAN.md (R4).
+coolify_version: "4.1.2"
+coolify_install: true            # run the official installer if Coolify is absent (rebuild only)
+
+# Custom host glue scripts (vendored verbatim — they work around the proxy/docker.sock incidents).
+coolify_scripts:
+  - coolify-autostart.sh
+  - coolify-proxy-socket-watchdog.sh
+  - docker-update-check.sh
+  - restart-coolify-proxy-after-docker.sh
+coolify_units:
+  - coolify-autostart.service
+  - coolify-proxy-reconnect.service
+  - coolify-proxy-watchdog.service
+  - coolify-proxy-watchdog.timer
+coolify_enable_units:            # the ones enabled on the live box
+  - coolify-autostart.service
+  - coolify-proxy-reconnect.service
+  - coolify-proxy-watchdog.timer

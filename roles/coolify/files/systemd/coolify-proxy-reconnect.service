@@ -1,0 +1,9 @@
+[Unit]
+Description=Restart coolify-proxy after docker (re)starts so Traefik re-reads the docker socket
+After=docker.service
+BindsTo=docker.service
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/restart-coolify-proxy-after-docker.sh
+[Install]
+WantedBy=docker.service
