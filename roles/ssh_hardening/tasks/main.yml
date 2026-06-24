@@ -1,0 +1,44 @@
+---
+# ssh_hardening — enforce the SSH access policy (root only from trusted sources, ai from
+# anywhere, key-only except ai-password). Read roles/ssh_hardening/README.md before editing.
+#
+# SAFETY: a bad sshd config can lock out network SSH. Guards:
+#   - the FULL merged config is validated with `sshd -t`; if invalid, the drop-in is removed
+#     (auto-revert) and the play fails WITHOUT reloading;
+#   - we RELOAD (not restart), so existing sessions survive and sshd keeps the old good config
+#     if a reload ever sees bad input;
+#   - the operator connects as root over Tailscale (a trusted source), so this never locks out
+#     the control path; the VPS provider console is the ultimate break-glass for root.
+
+- name: Assert the access policy is fully specified (never leave the public door mis-set)
+  ansible.builtin.assert:
+    that:
+      - ssh_internet_user | length > 0
+      - ssh_trusted_sources | length > 0
+    fail_msg: "ssh_internet_user and ssh_trusted_sources must be set, or this would lock SSH down wrong."
+
+- name: Deploy and validate the SSH access policy
+  block:
+    - name: Deploy the SSH access-policy drop-in
+      ansible.builtin.template:
+        src: 20-access-policy.conf.j2
+        dest: /etc/ssh/sshd_config.d/20-access-policy.conf
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reload sshd
+
+    - name: Validate the full merged sshd config
+      ansible.builtin.command: sshd -t
+      changed_when: false
+      check_mode: false
+  rescue:
+    - name: Auto-revert — remove the bad drop-in so sshd stays healthy
+      ansible.builtin.file:
+        path: /etc/ssh/sshd_config.d/20-access-policy.conf
+        state: absent
+    - name: Fail loudly (no reload happened; previous config intact)
+      ansible.builtin.fail:
+        msg: >-
+          The rendered sshd access policy failed `sshd -t`. The drop-in was removed and sshd was
+          NOT reloaded — the previous working config is still active. Fix the role and re-run.

@@ -1,0 +1,24 @@
+# Managed by Ansible (ssh_hardening role). SSH access policy — see roles/ssh_hardening/README.md.
+#
+#   root : key-only, ONLY from trusted sources (Tailscale + localhost/cloudflared). Never public.
+#   {{ ssh_internet_user }}   : allowed from anywhere{% if ssh_ai_allow_password %} (key OR password){% else %} (key only){% endif %}.
+#   others: key-only; NOT permitted from the public internet.
+#   The VPS provider console (local login) is unaffected — that is root's break-glass.
+
+PubkeyAuthentication yes
+PasswordAuthentication no
+PermitRootLogin no
+
+# Trusted sources: root may log in here, key-only.
+Match Address {{ ssh_trusted_sources | join(',') }}
+    PermitRootLogin prohibit-password
+
+# Public internet (everything NOT trusted): only the {{ ssh_internet_user }} account, never root.
+Match Address {{ (['*'] + (ssh_trusted_sources | map('regex_replace', '^', '!') | list)) | join(',') }}
+    AllowUsers {{ ssh_internet_user }}
+{% if ssh_ai_allow_password %}
+
+# The {{ ssh_internet_user }} account may also use a password (in addition to a key).
+Match User {{ ssh_internet_user }}
+    PasswordAuthentication yes
+{% endif %}

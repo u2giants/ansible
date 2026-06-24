@@ -40,8 +40,10 @@ base_journald_max_use: "1G"   # cap journald disk usage; VERIFY desired size
 # ----------------------------------------------------------------------------------
 # users role — PUBLIC keys only (plan §4). Real keys belong in 1Password/CI, not git.
 # ----------------------------------------------------------------------------------
-users_authorized_keys: []
-#  - "ssh-ed25519 AAAA... ci@github-actions"   # the CI deploy public key
+users_authorized_keys:
+  # Owner's key (also used for root over Tailscale). Lets `ai` log in over the internet (key).
+  - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDzgWGrKmHE0Tgds2DDQWN7AwFCBkY6mpRZhinc6Wv0C 916-alien"
+#  - "ssh-ed25519 AAAA... ci@github-actions"   # the CI deploy public key (Phase 4)
 
 # ----------------------------------------------------------------------------------
 # dns_hardening role (plan §3.3) — keep the May 2026 outage fixes intact

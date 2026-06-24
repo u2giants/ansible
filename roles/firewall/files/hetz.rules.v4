@@ -44,11 +44,12 @@ COMMIT
 -A PREROUTING -d 10.0.8.4/32 ! -i br-df155a1294c8 -j DROP
 -A PREROUTING -d 10.0.3.4/32 ! -i br-5cde1e485435 -j DROP
 -A PREROUTING -d 10.0.10.2/32 ! -i br-ecd368b5ac5c -j DROP
--A PREROUTING -d 10.0.1.18/32 ! -i br-d4b3e6b3b0cf -j DROP
 -A PREROUTING -d 10.0.3.2/32 ! -i br-5cde1e485435 -j DROP
 -A PREROUTING -d 10.0.3.3/32 ! -i br-5cde1e485435 -j DROP
 -A PREROUTING -d 10.0.3.5/32 ! -i br-5cde1e485435 -j DROP
 -A PREROUTING -d 10.0.3.6/32 ! -i br-5cde1e485435 -j DROP
+-A PREROUTING -d 10.0.1.19/32 ! -i br-d4b3e6b3b0cf -j DROP
+-A PREROUTING -d 10.0.1.8/32 ! -i br-d4b3e6b3b0cf -j DROP
 COMMIT
 *filter
 :INPUT ACCEPT [0:0]

@@ -26,7 +26,8 @@ COMMIT
 -A PREROUTING -d fdd4:1a51:f5e5::c/128 ! -i br-d4b3e6b3b0cf -j DROP
 -A PREROUTING -d fdd4:1a51:f5e5::3/128 ! -i br-d4b3e6b3b0cf -j DROP
 -A PREROUTING -d fdd4:1a51:f5e5::4/128 ! -i br-d4b3e6b3b0cf -j DROP
--A PREROUTING -d fdd4:1a51:f5e5::12/128 ! -i br-d4b3e6b3b0cf -j DROP
+-A PREROUTING -d fdd4:1a51:f5e5::13/128 ! -i br-d4b3e6b3b0cf -j DROP
+-A PREROUTING -d fdd4:1a51:f5e5::8/128 ! -i br-d4b3e6b3b0cf -j DROP
 COMMIT
 *filter
 :INPUT ACCEPT [0:0]

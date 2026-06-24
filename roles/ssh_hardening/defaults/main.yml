@@ -1,0 +1,13 @@
+---
+# The account allowed in from the public internet (root is never allowed from there).
+ssh_internet_user: "ai"
+# May the internet user also use a password (in addition to a key)? On a public port this is a
+# brute-force surface — fail2ban mitigates; use a strong password. Owner's explicit choice.
+ssh_ai_allow_password: true
+# "Trusted" sources from which root may log in (key-only). Tailscale ranges + localhost
+# (cloudflared hands off from localhost). Confirm the Tailscale IPv6 prefix against the tailnet.
+ssh_trusted_sources:
+  - "100.64.0.0/10"          # Tailscale IPv4 (CGNAT range)
+  - "fd7a:115c:a1e0::/48"    # Tailscale IPv6 (ULA prefix) — VERIFY for this tailnet
+  - "127.0.0.1"              # localhost (cloudflared SSH lands here)
+  - "::1"

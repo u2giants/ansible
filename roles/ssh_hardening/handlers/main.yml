@@ -1,0 +1,6 @@
+---
+# Reload (not restart) so live sessions survive. Validate once more right before reloading;
+# if invalid, the reload is skipped and sshd keeps running the previous good config.
+- name: Reload sshd
+  ansible.builtin.shell: "sshd -t && systemctl reload ssh"
+  changed_when: true

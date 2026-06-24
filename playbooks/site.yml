@@ -41,6 +41,10 @@
       tags: [phase1, users]
       when: enable_phase1 | bool
 
+    - role: ssh_hardening
+      tags: [phase1, ssh_hardening]
+      when: enable_phase1 | bool
+
     - role: dns_hardening
       tags: [phase1, dns_hardening]
       when: enable_phase1 | bool
