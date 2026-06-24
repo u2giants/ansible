@@ -61,17 +61,25 @@ cause drift. Phased plan with hard gates: [`docs/ANSIBLE-IMPLEMENTATION-PLAN.md`
   loads secrets → SSH → `--check` → 0 changes). **Drift detection is LIVE** (daily 03:00 UTC).
   `check.yml` posts the dry-run diff on PRs. Fixed along the way: INI inline-comment in inventory
   (broke the SSH username), SSH key trailing newline, and the drift grep (matched loop items).
-  REMAINING: `apply.yml` auto-apply is still gated by `ENABLE_AUTO_APPLY` (unset → check-only on
-  merge); flip it on + run the self-test to finish full automation.
+  **Phase 4 COMPLETE 2026-06-24:** `ENABLE_AUTO_APPLY=true` (GitHub repo variable). Self-test
+  passed — pushed a motd line to `main`, `apply.yml` auto-applied it to hetz (serialized), verified
+  live. **Push to `main` now auto-applies to prod** (doc-only pushes = no-op applies). Drift
+  detection runs daily.
 
 The scratch box (`165.227.208.178`) is to be **destroyed** by the owner once results are reviewed.
 
-## Not started
+## Status: core project COMPLETE (Phases 0–4). Optional follow-ups remain:
 
-- **Phase 3 — secrets migration to 1Password**, one at a time (table in plan §5.2). Needs vault access.
-- **Phase 4 — enable CI auto-apply + drift alerts.** Needs `OP_SERVICE_ACCOUNT_TOKEN`, Tailscale
-  `tag:ci` (`TS_OAUTH_CLIENT_ID`/`TS_OAUTH_SECRET`), and `ENABLE_AUTO_APPLY=true` as GitHub
-  secrets/variables; then fold the DigitalOcean `backrest-wiz` droplet into the inventory.
+- **Wire drift alerts to a channel** — `drift.yml` fails on drift but the alert is just a GitHub
+  Actions failure; route it to where the owner will see it (e.g. the backup-alert channel).
+- **cloudflared token management** — `cloudflared_manage_token` is `false` (manual); flip true only
+  if you want CI/rebuild to (re)write the env from `op://vibe_coding/cf-tunnel-hetz`.
+- **Clean the stale `--dport 18790` firewall rule** (nothing listens there) — confirm then remove.
+- **Extra users `nova`/`nasbridge`** — unknown purpose; encode in `users` if wanted.
+- **Fold in the DigitalOcean `backrest-wiz` droplet** as a second inventory group (plan §2.3).
+- **Phase 3 app-layer secrets** — restic/Spaces/oauth2-proxy/CF-DNS live in app/Coolify configs;
+  cleaning those belongs in their own repos, not here (owner said restic/Spaces are in a personal vault).
+- **Replace the owner's `916-alien` key copy in WSL** — no longer needed now that CI has its own key.
 
 ## Decisions made (and why)
 

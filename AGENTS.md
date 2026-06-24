@@ -341,7 +341,8 @@ See `HANDOFF.md` for the detailed continuation state. Summary:
 | done | **Phase 2 complete** — firewall, docker, ssh_hardening, cloudflared all live on prod | — |
 | done | Phase 3 (host-layer scope) — secrets in 1Password; app-layer secrets out of scope (their repos) | — |
 | done | Phase 4 CI **pipeline working** (2026-06-24) — Tailscale tag:ci + 1Password + CI key; **drift detection LIVE** (daily); PR diffs via check.yml | — |
-| open | Flip `ENABLE_AUTO_APPLY=true` (auto-apply on merge) + run the self-test — the last switch | owner decision |
+| done | **Phase 4 COMPLETE (2026-06-24)** — `ENABLE_AUTO_APPLY=true`; self-test passed (pushed a motd line to main → apply.yml auto-applied it to hetz, verified live). Push to main now auto-applies, serialized. |
+| note | Auto-apply is ON: **every push to `main` triggers a real apply** (doc-only pushes are no-op applies). Drift detection daily. `cloudflared` token mgmt still manual (`cloudflared_manage_token: false`). |
 | open | Phase 3: migrate secrets into 1Password one at a time | needs 1Password vault access |
 | blocked | Phase 4: enable CI auto-apply + drift alerts | needs `OP_SERVICE_ACCOUNT_TOKEN`, Tailscale `tag:ci`, `ENABLE_AUTO_APPLY` as GitHub secrets/vars |
 
