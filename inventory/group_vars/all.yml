@@ -43,7 +43,9 @@ base_journald_max_use: "1G"   # cap journald disk usage; VERIFY desired size
 users_authorized_keys:
   # Owner's key (also used for root over Tailscale). Lets `ai` log in over the internet (key).
   - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDzgWGrKmHE0Tgds2DDQWN7AwFCBkY6mpRZhinc6Wv0C 916-alien"
-#  - "ssh-ed25519 AAAA... ci@github-actions"   # the CI deploy public key (Phase 4)
+  # CI deploy key — GitHub Actions connects as `ai` over Tailscale; private half in
+  # 1Password (op://vibe_coding/ci-deploy-ssh/private_key). Added 2026-06-24 (Phase 4).
+  - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAk6qqxljRwTFOuejNLMVoveGlGxPq5WwWjFyUBQ3QEL ci@github-actions-ansible"
 
 # ----------------------------------------------------------------------------------
 # dns_hardening role (plan §3.3) — keep the May 2026 outage fixes intact
