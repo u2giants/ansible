@@ -38,12 +38,10 @@ cause drift. Phased plan with hard gates: [`docs/ANSIBLE-IMPLEMENTATION-PLAN.md`
 
 **Phase 2 risky roles were PROVEN on a throwaway DigitalOcean scratch box on 2026-06-24**
 (Ubuntu 24.04, Docker 29.6.0). Results:
-- **`firewall`** — applied mode B (generic default-DROP) with the auto-revert armed: box stayed
-  reachable, SSH/80/443/loopback/established/tailscale0 allowed, auto-revert timer armed then
-  disarmed cleanly. The risky lockout/auto-revert mechanics work. (Note: the role is intentionally
-  **not** "0 changes on re-run" — its staged snapshot/arm/apply/disarm are imperative command
-  tasks; the end state is stable.) Prod uses **mode A** (the captured hetz ruleset), which passed
-  `iptables-restore --test` but has NOT been applied to prod.
+- **`firewall`** — the original full-capture design was proven on scratch, but then **reworked**
+  (the full `iptables-save` approach drifts daily as Docker rewrites nat chains). The role now
+  manages only the declarative SSH lockdown and is **applied to prod + idempotent** — see the
+  "firewall reworked" item below. The old mode A/B and auto-revert machinery were removed.
 - **`docker`** — deployed `daemon.json` verbatim, held the package, did **not** restart the
   daemon; **idempotent** (2nd run = 0 changes). **APPLIED TO PROD 2026-06-24**: only change was
   the package hold (`daemon.json` already matched); Docker not restarted (27 containers stayed
@@ -85,15 +83,13 @@ The scratch box (`165.227.208.178`) is to be **destroyed** by the owner once res
 Phase 2 is proven on scratch. Remaining, in order of safety:
 
 1. ~~**Apply `docker` to prod**~~ ✅ done 2026-06-24 (no-op + package hold; no restart).
-2. **`firewall` role needs a REWORK before prod** (finding 2026-06-24). The mode-A full-ruleset
-   capture **drifts daily**: Docker rewrites its `nat` PREROUTING chains every time a container
-   cycles (confirmed — the captured file changed within one day). Re-applying a stale full capture
-   would fight Docker and could disrupt container networking. **Recommended fix:** have the role
-   manage only the *host-owned* INPUT rules (the port-22 Tailscale lockdown; optionally the 1904
-   allow) using `ansible.builtin.iptables` (additive), and leave Docker/Tailscale/fail2ban chains
-   alone (they self-rebuild on boot). Note: root-from-public is *already* closed at the SSH layer
-   by `ssh_hardening`, so the firewall is now defense-in-depth, not the only guard. The captured
-   `roles/firewall/files/hetz.rules.v*` remain a useful disaster-recovery snapshot.
+2. ~~**`firewall` role needs a REWORK**~~ ✅ **DONE + applied to prod 2026-06-24.** Reworked from
+   full-`iptables-save` capture (which drifted daily — Docker rewrites `nat` chains) to declarative
+   `ansible.builtin.iptables` rules managing ONLY the host-owned `filter INPUT` SSH lockdown
+   (port-22 trusted-source allow + drop; 1904 left open). Docker/Tailscale/fail2ban chains left
+   alone. Applying was a **no-op on IPv4** (rules already matched) and **closed an IPv6 gap** (live
+   v6 had no port-22 restriction — now locked to Tailscale-v6/localhost). Idempotent (2nd run = 0
+   changes), no drift. `files/hetz.rules.v*` kept only as a disaster-recovery snapshot.
 3. **Apply `cloudflared_coolify` to prod** — needs the real Tunnel 1 token from 1Password
    (`op://vibe_coding/cf-tunnel-coolify`); restarts the live tunnel, so validate reconnect.
    Overlaps with Phase 3 (secrets).

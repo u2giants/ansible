@@ -1,43 +1,43 @@
-# Role: `firewall`  — ⚠️ RISKY · phase2 · CAN LOCK YOU OUT
+# Role: `firewall`  — phase2
 
-The single highest-risk role. A wrong rule can (a) lock you out of SSH, or (b) wipe Docker's
-iptables chains and kill **all** container networking. Read plan §4a before touching it. Prove
-it on a **throwaway scratch host** with a full rebuild-and-diff before it ever touches prod.
+Manages **only the host-owned SSH lockdown** in the `filter` `INPUT` chain, declaratively
+(`ansible.builtin.iptables`). It deliberately does **not** manage the whole ruleset.
 
-## Guards baked in
-1. **Double-gated.** Requires `enable_phase2=true` **and** `firewall_apply=true`.
-2. **Never auto-generates a filter table over Docker.** In production use **mode A**: set
-   `firewall_rules_v4_raw` / `firewall_rules_v6_raw` to the box's real `iptables-save` output
-   (from `bin/discover.sh`), so Docker's `nat`/`DOCKER*` chains are preserved verbatim.
-3. **Pre-apply assertions** confirm the candidate ruleset contains the `tailscale0` interface,
-   the SSH allow, and a `:DOCKER` chain (unless `firewall_allow_no_docker: true`).
-4. **Auto-revert timer.** Before applying, it snapshots last-known-good and arms a
-   `systemd-run` timer that restores it in `firewall_autorevert_seconds` (default 60). If the
-   apply locks us out, the confirmation `ping` task can't run, the timer is never cancelled,
-   and the good rules come back automatically. Your way back in is Tailscale (`100.66.37.58`).
+## Why only the SSH rules (the rework, 2026-06-24)
+The original design captured the entire `iptables-save` and re-stamped it. That fails on this
+box: **Docker rewrites its `nat` chains every time a container cycles** (confirmed — the captured
+file drifted within a day), so re-applying a saved copy fights Docker and risks breaking container
+networking. The `INPUT` chain (where the SSH rules live) is **stable** — Docker doesn't touch it —
+so the role manages just those rules and leaves the daemon-owned chains alone:
 
-## Modes
-- **Mode A (production):** uses a captured `iptables-save`. The live hetz ruleset is vendored in
-  `files/hetz.rules.v4` / `hetz.rules.v6` (captured 2026-06-23, counters zeroed, timestamps
-  stripped; both pass `iptables-restore --test`). The role auto-loads them into
-  `firewall_rules_v4_raw`/`_v6_raw` when `firewall_use_captured: true` (default). Preserves
-  Docker's `nat`/`filter` chains. **Captured but UNPROVEN — never applied to prod yet.**
-- **Mode B (scratch only):** set `firewall_use_captured: false` → emits a minimal
-  host-INPUT-only table with no Docker chains. Allowed only when `firewall_allow_no_docker: true`.
+| Chain / rules | Owner | This role |
+|---|---|---|
+| `filter INPUT` SSH rules (port 22 lockdown, 1904 open) | host | ✅ manages |
+| `ts-input` | Tailscale (`tailscaled`) | ❌ leave |
+| `DOCKER*`, `nat` PREROUTING | Docker (`dockerd`) | ❌ leave |
+| `f2b-*` | fail2ban | ❌ leave (just ensures fail2ban enabled) |
 
-## ⚠️ Captured ≠ proven
-`files/hetz.rules.v*` is a faithful snapshot, but applying it has **not** been tested. Do the
-scratch-host rebuild-and-diff (below) before any prod apply. Do not run this role against prod
-even in `--check`: its snapshot/arm-revert/apply tasks use `check_mode: false` and would touch
-the box.
+## Policy (matches live hetz)
+INPUT policy stays **ACCEPT** (default-allow). The only restriction is SSH:
+- **port 22**: allowed from `firewall_ssh_trusted_v4/v6` (Tailscale, localhost/cloudflared, docker
+  subnet), **dropped** from everyone else.
+- **port 1904** (`firewall_ssh_public_ports`): left open to the public internet — `ssh_hardening`
+  restricts that port to the `ai` account.
+- **IPv6**: the same port-22 lockdown is applied (`firewall_lock_ipv6: true`). Live v6 currently
+  has *no* port-22 restriction — this closes that gap. (Defense-in-depth; `ssh_hardening` already
+  gates who may log in on any address.)
 
-## Proving it (do this first, on scratch)
-```bash
-ansible-playbook playbooks/site.yml -l scratch --tags firewall \
-  -e enable_phase2=true -e firewall_apply=true -e firewall_allow_no_docker=true
-# Confirm: still reachable; second run = 0 changes; rebuild-and-diff clean (plan §8.3).
-```
+Applying to prod is a **no-op on IPv4** (the rules already exist) and **adds the IPv6 lockdown**.
 
-## `--check` warning
-`--check` is **not** reliable for this role (command/shell tasks). Do not trust a prod
-`--check` diff here — prove on scratch (plan §4a).
+## Safe to re-run
+Each rule is declarative and idempotent (`iptables -C` match), so re-runs make no changes and
+there is no drift. A change persists via `netfilter-persistent save` (handler). The role connects
+over Tailscale (a trusted source), so the SSH lockdown can't cut the control path; a final
+`ping` confirms reachability.
+
+## Not managed / future
+- The stale `--dport 18790 ACCEPT` rule (nothing listens there) is left as-is — recommend removing.
+- `files/hetz.rules.v{4,6}` are kept only as a **disaster-recovery snapshot** of the full live
+  ruleset; the role does not apply them.
+- Tightening INPUT policy to default-DROP is out of scope (would require enumerating every needed
+  port and risks breaking apps).

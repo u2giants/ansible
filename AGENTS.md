@@ -104,7 +104,7 @@ are managed declaratively by roles, not source files in this repo.)
 | Add/remove an apt package or base setting | `inventory/group_vars/all.yml` (`base_packages`), `roles/base/` | role files for unrelated concerns |
 | Change DNS fallback servers | `inventory/group_vars/all.yml` (`dns_fallback_servers`), `roles/dns_hardening/` | `roles/docker/` (separate DNS concern) |
 | Change Docker daemon config | `roles/docker/files/daemon.json` (verbatim), `roles/docker/` | anything that restarts Docker automatically |
-| Change firewall rules | `roles/firewall/` + provide `firewall_rules_v4_raw` from live `iptables-save` | do not hand-write a filter table that omits Docker chains |
+| Change firewall (SSH) rules | `roles/firewall/` + `firewall_ssh_trusted_v4/v6`, `firewall_ssh_public_ports` in defaults | Docker/Tailscale/fail2ban chains; never a full-table capture |
 | Add/change a cron entry | `inventory/group_vars/all.yml` (`cron_glue_entries`), `roles/cron_glue/` | the keeper scripts under `/worksp/hiclaw/` (owned by HiClaw repo) |
 | Manage Cloudflare Tunnel 1 | `roles/cloudflared_coolify/` | Tunnels 2 & 3 (Coolify-managed) |
 | Add an SSH public key for `ai` | `inventory/group_vars/all.yml` (`users_authorized_keys`) | private keys (never commit) |
@@ -182,8 +182,9 @@ Why: Tailscale is the single SSH path and the firewall lifeline; Docker also man
 chains in this table.
 
 Do not change because: a naive default-DROP rewrite would wipe Docker's chains (killing all
-container networking) and/or lock out SSH. The `firewall` role uses **mode A** (verbatim
-`iptables-save` capture) for prod to avoid this.
+container networking) and/or lock out SSH. The `firewall` role manages **only the host-owned
+`filter INPUT` SSH rules** declaratively (`ansible.builtin.iptables`) and leaves Docker's chains
+alone — never reintroduce a full-`iptables-save` capture (it drifts daily as Docker rewrites nat).
 
 ### The `docker` role never restarts Docker
 
@@ -335,8 +336,9 @@ See `HANDOFF.md` for the detailed continuation state. Summary:
 | done | Phase 2 risky roles **proven on a scratch box** (2026-06-24) — firewall lockout/auto-revert mechanics, docker no-restart+idempotent, cloudflared deploy idempotent | see `HANDOFF.md` |
 | done | Phase 2 `docker` **applied to prod** (2026-06-24) — package hold only, no restart, 27 containers stayed up, idempotent | — |
 | done | `ssh_hardening` **applied to prod** (2026-06-24) — root off the public internet; `ai` on (key/password, in 1Password); idempotent | — |
-| open | `firewall` role needs **rework** — full-table mode A drifts daily (Docker chains); manage only host-owned INPUT rules instead. See `HANDOFF.md` | — |
+| done | `firewall` **reworked + applied to prod** (2026-06-24) — declarative SSH lockdown only (no full-table drift); no-op on IPv4, closed an IPv6 gap; idempotent | — |
 | open | `cloudflared` to prod | real tunnel token (1Password) |
+| open | Phase 3 (secrets → 1Password) and Phase 4 (CI auto-apply + drift) | 1Password / GitHub secrets |
 | open | Phase 3: migrate secrets into 1Password one at a time | needs 1Password vault access |
 | blocked | Phase 4: enable CI auto-apply + drift alerts | needs `OP_SERVICE_ACCOUNT_TOKEN`, Tailscale `tag:ci`, `ENABLE_AUTO_APPLY` as GitHub secrets/vars |
 

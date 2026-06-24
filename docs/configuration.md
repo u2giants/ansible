@@ -20,9 +20,8 @@ see [`deployment.md`](deployment.md).
 |---|---|---|
 | `enable_phase1` | `true` | runs the non-disruptive roles |
 | `enable_phase2` | `false` | gates the risky roles (firewall/docker/cron_glue/cloudflared); a pre-task asserts opt-in |
-| `firewall_apply` | `false` | second gate on top of `enable_phase2` for the firewall role |
-| `firewall_use_captured` | `true` | load the captured prod ruleset `roles/firewall/files/hetz.rules.v*` (mode A); `false` = scratch mode-B template |
-| `firewall_allow_no_docker` | `false` | allows the scratch-only "mode B" ruleset that has no Docker chains |
+| `firewall_lock_ipv6` | `true` | also lock down IPv6 port 22 (closes the live v6 gap) |
+| `ssh_trusted_root_password` | `true` | allow root password login from trusted sources (Tailscale) — no-key break-glass |
 | `docker_auto_restart` | `false` | MUST stay false — Ansible never restarts Docker |
 | `ENABLE_AUTO_APPLY` | unset | GitHub repo variable; gates real apply-on-merge in `apply.yml` |
 
@@ -34,9 +33,10 @@ see [`deployment.md`](deployment.md).
 | `managed_user` | `ai` | passwordless sudo user |
 | `dns_fallback_servers` | `1.1.1.1 1.0.0.1 8.8.8.8 8.8.4.4` | resolved FallbackDNS |
 | `docker_ce_version` | `5:29.6.0-1~ubuntu.24.04~noble` | pinned/held |
-| `users_authorized_keys` | `[]` | PUBLIC keys only; empty = no-op (never strips keys) |
+| `users_authorized_keys` | 916-alien public key | installed for `ai`; PUBLIC keys only (never strips keys) |
 | `cron_glue_entries` | tailscale keepalive (root, */4), sync-infra-docs (ai, */15) | hiclaw keepers intentionally NOT adopted |
-| `firewall_allowed_tcp` | `[22, 80, 443]` | used only by scratch "mode B"; prod uses verbatim capture |
+| `firewall_ssh_trusted_v4` | `100.64.0.0/10`, `127.0.0.1/32`, `10.0.1.0/24` | sources allowed to reach port 22 (else dropped) |
+| `firewall_ssh_public_ports` | `[1904]` | SSH ports left open to the public (ai only, via ssh_hardening) |
 
 ## Secrets (1Password vault `vibe_coding`)
 

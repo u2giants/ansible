@@ -1,0 +1,7 @@
+---
+# Persist the live ruleset so it survives a reboot. netfilter-persistent saves the full current
+# table (including Docker/Tailscale chains) to /etc/iptables/rules.v{4,6} — that is the boot-time
+# baseline, NOT something Ansible re-applies, so it does not reintroduce drift into the repo.
+- name: Persist iptables
+  ansible.builtin.command: netfilter-persistent save
+  changed_when: true

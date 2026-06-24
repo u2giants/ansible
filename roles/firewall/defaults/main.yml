@@ -1,13 +1,20 @@
 ---
-firewall_apply: false                  # second gate on top of enable_phase2
+# SSH lockdown — the only host-owned firewall rules. INPUT policy stays ACCEPT (default-allow);
+# these rules restrict only SSH. Everything else (Docker/Tailscale/fail2ban chains) is left to
+# the daemons that own them.
 firewall_ssh_port: 22
-firewall_tailscale_interface: "tailscale0"
-firewall_autorevert_seconds: 60
-firewall_allow_no_docker: false        # set true ONLY on a scratch box with no containers
-firewall_use_captured: true            # load roles/firewall/files/hetz.rules.v* (mode A); false = mode B template
-firewall_allowed_tcp:
-  - 22
-  - 80
-  - 443
-# firewall_rules_v4_raw: |             # paste captured `iptables-save` here for prod (mode A)
-# firewall_rules_v6_raw: |
+# SSH ports left OPEN to the public internet (sshd also listens here; ssh_hardening gates users).
+firewall_ssh_public_ports:
+  - 1904
+# Sources allowed to reach port 22 (everyone else is dropped). Confirmed live on hetz 2026-06-24.
+firewall_ssh_trusted_v4:
+  - "100.64.0.0/10"          # Tailscale (CGNAT)
+  - "127.0.0.1/32"           # localhost (cloudflared)
+  - "10.0.1.0/24"            # docker bridge subnet
+firewall_ssh_trusted_v6:
+  - "fd7a:115c:a1e0::/48"    # Tailscale IPv6 — VERIFY for this tailnet (`tailscale ip -6`)
+  - "::1/128"                # localhost
+firewall_lock_ipv6: true     # close the IPv6 port-22 gap (live v6 currently has no restriction)
+
+# NOTE: live INPUT also has a stale `--dport 18790 ACCEPT` (nothing listens there). It is left
+# UNMANAGED here — recommend removing it once confirmed unused; not done automatically.
