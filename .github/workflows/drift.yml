@@ -63,3 +63,17 @@ jobs:
             exit 1
           fi
           echo "No drift — live host matches the repo."
+
+      # Software-inventory drift (recovery R6): catch any package/binary/npm installed on the box
+      # outside Ansible by comparing the live inventory to the committed baseline.
+      - name: Software-inventory drift (vs baseline)
+        run: |
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new ai@100.66.37.58 \
+            'sudo bash -s' < bin/discover-software.sh > /tmp/live-software.txt
+          additions=$(comm -13 <(sort -u docs/baseline-software.txt) <(sort -u /tmp/live-software.txt))
+          if [ -n "$additions" ]; then
+            echo "::error::Software installed OUTSIDE Ansible (not in baseline-software.txt):"
+            echo "$additions"
+            exit 1
+          fi
+          echo "Software inventory matches the baseline."

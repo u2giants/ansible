@@ -68,7 +68,11 @@ plan below:
   verify), with the commands a future session runs. Include the **app-repo inventory** and the
   **backrest restore** steps.
 
-### R6 — Software-inventory drift (so the gap can't silently reopen)
+### R6 — Software-inventory drift (so the gap can't silently reopen)  ✅ DONE (2026-06-24)
+`bin/discover-software.sh` + committed `docs/baseline-software.txt` (218 entries) + a
+software-inventory check in `drift.yml` that flags anything on the box not in the baseline. Also
+made the `packages` role install the **full** 202-package manual apt set (not just a curated
+dozen), so a rebuild reproduces the exact footprint. No-op on prod. Original plan below:
 - New `bin/discover-software.sh` (full inventory) + a CI check that compares the box's installed
   apt packages / `/usr/local/bin` / global npm against what Ansible declares, and **flags anything
   not captured.** This makes "someone installed a tool by hand" a loud signal, extending drift

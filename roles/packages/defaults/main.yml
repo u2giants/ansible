@@ -1,17 +1,6 @@
 ---
-# Host CLIs / tooling installed from the vendor repos configured by the apt_repos role.
-# These are the tools the owner's AI sessions + MCP servers rely on. Confirmed installed on
-# hetz 2026-06-24. Docker engine is handled by the `docker` role; non-apt tools (go, supabase,
-# codex, gemini/claude npm CLIs, cloudflared binary) are handled by the `dev_tools` role (R2).
-tooling_packages:
-  - google-cloud-cli       # gcloud
-  - azure-cli              # az
-  - gh                     # GitHub CLI
-  - 1password-cli          # op
-  - nodejs                 # node + npm (NodeSource 20.x)
-  - postgresql-client      # psql
-  - restic                 # backups CLI
-  - ripgrep                # rg
-  - tailscale              # already core to connectivity; declared for rebuild completeness
-  - google-chrome-stable   # used for browser automation
-  - cloudflared            # /usr/bin/cloudflared; dev_tools symlinks it to /usr/local/bin for Tunnel 1
+# The full manual apt package set lives in files/apt-manual.txt (captured verbatim from the box
+# by bin/discover-software.sh). Regenerate it when packages are intentionally added/removed:
+#   ssh vps 'sudo bash -s' < bin/discover-software.sh | grep '^APT ' | sed 's/^APT  //' \
+#     | sort -u > roles/packages/files/apt-manual.txt
+# (and update docs/baseline-software.txt so the software-drift check stays in sync).

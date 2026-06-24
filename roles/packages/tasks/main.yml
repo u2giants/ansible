@@ -1,11 +1,22 @@
 ---
-# packages — install the host CLIs / tooling from the vendor repos (apt_repos must run first).
-# Additive and idempotent: on the live box these are already installed, so applying is a no-op.
-# See docs/RECOVERY-GAP-PLAN.md (R1).
+# packages — install the FULL set of manually-installed host packages, so a rebuild reproduces
+# the exact apt footprint (gap R1/R6). The list (files/apt-manual.txt) is captured verbatim from
+# the box by bin/discover-software.sh. Additive + idempotent: on the live box every package is
+# already present, so applying is a no-op. Requires apt_repos to have configured the vendor repos.
+#
+# Key CLIs in here (for humans): google-cloud-cli, azure-cli, gh, 1password-cli, nodejs,
+# postgresql-client-17, restic, ripgrep, tailscale, cloudflared, google-chrome-stable, docker-*.
+# Non-apt tools (go, supabase, codex, npm CLIs) are handled by the dev_tools role.
 
-- name: Install host CLIs / tooling from vendor repos
+- name: Load the captured manual apt package list
+  ansible.builtin.set_fact:
+    packages_apt_manual: >-
+      {{ lookup('ansible.builtin.file', 'apt-manual.txt').splitlines()
+         | map('trim') | reject('match', '^#') | select | list }}
+
+- name: Install all manually-installed apt packages (full host package set)
   ansible.builtin.apt:
-    name: "{{ tooling_packages }}"
+    name: "{{ packages_apt_manual }}"
     state: present
     update_cache: true
     cache_valid_time: 3600
