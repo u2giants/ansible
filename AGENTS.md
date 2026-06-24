@@ -16,9 +16,13 @@ system cron, host systemd units (Cloudflare Tunnel 1, the backup watchdog), and 
 - **Key moving parts:** `roles/` (one role per host concern), `playbooks/site.yml` (entrypoint,
   phase-gated), `inventory/` (hosts + non-secret vars), `.github/workflows/` (check / apply /
   drift), secrets from **1Password** at apply time.
-- **Outcome that matters:** if `hetz` is destroyed, a new Ubuntu box + this repo + the 1Password
-  vault + data backups = full recovery, and ~7 concurrent AI sessions can't cause conflicting
-  drift because every host change goes through one serialized apply path.
+- **Outcome that matters — THE MISSION (read [`docs/DISASTER-RECOVERY.md`](docs/DISASTER-RECOVERY.md)):**
+  the owner is not a sysadmin and must remember NOTHING. Success = they say **"rebuild everything"**
+  and the whole `hetz` environment is reconstructed from GitHub + backrest backups + 1Password +
+  this repo, authenticating only when prompted. So **every piece of software on the box must be
+  reproducible from Ansible (host) or Coolify+GitHub (apps)** — closing that gap is the active work
+  ([`docs/RECOVERY-GAP-PLAN.md`](docs/RECOVERY-GAP-PLAN.md)). Also: the serialized apply path stops
+  ~7 concurrent AI sessions from causing conflicting drift.
 
 **Scope boundary (the most important rule): Ansible owns the host. Coolify owns the apps.**
 Never manage application containers or Coolify-owned resources here — it causes reconcile loops.
@@ -41,6 +45,7 @@ Then load additional docs only when relevant:
 
 | Task / question | Read these docs | Usually do not need |
 |---|---|---|
+| Understand WHY this project exists (the mission) | `docs/DISASTER-RECOVERY.md`, `docs/RECOVERY-GAP-PLAN.md` | role internals until needed |
 | Quick repo orientation | `README.md`, `AGENTS.md` | `docs/ANSIBLE-IMPLEMENTATION-PLAN.md` (long); role READMEs |
 | Modify a host role's behavior | `AGENTS.md`, the relevant `roles/<role>/README.md`, `docs/architecture.md` | `docs/deployment.md` unless the apply flow changes |
 | Add/change config, vars, secrets, runtime settings | `AGENTS.md`, `docs/configuration.md`, `docs/deployment.md` if CI/runtime is affected | unrelated role READMEs |
