@@ -76,18 +76,61 @@ rebuilt from scratch; the inventory diff was clean. The **only** unproven step i
 **data-restore** drill (restoring coolify-db + /data/coolify so Coolify knows the ~20 apps) — that
 lives in the `backrest-wiz` repo, not here, and needs the real backups.
 
-### Optional follow-ups remain:
+### What's next — remaining work (none urgent; ranked by real value)
 
-- **Wire drift alerts to a channel** — `drift.yml` fails on drift but the alert is just a GitHub
-  Actions failure; route it to where the owner will see it (e.g. the backup-alert channel).
-- **cloudflared token management** — `cloudflared_manage_token` is `false` (manual); flip true only
-  if you want CI/rebuild to (re)write the env from `op://vibe_coding/cf-tunnel-hetz`.
-- **Clean the stale `--dport 18790` firewall rule** (nothing listens there) — confirm then remove.
-- **Extra users `nova`/`nasbridge`** — unknown purpose; encode in `users` if wanted.
-- **Fold in the DigitalOcean `backrest-wiz` droplet** as a second inventory group (plan §2.3).
+> ⚠️ **FIRST, RE-CHECK FOR GAPS between what Ansible records and what's actually on the server.**
+> The recovery mission only holds if *every* piece of software/config on `hetz` is captured in code.
+> We closed the known gaps (R1–R7), but new things get installed/changed over time. On any handoff,
+> **re-audit**:
+> - `ssh vps 'sudo bash -s' < bin/discover-software.sh` and diff vs `docs/baseline-software.txt`
+>   (the daily `drift.yml` software step already does this — check it's green and investigate any
+>   additions). If something new is legit, add it to a role + regenerate the baseline/`apt-manual.txt`.
+> - `ssh vps 'sudo bash -s' < bin/discover.sh` and compare enabled services, cron, `/etc` configs,
+>   systemd units, listening ports, and `/usr/local/bin` against what the roles declare. Anything the
+>   roles don't reproduce is a recovery gap — capture it (same "vendor-verbatim, no-op-on-prod" pattern).
+> - Confirm the config `drift.yml` check is green (phase1 `--check` = 0 changes).
+> Treat "is the repo still a complete description of the box?" as a standing question, not a one-time task.
+
+**Higher value, small effort**
+- **Wire drift alerts to a channel the owner actually watches.** `drift.yml` (config + software
+  drift) *fails the workflow* on drift, which only emails on Actions failure. Route it to Slack/
+  Telegram/etc. so detection becomes *noticed*. This is the highest-value small item for the
+  "catch changes I don't know about" goal.
+- **Exact-path polish (R7 finding).** A rebuild puts `codex`/`gemini`/`supabase` in `/usr/bin` (via
+  npm/.deb) but prod has them in `/usr/local/bin`. They work either way; add symlinks in `dev_tools`
+  for byte-exact reproduction.
+
+**The one bigger thing — the second server + the backup system**
+- **`backrest-wiz` / backrest — cleanup, upgrade, 3-2-1, restore-test, and Ansible integration.**
+  This is the only substantial remaining work and it's the mission's "Pillar 4" (data restore). A
+  full **comprehensive plan lives in that repo's `HANDOFF.md`** (`u2giants/backrest-wiz`) — read it.
+  In short: the DigitalOcean backup-monitor **droplet** is a whole second server NOT yet under this
+  pipeline (fold it in as the `[do_backup_wiz]` inventory group — already stubbed in `hosts.ini`);
+  the **backrest producer** on `hetz` (`/opt/backrest`) is set up imperatively and **not in a role**
+  (only its watchdog is — `backrest_watchdog`), so a `hetz` rebuild would NOT restore the backup
+  producer; and the backups themselves have **never been restore-tested** (the biggest risk). When
+  you do the Ansible-integration phase there, you're extending *this* pipeline to cover both servers.
+
+**Quick cleanups (safe, do anytime)**
+- **Clean the stale `--dport 18790` firewall rule** (nothing listens there) — confirm then remove
+  from the `firewall` role's allowed sources.
+- **Replace the owner's `916-alien` private-key copy left in WSL `~/.ssh/`** — no longer needed now
+  that CI has its own key (`op://vibe_coding/ci-deploy-ssh`).
+- **CI Node-20 deprecation warnings** — `1password/load-secrets-action`, `actions/checkout`,
+  `actions/setup-python` warn about Node 20→24; cosmetic, bump action versions when convenient.
+
+**Needs the owner's knowledge (can't be done blind)**
+- **Extra login users `nova` / `nasbridge`** — unknown purpose (nasbridge hints at a Synology NAS
+  bridge); encode in the `users` role or remove, once the owner says what they are.
 - **Phase 3 app-layer secrets** — restic/Spaces/oauth2-proxy/CF-DNS live in app/Coolify configs;
-  cleaning those belongs in their own repos, not here (owner said restic/Spaces are in a personal vault).
-- **Replace the owner's `916-alien` key copy in WSL** — no longer needed now that CI has its own key.
+  cleaning those belongs in their own repos (owner confirmed restic/Spaces are in a personal vault).
+
+**Optional / by-design**
+- **`cloudflared_manage_token`** stays `false` (manual). Flip true only for a rebuild/CI run that
+  must (re)write the tunnel env from `op://vibe_coding/cf-tunnel-hetz`.
+- **`coolify` install** is proven on a fresh box (R7), but the **backrest data-restore** into a
+  rebuilt Coolify is the one un-rehearsed recovery step — drill it on a sized box before a real
+  disaster (it's `backrest-wiz`'s domain).
 
 ## Decisions made (and why)
 
@@ -108,24 +151,12 @@ lives in the `backrest-wiz` repo, not here, and needs the real backups.
 
 ## Exact next action
 
-Phase 2 is proven on scratch. Remaining, in order of safety:
-
-1. ~~**Apply `docker` to prod**~~ ✅ done 2026-06-24 (no-op + package hold; no restart).
-2. ~~**`firewall` role needs a REWORK**~~ ✅ **DONE + applied to prod 2026-06-24.** Reworked from
-   full-`iptables-save` capture (which drifted daily — Docker rewrites `nat` chains) to declarative
-   `ansible.builtin.iptables` rules managing ONLY the host-owned `filter INPUT` SSH lockdown
-   (port-22 trusted-source allow + drop; 1904 left open). Docker/Tailscale/fail2ban chains left
-   alone. Applying was a **no-op on IPv4** (rules already matched) and **closed an IPv6 gap** (live
-   v6 had no port-22 restriction — now locked to Tailscale-v6/localhost). Idempotent (2nd run = 0
-   changes), no drift. `files/hetz.rules.v*` kept only as a disaster-recovery snapshot.
-3. **Apply `cloudflared_coolify` to prod** — needs the real Tunnel 1 token from 1Password
-   (`op://vibe_coding/cf-tunnel-hetz`); restarts the live tunnel, so validate reconnect.
-   Overlaps with Phase 3 (secrets).
-
-Then Phase 3 (secrets) and Phase 4 (CI auto-apply). Other options if not continuing Phase 2:
-2. **Phase 4:** create the GitHub secrets + `ENABLE_AUTO_APPLY`, then the pipeline runs applies
-   instead of manual WSL.
-3. **Phase 3:** migrate secrets into 1Password one at a time with validation/rollback (plan §5.2).
+Phases 0–4 and recovery gaps R1–R7 are **done and applied to prod** (the whole host + Coolify
+install rebuild is validated). There is **no required next step** — pick from "What's next" above.
+On any handoff, **start by re-checking for gaps** (the boxed directive at the top of that section):
+re-run `bin/discover-software.sh` + `bin/discover.sh` against `hetz` and confirm the repo still
+fully describes the box. The single biggest *outstanding* piece of real work is the
+**`backrest-wiz` cleanup + Ansible integration** (its repo's `HANDOFF.md` has the full plan).
 
 ## Known risks / unknowns
 
@@ -133,7 +164,12 @@ Then Phase 3 (secrets) and Phase 4 (CI auto-apply). Other options if not continu
   disabled — confirm intent with the owner (not touched).
 - **Extra login users `nova`, `nasbridge`** exist; purpose unknown; `users` role manages only
   `ai`. Verify purpose before encoding (`getent passwd` on the box).
-- `--check` is not fully reliable for command/shell tasks — prove risky roles on scratch, don't
+- **`--check` is not fully reliable for command/shell tasks** — prove risky roles on scratch, don't
   trust prod `--check` (plan §4a).
-- A copy of the owner's `916-alien` SSH **private key** lives in WSL `~/.ssh/` to enable applies;
-  replace with a dedicated CI key in Phase 4.
+- **A copy of the owner's `916-alien` private key lives in WSL `~/.ssh/`** to enable manual applies;
+  remove it now that CI has its own key.
+- **The recovery is only as good as a re-checked inventory** — software/config installed outside the
+  pipeline silently breaks the "rebuild everything" guarantee. The daily `drift.yml` (config +
+  software) is the guard; keep it green and act on any failure.
+- **`backrest` data-restore has never been rehearsed** — a host rebuild can stand up Coolify but the
+  actual app-state restore from backups is unproven (see `backrest-wiz`).
