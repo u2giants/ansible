@@ -1,0 +1,6 @@
+[Unit]
+Description=Repair DNS if external resolution is broken
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/fix-dns-if-broken.sh

@@ -17,6 +17,11 @@ comm -23 <(apt-mark showmanual | sort) \
 # Binaries / scripts dropped into /usr/local/bin (the non-apt tools + glue scripts)
 ls -1 /usr/local/bin 2>/dev/null | sort | sed 's/^/BIN  /'
 
+# Admin scripts dropped into /usr/local/sbin (e.g. the dns watchdog). Scanned because a
+# host-side glue script (fix-dns-if-broken.sh) hid here and escaped the drift check until the
+# 2026-06-25 gap re-audit added this line.
+ls -1 /usr/local/sbin 2>/dev/null | sort | sed 's/^/SBIN /'
+
 # Global npm packages (name@version)
 if command -v npm >/dev/null 2>&1; then
   npm ls -g --depth=0 --parseable 2>/dev/null \

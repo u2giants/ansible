@@ -4,3 +4,8 @@
     name: systemd-journald
     state: restarted
   # Safe to restart: journald restart does not affect Docker/Coolify/containers.
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  # Picks up unit-file removals (e.g. the socks5-home-tunnel teardown below).

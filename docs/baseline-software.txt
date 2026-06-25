@@ -211,6 +211,7 @@ BIN  go
 BIN  gofmt
 BIN  restart-coolify-proxy-after-docker.sh
 BIN  supabase
+SBIN fix-dns-if-broken.sh
 NPM  @anthropic-ai/claude-code
 NPM  corepack
 NPM  @google/gemini-cli

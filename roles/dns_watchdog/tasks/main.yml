@@ -1,0 +1,45 @@
+---
+# dns_watchdog — installs the systemd timer that self-heals host DNS when external resolution
+# breaks (the counterpart to dns_hardening's FallbackDNS, born of the May 2026 DNS cascade
+# outage — AGENTS §13). Every 5 minutes a oneshot service tests real resolution and, if broken,
+# restarts systemd-resolved + flushes caches.
+#
+# The script + units are vendored VERBATIM from the live box (captured 2026-06-25 during the
+# gap re-audit). It was running on prod but had never been wrapped in a role, so a rebuild would
+# NOT have reproduced it — closing that recovery gap. Deploying byte-for-byte keeps re-applies
+# idempotent; do not "improve" these files here or they'll drift from prod.
+
+- name: Install the DNS-repair script
+  ansible.builtin.copy:
+    src: fix-dns-if-broken.sh
+    dest: /usr/local/sbin/fix-dns-if-broken.sh
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install dns-watchdog service unit
+  ansible.builtin.copy:
+    src: dns-watchdog.service
+    dest: /etc/systemd/system/dns-watchdog.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Install dns-watchdog timer unit
+  ansible.builtin.copy:
+    src: dns-watchdog.timer
+    dest: /etc/systemd/system/dns-watchdog.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Flush handlers so the timer unit exists before we enable it
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start the dns-watchdog timer
+  ansible.builtin.systemd:
+    name: dns-watchdog.timer
+    enabled: true
+    state: started

@@ -62,6 +62,10 @@
       tags: [phase1, dns_hardening]
       when: enable_phase1 | bool
 
+    - role: dns_watchdog
+      tags: [phase1, dns_watchdog]
+      when: enable_phase1 | bool
+
     - role: backrest_watchdog
       tags: [phase1, backrest_watchdog]
       when: enable_phase1 | bool

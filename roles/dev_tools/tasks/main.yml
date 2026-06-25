@@ -83,3 +83,20 @@
     dest: /usr/local/bin/cloudflared
     state: link
     force: true
+
+# ---- Re-home legacy nasbridge-owned tools to root (gap re-audit 2026-06-25) ----
+# On prod these system-wide CLIs were owned by the stray `nasbridge` (uid 1001) — the accidental
+# identity that once installed them. /usr/local tooling must be root-owned, and this MUST run
+# before the users role removes nasbridge, or the files would be left orphaned on a now-dead uid.
+# A fresh rebuild installs them as root already, so this is a no-op there and on a corrected box.
+- name: Re-home global CLIs under /usr/local to root (supabase + gemini-cli)
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    owner: root
+    group: root
+    recurse: "{{ item.recurse | default(false) }}"
+    state: "{{ item.state | default('file') }}"
+  loop:
+    - { path: /usr/local/bin/supabase }
+    - { path: /usr/local/lib/node_modules/@google/gemini-cli, state: directory, recurse: true }
+  failed_when: false   # paths may be absent on a fresh box before npm/.deb installs run

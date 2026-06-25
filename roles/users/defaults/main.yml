@@ -3,3 +3,16 @@ managed_user: "ai"
 # PUBLIC keys only. Leave empty until the CI deploy key exists; an empty list is a no-op,
 # so this role will never strip existing keys and lock anyone out.
 users_authorized_keys: []
+
+# Login users that must NOT exist on the box (removed for byte-exact recovery). Both were found
+# in the 2026-06-25 gap re-audit as un-owned accounts the repo didn't reproduce:
+#   - nova:      orphan system account (uid 108), no home dir, no key, never logged in, no
+#                package owns it — inert cruft.
+#   - nasbridge: uid 1001, never logged in, no key, no process/unit/cron/container uses it. It
+#                was merely the accidental identity that once ran a global `npm install -g`
+#                (@google/gemini-cli) + the supabase install. dev_tools re-homes those tools to
+#                root BEFORE this removal so nothing is left orphaned.
+# Confirmed unrelated to popdam (Coolify apps) or the "Gemini MCP bridge" unit (runs as `ai`).
+users_absent:
+  - nova
+  - nasbridge

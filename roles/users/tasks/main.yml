@@ -28,3 +28,13 @@
     exclusive: false                   # never wipe keys we don't manage (lockout risk)
   loop: "{{ users_authorized_keys }}"
   when: users_authorized_keys | length > 0
+
+- name: Remove un-owned login users found in the gap re-audit (nova, nasbridge)
+  ansible.builtin.user:
+    name: "{{ item }}"
+    state: absent
+    remove: true       # delete the home dir + mail spool too (both are inert/skel-only)
+    force: true        # neither is logged in; force handles the edge case if one ever is
+  loop: "{{ users_absent }}"
+  # dev_tools (runs earlier) re-homes the global CLIs nasbridge owned to root, so no /usr/local
+  # file is orphaned by this removal. Idempotent: a no-op once the users are gone (e.g. rebuild).

@@ -52,3 +52,22 @@
       [Journal]
       SystemMaxUse={{ base_journald_max_use }}
   notify: Restart journald
+
+# ---- Tear down the deprecated socks5-home-tunnel service (gap re-audit 2026-06-25) ----
+# An SSH SOCKS proxy to a home machine binding 0.0.0.0:1080 — internet-exposed given the host's
+# ACCEPT INPUT policy (firewall only locks down port 22). It was found enabled + crash-looping
+# (home box unreachable, nothing listening). The plan always said it must stay OFF (§3.5) and the
+# owner confirmed it's unused. Stop+disable+remove so a rebuild never recreates it. Idempotent:
+# a no-op once the unit is gone (e.g. a fresh box where it never existed).
+- name: Disable the deprecated socks5-home-tunnel service
+  ansible.builtin.systemd:
+    name: socks5-home-tunnel.service
+    state: stopped
+    enabled: false
+  failed_when: false      # unit may already be absent (fresh box); removal below is authoritative
+
+- name: Remove the socks5-home-tunnel unit file
+  ansible.builtin.file:
+    path: /etc/systemd/system/socks5-home-tunnel.service
+    state: absent
+  notify: Reload systemd

@@ -145,6 +145,7 @@ Host-level systemd services/units that **this repo manages or relies on**:
 |---|---|---|---|
 | `cloudflared-coolify.service` | Cloudflare Tunnel 1 (`coolify.designflow.app`) | `roles/cloudflared_coolify` (Phase 2, gated) | Tunnels 2/3 are Coolify's — never touch |
 | `backrest-dump-watchdog.timer` + `.service` | Self-heal backrest backup agent after docker.sock staleness | `roles/backrest_watchdog` (Phase 1, applied) | units vendored verbatim from `backrest-wiz` |
+| `dns-watchdog.timer` + `.service` | Self-heal host DNS (restart `systemd-resolved`) if external resolution breaks | `roles/dns_watchdog` (Phase 1) | script in `/usr/local/sbin`; vendored verbatim; counterpart to `dns_hardening` |
 | `systemd-resolved` | Host DNS; fallback-dns drop-in | `roles/dns_hardening` (Phase 1, applied) | restarted by the role on change |
 | `systemd-journald` | Logs; size cap drop-in | `roles/base` (Phase 1, applied) | restarted by the role on change |
 | `docker.service` | Engine; `daemon.json` only | `roles/docker` (Phase 2, gated) | **never auto-restarted** by Ansible |

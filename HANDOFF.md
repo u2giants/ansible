@@ -33,6 +33,16 @@ cause drift. Phased plan with hard gates: [`docs/ANSIBLE-IMPLEMENTATION-PLAN.md`
   of all 12 u2giants repos (popdam3, theoracle, compshop, popcrm-web, poppim-web,
   synology-monitor, albert-standards, backrest-wiz, seafile, hiclaw, devops-mcp, authentik).
 - **Local validation:** `ansible-lint` clean (2 accepted warnings) + `--syntax-check` green in WSL.
+- **Gap re-audit — 2026-06-25.** Software inventory (0 drift) and phase1 config `--check` (0
+  changes) both clean. Closed the remaining host-layer gaps the audit surfaced: new
+  **`dns_watchdog`** role (the live DNS self-heal timer/script in `/usr/local/sbin`, previously
+  un-roled — captured verbatim, no-op on prod); removed the deprecated **`socks5-home-tunnel`**
+  service (owner-confirmed unused; was enabled + crash-looping, exposed `0.0.0.0:1080`); removed
+  the un-owned login users **`nova`** (orphan) and **`nasbridge`** (accidental global-install
+  identity — its `supabase`/`gemini-cli` tools re-homed to root by `dev_tools` first). Also fixed
+  the audit blind spot that hid the watchdog: `bin/discover-software.sh` now scans
+  `/usr/local/sbin` and the baseline was regenerated. Previewed against prod: `changed=4`,
+  `dns_watchdog`=0. **Not yet applied/pushed** at time of writing — see "Exact next action".
 
 ## Partially done / current state
 
@@ -120,8 +130,6 @@ lives in the `backrest-wiz` repo, not here, and needs the real backups.
   `actions/setup-python` warn about Node 20→24; cosmetic, bump action versions when convenient.
 
 **Needs the owner's knowledge (can't be done blind)**
-- **Extra login users `nova` / `nasbridge`** — unknown purpose (nasbridge hints at a Synology NAS
-  bridge); encode in the `users` role or remove, once the owner says what they are.
 - **Phase 3 app-layer secrets** — restic/Spaces/oauth2-proxy/CF-DNS live in app/Coolify configs;
   cleaning those belongs in their own repos (owner confirmed restic/Spaces are in a personal vault).
 
@@ -160,10 +168,6 @@ fully describes the box. The single biggest *outstanding* piece of real work is 
 
 ## Known risks / unknowns
 
-- **`socks5-home-tunnel.service` is enabled** on the box but the plan says it should stay
-  disabled — confirm intent with the owner (not touched).
-- **Extra login users `nova`, `nasbridge`** exist; purpose unknown; `users` role manages only
-  `ai`. Verify purpose before encoding (`getent passwd` on the box).
 - **`--check` is not fully reliable for command/shell tasks** — prove risky roles on scratch, don't
   trust prod `--check` (plan §4a).
 - **A copy of the owner's `916-alien` private key lives in WSL `~/.ssh/`** to enable manual applies;
