@@ -98,8 +98,13 @@ and diffed its software inventory vs the prod baseline. Results:
 - **Diff was clean:** the only deltas were `hc-utils` (Hetzner-only), roles not run in the scoped
   test (`backrest_watchdog`, `coolify`), `/usr/bin` vs `/usr/local/bin` path nuances for
   codex/gemini/supabase, and DO-vs-Hetzner base-image packages. No unexplained gaps.
-- **NOT yet proven:** the **Coolify install** (needs a ≥2 GB box) and the **data restore** from
-  backrest. Do those on a properly-sized box before a real disaster. Original plan below:
+- **Coolify install PROVEN (2026-06-24, on a 2 GB box):** the `coolify` role ran the official
+  installer, the **version pin worked** (installed exactly 4.1.2, matching prod), and all 5
+  Coolify containers (coolify/db/redis/realtime/sentinel) came up **healthy**; `/data/coolify`,
+  the glue scripts, and the units all deployed.
+- **Only remaining:** the **backrest data-restore drill** — restoring `coolify-db` + `/data/coolify`
+  + app volumes into the rebuilt Coolify so it knows the ~20 apps. That is **backrest's domain**
+  (the `backrest-wiz` repo), not this repo, and needs the real backups. Original plan below:
 - Provision a throwaway box, run bootstrap + the full pipeline + a restore, and **diff** it against
   prod: package lists, binaries, enabled services, listening ports, Coolify apps. Every difference
   is a bug to chase to zero. This is what *proves* the mission is met (§8.3 of the plan).

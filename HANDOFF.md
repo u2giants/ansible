@@ -68,7 +68,15 @@ cause drift. Phased plan with hard gates: [`docs/ANSIBLE-IMPLEMENTATION-PLAN.md`
 
 The scratch box (`165.227.208.178`) is to be **destroyed** by the owner once results are reviewed.
 
-## Status: core project COMPLETE (Phases 0–4). Optional follow-ups remain:
+## Status: COMPLETE — Phases 0–4 + recovery gaps R1–R7 done and validated.
+
+The full rebuild is **proven on a bare box** (2026-06-24, R7): toolchain (apt repos, 202 packages,
+Go/supabase/codex/npm CLIs, Docker) AND Coolify install (4.1.2 pinned, all containers healthy) all
+rebuilt from scratch; the inventory diff was clean. The **only** unproven step is the backrest
+**data-restore** drill (restoring coolify-db + /data/coolify so Coolify knows the ~20 apps) — that
+lives in the `backrest-wiz` repo, not here, and needs the real backups.
+
+### Optional follow-ups remain:
 
 - **Wire drift alerts to a channel** — `drift.yml` fails on drift but the alert is just a GitHub
   Actions failure; route it to where the owner will see it (e.g. the backup-alert channel).
