@@ -240,6 +240,25 @@ Why: cross-platform authoring.
 Do not change because: removing LF enforcement breaks scripts on the host; without the env var,
 local runs silently lose `roles_path`/inventory.
 
+### The `packages` role skips unavailable packages; never re-add `google-chrome.list`
+
+Looks like: `packages` doesn't plainly `apt install` the 202-package list — it pre-filters to
+repo-resolvable packages and reports the rest. And `roles/apt_repos/files/sources/` has
+`google-chrome.sources` but no `google-chrome.list`.
+
+Actually: both are deliberate, learned from the R7 bare-box rebuild test (2026-06-24):
+- The box's `google-chrome.list` was **keyless** (no `signed-by=`) and broke `apt update` on a fresh
+  box with `NO_PUBKEY`. It was removed — the keyed `google-chrome.sources` installs Chrome, and the
+  chrome package recreates the `.list` post-install.
+- The full manual list includes provider/boot packages (e.g. `hc-utils` (Hetzner-only), grub/kernel)
+  that don't resolve or can't configure on a different provider/box. The role installs only what apt
+  can resolve and **loudly reports the rest** so a rebuild doesn't hard-fail on one bad package.
+
+Do not change because: re-adding the keyless `google-chrome.list` re-breaks `apt update` on every
+rebuild; switching to a plain `apt: name=<full list>` makes a rebuild hard-fail on the first
+provider-specific package. (Also: small rebuild boxes need swap + ≥25 GB disk — Chrome OOM'd / npm
+hit ENOSPC on a 458 MB/8.7 GB box; not a role bug. See `docs/RECOVERY-GAP-PLAN.md` R7.)
+
 ## 11. Credentials and environment
 
 No secret values are stored in this repo. Secrets live in **1Password** (vault `vibe_coding`) and

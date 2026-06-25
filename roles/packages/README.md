@@ -10,6 +10,11 @@ ensures every one is present. Includes the key CLIs (`gcloud`, `az`, `gh`, `op`,
 `restic`, `rg`, Tailscale, `cloudflared`, Chrome, Docker) plus everything else manually installed
 (vim, tmux, build-essential, …). Requires `apt_repos` to have configured the vendor repos first.
 
+**Resilient by design (R7):** the role first filters the list to packages apt can actually resolve
+in the configured repos, installs those, and **loudly reports the rest** — so a rebuild on a
+slightly different box (e.g. a provider-specific package like `hc-utils`) does not hard-fail. On a
+same-provider Hetzner rebuild everything resolves; on the live box it's a 0-change no-op.
+
 ## Keeping it current
 When you intentionally add/remove a package, regenerate the list and the baseline:
 ```bash
