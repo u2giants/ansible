@@ -1,12 +1,13 @@
 ---
-# packages — install the FULL set of manually-installed host packages, so a rebuild reproduces
-# the exact apt footprint (gap R1/R6). The list (files/apt-manual.txt) is captured verbatim from
-# the box by bin/discover-software.sh. Additive + idempotent: on the live box every package is
-# already present, so applying is a no-op. Requires apt_repos to have configured the vendor repos.
+# packages — install the FULL set of manually-installed host packages so a rebuild reproduces the
+# exact apt footprint (gap R1/R6). The list (files/apt-manual.txt) is captured verbatim from the
+# box by bin/discover-software.sh. Additive + idempotent: on the live box every package is already
+# present (no-op). Requires apt_repos to have configured the vendor repos first.
 #
-# Key CLIs in here (for humans): google-cloud-cli, azure-cli, gh, 1password-cli, nodejs,
-# postgresql-client-17, restic, ripgrep, tailscale, cloudflared, google-chrome-stable, docker-*.
-# Non-apt tools (go, supabase, codex, npm CLIs) are handled by the dev_tools role.
+# RESILIENT: a rebuild must not hard-fail because one package is unavailable in the configured
+# repos (e.g. a provider-specific package like hc-utils on a non-Hetzner box, or a package later
+# pulled from upstream). So we install only what apt can resolve and LOUDLY report the rest for the
+# human to handle. On a same-provider Hetzner rebuild everything resolves.
 
 - name: Load the captured manual apt package list
   ansible.builtin.set_fact:
@@ -14,9 +15,21 @@
       {{ lookup('ansible.builtin.file', 'apt-manual.txt').splitlines()
          | map('trim') | reject('match', '^#') | select | list }}
 
-- name: Install all manually-installed apt packages (full host package set)
+- name: Determine which manual packages are available in the configured repos
+  ansible.builtin.shell:
+    cmd: "for p in {{ packages_apt_manual | join(' ') }}; do apt-cache show \"$p\" >/dev/null 2>&1 && echo \"$p\"; done"
+  register: packages_available
+  changed_when: false
+  check_mode: false
+
+- name: Report manual packages NOT available in any configured repo (handle manually after rebuild)
+  ansible.builtin.debug:
+    msg: "UNAVAILABLE (skipped, not in any configured repo): {{ packages_apt_manual | difference(packages_available.stdout_lines) }}"
+  when: (packages_apt_manual | difference(packages_available.stdout_lines)) | length > 0
+
+- name: Install all available manual apt packages (full host package set)
   ansible.builtin.apt:
-    name: "{{ packages_apt_manual }}"
+    name: "{{ packages_available.stdout_lines }}"
     state: present
     update_cache: true
     cache_valid_time: 3600

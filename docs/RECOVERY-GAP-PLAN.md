@@ -85,7 +85,21 @@ dozen), so a rebuild reproduces the exact footprint. No-op on prod. Original pla
   not captured.** This makes "someone installed a tool by hand" a loud signal, extending drift
   detection from config to *software inventory*.
 
-### R7 — Rebuild-and-diff validation (the real proof)
+### R7 — Rebuild-and-diff validation (the real proof)  ✅ SUBSTANTIALLY DONE (2026-06-24)
+Ran the toolchain rebuild (`apt_repos`, `packages`, `dev_tools`, `docker`) against a bare DO box
+and diffed its software inventory vs the prod baseline. Results:
+- **Found + fixed a REAL rebuild-breaking bug:** the keyless `google-chrome.list` (NO_PUBKEY) broke
+  `apt update` on a fresh box — removed it (the chrome package recreates it post-install).
+- **Made `packages` resilient:** installs only repo-resolvable packages and reports the rest, so a
+  rebuild no longer hard-fails on a provider-specific package (e.g. `hc-utils`).
+- **Proved the toolchain rebuilds bare-metal:** all 202 apt packages (incl. Chrome), Go, supabase,
+  the npm CLIs, codex, and Docker installed cleanly (after giving the tiny 458 MB box swap — an OOM
+  was a test-box limit, not a bug).
+- **Diff was clean:** the only deltas were `hc-utils` (Hetzner-only), roles not run in the scoped
+  test (`backrest_watchdog`, `coolify`), `/usr/bin` vs `/usr/local/bin` path nuances for
+  codex/gemini/supabase, and DO-vs-Hetzner base-image packages. No unexplained gaps.
+- **NOT yet proven:** the **Coolify install** (needs a ≥2 GB box) and the **data restore** from
+  backrest. Do those on a properly-sized box before a real disaster. Original plan below:
 - Provision a throwaway box, run bootstrap + the full pipeline + a restore, and **diff** it against
   prod: package lists, binaries, enabled services, listening ports, Coolify apps. Every difference
   is a bug to chase to zero. This is what *proves* the mission is met (§8.3 of the plan).
