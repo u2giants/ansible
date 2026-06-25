@@ -41,8 +41,9 @@ cause drift. Phased plan with hard gates: [`docs/ANSIBLE-IMPLEMENTATION-PLAN.md`
   the un-owned login users **`nova`** (orphan) and **`nasbridge`** (accidental global-install
   identity — its `supabase`/`gemini-cli` tools re-homed to root by `dev_tools` first). Also fixed
   the audit blind spot that hid the watchdog: `bin/discover-software.sh` now scans
-  `/usr/local/sbin` and the baseline was regenerated. Previewed against prod: `changed=4`,
-  `dns_watchdog`=0. **Not yet applied/pushed** at time of writing — see "Exact next action".
+  `/usr/local/sbin` and the baseline was regenerated. **Applied to prod 2026-06-25** via CI
+  auto-apply (`changed=4`); idempotency gate passed (re-run `--check` = `changed=0`); live box
+  verified (users gone, socks5 unit gone, tools `root`-owned, `dns-watchdog.timer` active).
 
 ## Partially done / current state
 
