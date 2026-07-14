@@ -87,6 +87,12 @@ cron_glue_entries:
     job: "/home/ai/bin/sync-infra-docs.sh >> /home/ai/logs/sync-infra-docs.log 2>&1"
     minute: "*/15"
     # The script itself is NOT managed here — it lives in its source repo.
+  - name: "sync claude memory across machines"  # ai crontab, added 2026-07-14
+    user: "{{ managed_user }}"
+    job: "/worksp/ai-devops/bin/ai-memory-sync >> /home/ai/logs/ai-memory-sync.log 2>&1"
+    minute: "*/30"
+    # Keeper script lives in the ai-devops repo (isolated clone + secret gate);
+    # NOT managed here. Ansible owns only that this cron entry exists.
 # NOT adopted (app-layer, owned by the HiClaw repo per plan §4a — 5 minute-by-minute
 # /worksp/hiclaw/*-keeper.sh entries on the box). Left to that repo on purpose.
 
