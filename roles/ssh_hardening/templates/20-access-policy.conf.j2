@@ -9,9 +9,14 @@ PubkeyAuthentication yes
 PasswordAuthentication no
 PermitRootLogin no
 
+# Key-only trusted sources must be matched first: sshd uses the first obtained value for each
+# keyword, so this preserves prohibit-password even when the broader trusted block allows it.
+Match Address {{ ssh_trusted_root_key_only_sources | join(',') }}
+    PermitRootLogin prohibit-password
+
 # Trusted sources (Tailscale + localhost/cloudflared): full access by key OR password,
 # including root — so a machine with NO ssh key can still get in over Tailscale (break-glass).
-Match Address {{ ssh_trusted_sources | join(',') }}
+Match Address {{ ssh_trusted_root_password_sources | join(',') }}
 {% if ssh_trusted_root_password %}
     PermitRootLogin yes
     PasswordAuthentication yes

@@ -15,7 +15,10 @@
     that:
       - ssh_internet_user | length > 0
       - ssh_trusted_sources | length > 0
-    fail_msg: "ssh_internet_user and ssh_trusted_sources must be set, or this would lock SSH down wrong."
+      - ssh_trusted_root_key_only_sources | difference(ssh_trusted_sources) | length == 0
+      - ssh_trusted_root_password_sources | difference(ssh_trusted_sources) | length == 0
+      - ssh_trusted_root_key_only_sources | intersect(ssh_trusted_root_password_sources) | length == 0
+    fail_msg: "SSH trusted-source policy is incomplete or overlapping; refusing an unsafe apply."
 
 - name: Deploy and validate the SSH access policy
   block:
