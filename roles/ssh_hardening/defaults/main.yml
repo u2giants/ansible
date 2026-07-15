@@ -14,3 +14,13 @@ ssh_trusted_sources:
   - "fd7a:115c:a1e0::/48"    # Tailscale IPv6 (ULA prefix) — VERIFY for this tailnet
   - "127.0.0.1"              # localhost (cloudflared SSH lands here)
   - "::1"
+  - "10.0.1.0/24"            # Coolify Docker bridge (root key-only)
+# Trusted sources that must remain key-only even when trusted root passwords are enabled.
+ssh_trusted_root_key_only_sources:
+  - "10.0.1.0/24"
+# Trusted sources where the existing break-glass root-password policy remains enabled.
+ssh_trusted_root_password_sources:
+  - "100.64.0.0/10"
+  - "fd7a:115c:a1e0::/48"
+  - "127.0.0.1"
+  - "::1"
