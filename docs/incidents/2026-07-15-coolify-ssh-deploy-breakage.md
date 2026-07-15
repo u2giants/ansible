@@ -32,8 +32,9 @@ was applied on **2026-07-14 16:32**, rendering `/etc/ssh/sshd_config.d/20-access
   → `PermitRootLogin prohibit-password`
 - `Match Address *,!<trusted>` (the public-internet bucket) → `AllowUsers ai` (root not allowed)
 
-The controlling variable is `ssh_trusted_sources` in
-[`roles/ssh_hardening/defaults/main.yml`](../../roles/ssh_hardening/defaults/main.yml).
+At the time of the break the single controlling variable was `ssh_trusted_sources` in
+[`roles/ssh_hardening/defaults/main.yml`](../../roles/ssh_hardening/defaults/main.yml) (the fix
+below restructured this into separate key-only / password source lists — see **The fix**).
 
 **Why that broke deploys:** Coolify performs deploys by SSHing **as `root`** to
 `host.docker.internal` from the **Docker bridge network `10.0.1.0/24`** (observed source
@@ -53,9 +54,12 @@ and still matched Coolify's stored private key. The access *policy* refused it, 
 
 ## The warning / do-not-repeat
 
-Any future tightening of `ssh_trusted_sources` / `AllowUsers` / `PermitRootLogin` in the
-`ssh_hardening` role **MUST preserve root SSH (key-only) from the Docker bridge `10.0.1.0/24`**,
-because **Coolify's deploy engine connects as root over that network** to `host.docker.internal`.
+Any future tightening of the `ssh_hardening` role's access policy **MUST preserve root SSH
+(key-only) from the Docker bridge `10.0.1.0/24`**, because **Coolify's deploy engine connects as
+root over that network** to `host.docker.internal`. Concretely, keep `10.0.1.0/24` in **both**
+`ssh_trusted_root_key_only_sources` (so it renders a root `prohibit-password` block) **and**
+`ssh_trusted_sources` (so it is excluded from the public `AllowUsers ai` bucket), and never move it
+into `ssh_trusted_root_password_sources` (root should stay key-only there).
 
 Removing it silently breaks **ALL** app deploys on the host with **no obvious error in GitHub
 Actions** (the deploy trigger still returns "queued"). This is safe to keep: Coolify's
@@ -72,22 +76,56 @@ so the two must be kept consistent.
 
 ## The fix
 
-Add the Coolify/Docker internal bridge network **`10.0.1.0/24` (IPv4)** to the `ssh_trusted_sources`
-role variable in [`roles/ssh_hardening/defaults/main.yml`](../../roles/ssh_hardening/defaults/main.yml)
-so the `Match Address` block grants root `PermitRootLogin prohibit-password` from that network:
+Fixed in [`u2giants/ansible#3`](https://github.com/u2giants/ansible/pull/3). Rather than simply
+adding `10.0.1.0/24` to a single trusted list (which would have inherited the Tailscale
+root-**password** break-glass), the `ssh_hardening` role was restructured so the Docker bridge gets
+**root key-only** access while Tailscale/loopback keep their password break-glass. This uses **three**
+list variables in
+[`roles/ssh_hardening/defaults/main.yml`](../../roles/ssh_hardening/defaults/main.yml):
 
 ```yaml
-ssh_trusted_sources:
+# Root key-only sources — matched FIRST in the template (sshd takes the first value it
+# obtains per keyword), so these stay prohibit-password even when root-password is enabled below.
+ssh_trusted_root_key_only_sources:
+  - "10.0.1.0/24"            # Coolify / Docker internal bridge — Coolify SSHes as root to deploy apps
+
+# Sources where the existing break-glass root-PASSWORD policy remains enabled.
+ssh_trusted_root_password_sources:
   - "100.64.0.0/10"          # Tailscale IPv4 (CGNAT range)
   - "fd7a:115c:a1e0::/48"    # Tailscale IPv6 (ULA prefix)
   - "127.0.0.1"              # localhost (cloudflared SSH lands here)
   - "::1"
-  - "10.0.1.0/24"            # Coolify / Docker internal bridge — Coolify SSHes as root to deploy
+
+# Union of all trusted sources — used ONLY to build the public-internet exclusion, so the
+# Docker bridge is NOT caught by the `AllowUsers ai` (no-root) bucket. Must contain 10.0.1.0/24.
+ssh_trusted_sources:
+  - "100.64.0.0/10"
+  - "fd7a:115c:a1e0::/48"
+  - "127.0.0.1"
+  - "::1"
+  - "10.0.1.0/24"            # Coolify / Docker internal bridge
 ```
 
-Applied via the normal **Ansible apply pipeline** (not by hand-editing `/etc` on the box). After
-the change renders the drop-in and reloads sshd, Coolify's localhost server returns to
-`is_usable=true` and app deploys resume swapping containers.
+Correspondingly,
+[`roles/ssh_hardening/templates/20-access-policy.conf.j2`](../../roles/ssh_hardening/templates/20-access-policy.conf.j2)
+now renders, in order:
+
+```jinja
+Match Address {{ ssh_trusted_root_key_only_sources | join(',') }}   # 10.0.1.0/24 → key-only, first
+    PermitRootLogin prohibit-password
+Match Address {{ ssh_trusted_root_password_sources | join(',') }}   # Tailscale/loopback → break-glass
+    PermitRootLogin yes / PasswordAuthentication yes   (when ssh_trusted_root_password)
+Match Address *,!<ssh_trusted_sources>                              # public → AllowUsers ai, no root
+    AllowUsers {{ ssh_internet_user }}
+```
+
+The role's `Deploy and validate the SSH access policy` task also asserts the key-only and
+password source lists do not overlap, refusing an unsafe apply.
+
+Applied via the normal **Ansible apply pipeline** (not by hand-editing `/etc` on the box); the role
+runs `sshd -t` and then **reloads** (not restarts) sshd. After it renders the drop-in, Coolify's
+localhost server returns to `is_usable=true` and app deploys resume swapping containers.
 
 The fix is safe and scoped: Coolify's `authorized_keys` entry is already pinned to
-`from="10.0.1.0/24"` and is key-only, so this grants no broader access than the key already allows.
+`from="10.0.1.0/24"` and is key-only, so this grants no broader access than the key already allows —
+and, unlike a naive one-list add, it grants root **no** password access over the Docker bridge.
