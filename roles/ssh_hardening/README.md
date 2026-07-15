@@ -36,3 +36,31 @@ console login independent of sshd, so root can always get in there — the ultim
 - Verify the Tailscale IPv6 prefix in `ssh_trusted_sources` matches this tailnet (`tailscale ip -6`).
 - This role does not change which ports sshd listens on (`/etc/ssh/sshd_config.d/10-ports.conf`,
   ports 22 + 1904) or the firewall; it governs *who* may log in *from where*.
+
+## ⚠️ Coolify / Docker deploys depend on this policy
+
+**Coolify deploys apps by SSHing in as `root` from the Docker bridge network `10.0.1.0/24`**
+(to `host.docker.internal`, observed source `10.0.1.15`). That means the Docker bridge network
+**must** stay in `ssh_trusted_sources` so the `Match Address` block grants root
+`PermitRootLogin prohibit-password` from it. It is already listed:
+
+```yaml
+ssh_trusted_sources:
+  - "10.0.1.0/24"   # Coolify / Docker internal bridge — Coolify SSHes as root to deploy apps
+```
+
+This is safe and tightly scoped: Coolify's authorized key in `/root/.ssh/authorized_keys` is
+already pinned to `from="10.0.1.0/24"` and is **key-only** (no password).
+
+**Do-not-repeat warning.** Any future tightening of `ssh_trusted_sources` / `AllowUsers` /
+`PermitRootLogin` in this role **MUST preserve root SSH (key-only) from the Docker bridge
+`10.0.1.0/24`**. Remove it and Coolify's root SSH falls into the "public internet" bucket
+(`AllowUsers ai`, root refused) and **ALL app deploys on the host silently break** — popcrm-web,
+poppim-web, popdam, monitor, hiclaw, etc. There is **no obvious error in GitHub Actions**: the
+deploy trigger still returns "queued", but the container is never replaced and the live site keeps
+serving the old bundle. Host `auth.log` shows `User root from 10.0.1.x not allowed because not
+listed in AllowUsers`, and Coolify marks its localhost server `is_reachable=false, is_usable=false`.
+
+Before changing this role's access policy, verify Coolify can still `is_usable=true` its localhost
+server and that a test app deploy actually swaps the container. See
+[`docs/incidents/2026-07-15-coolify-ssh-deploy-breakage.md`](../../docs/incidents/2026-07-15-coolify-ssh-deploy-breakage.md).

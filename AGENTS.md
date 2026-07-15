@@ -53,7 +53,7 @@ Then load additional docs only when relevant:
 | Change local setup / how to run, lint, test, apply | `AGENTS.md`, `docs/development.md`, `ansible.cfg`, `requirements.yml` | `docs/deployment.md` unless CI changes |
 | Change deployment, CI/CD, the apply pipeline, rollback | `AGENTS.md`, `docs/deployment.md`, `.github/workflows/*`, `docs/configuration.md` | `docs/development.md` unless local flow changes |
 | Change firewall / docker / cloudflared (risky roles) | `AGENTS.md`, `docs/architecture.md`, that role's README, `docs/ANSIBLE-IMPLEMENTATION-PLAN.md` §4a | unrelated roles |
-| Investigate an incident or breakage | `AGENTS.md` (Critical incidents §14), `HANDOFF.md` if present, `docs/DISCOVERY-2026-06-23.md` | unrelated role READMEs |
+| Investigate an incident or breakage | `AGENTS.md` (Critical incidents §13), `docs/incidents/*`, `HANDOFF.md` if present, `docs/DISCOVERY-2026-06-23.md` | unrelated role READMEs |
 | Continue unfinished work | `AGENTS.md`, **`HANDOFF.md`**, docs named inside it | docs unrelated to the handoff scope |
 | Understand the full original brief / rationale | `docs/ANSIBLE-IMPLEMENTATION-PLAN.md` | everything else until you need it |
 | Claude Code session | `CLAUDE.md`, then `AGENTS.md` | other docs unless the task needs them |
@@ -349,6 +349,29 @@ Root cause: the `copy` module doesn't create parent dirs; check mode masked it.
 Recovery: added a `file: state=directory` task before the copy; re-applied cleanly.
 
 Rule added: ensure parent dirs explicitly; don't fully trust `--check` for filesystem layout.
+
+### 2026-07-14 — SSH hardening broke ALL Coolify app deploys
+
+What happened: after the `ssh_hardening` apply on 2026-07-14 16:32, every Coolify app deploy on
+`hetz` (popcrm-web, poppim-web, popdam, monitor, hiclaw, …) failed silently — GitHub Actions
+returned "deployment queued", the container was never replaced, and the live site kept serving the
+old bundle.
+
+Impact: all app deploys on the host blocked; Coolify marked its localhost server
+`is_reachable=false, is_usable=false`. No host damage.
+
+Root cause: Coolify deploys by SSHing **as root** from the Docker bridge `10.0.1.0/24` to
+`host.docker.internal`; that network was not in `ssh_trusted_sources`, so root fell into the
+public-internet `AllowUsers ai` bucket and was refused (`auth.log`: `User root from 10.0.1.15 not
+allowed because not listed in AllowUsers`). Not a key problem — Coolify's key was still present.
+
+Recovery/fix: add `10.0.1.0/24` to `ssh_trusted_sources` in `roles/ssh_hardening/defaults/main.yml`
+(key-only root from the Docker bridge), applied via the Ansible pipeline.
+
+Rule added: never tighten `ssh_hardening` `ssh_trusted_sources` / `AllowUsers` / `PermitRootLogin`
+without preserving key-only root from `10.0.1.0/24` — see
+[`docs/incidents/2026-07-15-coolify-ssh-deploy-breakage.md`](docs/incidents/2026-07-15-coolify-ssh-deploy-breakage.md)
+and `roles/ssh_hardening/README.md`.
 
 ## 14. Pending work
 
