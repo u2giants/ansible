@@ -4,12 +4,16 @@
 dev_tools_arch: "amd64"          # x86_64
 go_version: "1.26.4"
 supabase_version: "2.98.2"
-# Pin MUST match what is actually running, or the guard in tasks/main.yml
-# (`when: codex_version not in (codex --version)`) never matches and npm reinstalls
-# on EVERY apply — which re-creates npm's own /usr/local/bin/codex symlink and would
-# clobber the standalone install, silently DOWNGRADING the codex Albert actually uses.
-# Live on hetz 2026-07-16: /usr/local/bin/codex -> /opt/codex -> standalone 0.144.5.
-codex_version: "0.144.5"         # @openai/codex (standalone, installs under /opt/codex)
+# codex: DELIBERATE EXCEPTION to the version-pinning rule above.
+# The standalone is canonical (/usr/local/bin/codex -> {{ codex_install_root }}/codex).
+# It SELF-UPDATES and the vendor installer exposes no version-pin variable, so a pin
+# would be a lie. Ansible guarantees PRESENCE + symlink + this minimum floor + that the
+# sandbox actually works. A rebuild installs whatever release the vendor then serves.
+# The apt `bubblewrap` package (roles/packages/files/apt-manual.txt) is a hard
+# dependency: codex's Linux sandbox uses /usr/bin/bwrap, which the AppArmor profile
+# below is attached to.
+codex_install_root: "/opt/codex"
+codex_min_version: "0.144.5"
 
 # AppArmor exception letting bubblewrap create unprivileged user namespaces.
 # Ubuntu 24.04 blocks these (kernel.apparmor_restrict_unprivileged_userns=1), and
