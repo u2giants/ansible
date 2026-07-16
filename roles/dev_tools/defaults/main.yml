@@ -4,7 +4,23 @@
 dev_tools_arch: "amd64"          # x86_64
 go_version: "1.26.4"
 supabase_version: "2.98.2"
-codex_version: "0.141.0"         # @openai/codex (standalone, installs under /opt/codex)
+# Pin MUST match what is actually running, or the guard in tasks/main.yml
+# (`when: codex_version not in (codex --version)`) never matches and npm reinstalls
+# on EVERY apply — which re-creates npm's own /usr/local/bin/codex symlink and would
+# clobber the standalone install, silently DOWNGRADING the codex Albert actually uses.
+# Live on hetz 2026-07-16: /usr/local/bin/codex -> /opt/codex -> standalone 0.144.5.
+codex_version: "0.144.5"         # @openai/codex (standalone, installs under /opt/codex)
+
+# AppArmor exception letting bubblewrap create unprivileged user namespaces.
+# Ubuntu 24.04 blocks these (kernel.apparmor_restrict_unprivileged_userns=1), and
+# Codex's Linux sandbox needs them via /usr/bin/bwrap — without this, `codex exec`
+# SILENTLY writes nothing while `codex --version` still passes. Scoped to the bwrap
+# binary rather than turning the host-wide mitigation off. See
+# files/apparmor-bwrap for the full rationale + the verification done on hetz.
+codex_bwrap_apparmor: true
+# Unprivileged user the post-apply verification runs as. Root is NOT subject to the
+# userns restriction, so verifying as root would pass even when the fix did nothing.
+codex_bwrap_verify_user: "ai"
 # Global npm CLIs (idempotent via community.general.npm). codex is handled separately (guarded).
 dev_tools_npm:
   - { name: "@anthropic-ai/claude-code", version: "2.1.160" }
