@@ -107,27 +107,34 @@
   ansible.builtin.command: /usr/local/bin/codex --version
   register: dt_codex
   changed_when: false
-  failed_when: false
+  # A missing/broken codex MUST fail the apply. `failed_when: false` here would let a
+  # dead codex pass a green apply — the exact silent-failure class this whole change
+  # exists to kill, and a violation of the repo's no-silent-failures rule.
+  failed_when: not ansible_check_mode and dt_codex.rc != 0
   check_mode: false
 
 - name: Report the codex version in use (auditability — it is not pinned)
   ansible.builtin.debug:
     msg: "codex in use: {{ dt_codex.stdout | default('UNKNOWN') | trim }} (floor {{ codex_min_version }}, vendor-managed/self-updating)"
 
-# Loud failure if the vendor ever serves something older than we support. NOTE: a
-# passing version says NOTHING about whether the sandbox works — that is exactly the
-# trap that hid this bug. The bwrap AppArmor verification below is the real check.
-- name: Fail if codex is older than the supported floor
+# Loud failure if codex is unusable OR older than we support. Deliberately NOT gated
+# on "a version was parsed" — that would silently skip the check on exactly the broken
+# install it exists to catch. Unparseable output is itself a failure.
+# NOTE: a passing version says NOTHING about whether the sandbox works — that is the
+# trap that hid the original bug. The bwrap verification below is the real check.
+- name: Fail if codex is unusable or older than the supported floor
   ansible.builtin.assert:
     that:
-      - dt_codex.stdout | default('') | regex_search('[0-9]+\.[0-9]+\.[0-9]+') is version(codex_min_version, '>=')
+      - >-
+        (dt_codex.stdout | default('') | regex_search('[0-9]+\.[0-9]+\.[0-9]+')) is not none
+        and (dt_codex.stdout | default('') | regex_search('[0-9]+\.[0-9]+\.[0-9]+'))
+            is version(codex_min_version, '>=')
     fail_msg: >-
-      codex {{ dt_codex.stdout | default('UNKNOWN') | trim }} is below the supported
-      floor {{ codex_min_version }}. Re-run the vendor installer, or lower
+      codex is unusable or below the supported floor {{ codex_min_version }}.
+      `codex --version` returned: '{{ dt_codex.stdout | default('') | trim }}'
+      (rc={{ dt_codex.rc | default('n/a') }}). Re-run the vendor installer, or lower
       codex_min_version deliberately.
-  when:
-    - not ansible_check_mode
-    - dt_codex.stdout | default('') | regex_search('[0-9]+\.[0-9]+\.[0-9]+')
+  when: not ansible_check_mode
 
 # ---- AppArmor: let bubblewrap create unprivileged user namespaces (Codex sandbox) ----
 # Ubuntu 24.04 blocks unprivileged userns unless the creating binary has a profile
