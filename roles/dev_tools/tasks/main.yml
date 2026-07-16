@@ -60,21 +60,74 @@
   loop_control:
     label: "{{ item.name }}@{{ item.version }}"
 
-# ---- codex (standalone, via @openai/codex; guarded so prod is a no-op) ----
-- name: Check installed codex version
-  ansible.builtin.command: codex --version
+# ---- codex (standalone is canonical; PRESENCE-managed, not version-pinned) ----
+# DELIBERATE EXCEPTION to this role's "version-pinned so a rebuild reproduces them"
+# rule. Codex ships a self-updating standalone (its releases/ dir already held both
+# 0.142.5 and 0.144.5), and the vendor installer exposes no version-pin variable, so a
+# pin here would be a lie the tool immediately breaks. Ansible therefore guarantees
+# PRESENCE + the symlink + a minimum version + that the sandbox actually works — not a
+# byte-exact version. A disaster-recovery rebuild installs whatever release the vendor
+# then serves; that is accepted and stated plainly rather than faked.
+#
+# Why standalone over npm: npm's @openai/codex is a thin JS shim that spawns a
+# platform optional-dep binary; it does NOT create /opt/codex. Both were installed, and
+# /usr/local/bin/codex pointed at the standalone, so npm's copy was permanently
+# shadowed — its only real effect was that the old exact-version guard never matched,
+# re-running npm on EVERY apply and threatening to clobber the working symlink.
+- name: Remove the shadowed npm codex package (the standalone is canonical)
+  community.general.npm:
+    name: "@openai/codex"
+    global: true
+    state: absent
+
+- name: Install the standalone codex (official vendor installer, only when absent)
+  ansible.builtin.shell:
+    cmd: set -o pipefail && curl -fsSL https://chatgpt.com/codex/install.sh | sh
+    creates: "{{ codex_install_root }}/codex"
+  args:
+    executable: /bin/bash
+  environment:
+    # Reproduces the layout already on the box:
+    #   {{ codex_install_root }}/.codex/packages/standalone/releases/<ver>/...
+    #   {{ codex_install_root }}/codex -> .../current/bin/codex
+    # CODEX_HOME is deliberately NOT set: the installer defaults it to $HOME/.codex,
+    # which is what produced this layout. Setting CODEX_HOME={{ codex_install_root }}
+    # would place packages/ at the root instead and yield a DIFFERENT layout.
+    HOME: "{{ codex_install_root }}"
+    CODEX_INSTALL_DIR: "{{ codex_install_root }}"
+
+- name: Point /usr/local/bin/codex at the standalone
+  ansible.builtin.file:
+    src: "{{ codex_install_root }}/codex"
+    dest: /usr/local/bin/codex
+    state: link
+    force: true
+
+- name: Read the codex version now in use
+  ansible.builtin.command: /usr/local/bin/codex --version
   register: dt_codex
   changed_when: false
   failed_when: false
   check_mode: false
 
-- name: Install codex {{ codex_version }}
-  community.general.npm:
-    name: "@openai/codex"
-    version: "{{ codex_version }}"
-    global: true
-    state: present
-  when: codex_version not in (dt_codex.stdout | default(''))
+- name: Report the codex version in use (auditability — it is not pinned)
+  ansible.builtin.debug:
+    msg: "codex in use: {{ dt_codex.stdout | default('UNKNOWN') | trim }} (floor {{ codex_min_version }}, vendor-managed/self-updating)"
+
+# Loud failure if the vendor ever serves something older than we support. NOTE: a
+# passing version says NOTHING about whether the sandbox works — that is exactly the
+# trap that hid this bug. The bwrap AppArmor verification below is the real check.
+- name: Fail if codex is older than the supported floor
+  ansible.builtin.assert:
+    that:
+      - dt_codex.stdout | default('') | regex_search('[0-9]+\.[0-9]+\.[0-9]+') is version(codex_min_version, '>=')
+    fail_msg: >-
+      codex {{ dt_codex.stdout | default('UNKNOWN') | trim }} is below the supported
+      floor {{ codex_min_version }}. Re-run the vendor installer, or lower
+      codex_min_version deliberately.
+  when:
+    - not ansible_check_mode
+    - dt_codex.stdout | default('') | regex_search('[0-9]+\.[0-9]+\.[0-9]+')
 
 # ---- AppArmor: let bubblewrap create unprivileged user namespaces (Codex sandbox) ----
 # Ubuntu 24.04 blocks unprivileged userns unless the creating binary has a profile
