@@ -1,0 +1,53 @@
+# AppArmor profile: permit bubblewrap to create unprivileged user namespaces.
+#
+# Managed by Ansible (roles/dev_tools). Do not edit on the host — changes are drift
+# and get reverted by the next apply.
+#
+# WHY THIS EXISTS
+# ---------------
+# Ubuntu 24.04 ships kernel.apparmor_restrict_unprivileged_userns=1, which blocks
+# unprivileged user namespaces unless the executable that creates them has an
+# AppArmor profile granting `userns`. Codex's Linux sandbox shells out to
+# /usr/bin/bwrap (bubblewrap), which needs exactly that. Without this profile, as an
+# unprivileged user:
+#
+#   $ bwrap --dev-bind / / --unshare-user true
+#   bwrap: setting up uid map: Permission denied
+#   $ codex exec --sandbox workspace-write ...
+#   -> "the workspace sandbox rejected all file writes"  (and codex exec exits 0!)
+#
+# i.e. `codex exec` silently changes nothing while `codex --version` and
+# `codex login status` both pass. `ai-devops doctor` (u2giants/ai-devops) detects it
+# by attempting a real sandboxed write.
+#
+# WHY NOT sysctl kernel.apparmor_restrict_unprivileged_userns=0
+# -------------------------------------------------------------
+# That disables the mitigation host-wide for every binary. hetz is internet-facing
+# and runs ~20 Coolify app containers; unprivileged userns is real kernel attack
+# surface. This profile confines the exception to the one binary that needs it.
+#
+# The `pix` stack mirrors Ubuntu's own /etc/apparmor.d/unprivileged_userns pattern:
+# children are stacked into the unprivileged_userns profile so capabilities gained
+# inside the namespace are stripped, rather than granting a blanket exception.
+#
+# VERIFIED on hetz 2026-07-16 (Ubuntu 24.04 noble, kernel 6.8.0-124-generic,
+# bubblewrap 0.9.0, codex-cli 0.144.5), loaded runtime-only from /tmp and then
+# reverted, testing as the unprivileged user `ai` (NOT root — root is not subject to
+# the restriction, so testing as root proves nothing):
+#   before: bwrap -> "setting up uid map: Permission denied"; codex wrote no file
+#   after:  bwrap -> succeeds;                                codex wrote the file
+#   revert: bwrap blocked again  (A/B confirms this profile is the cause of the fix)
+
+abi <abi/4.0>,
+include <tunables/global>
+
+profile bwrap /usr/bin/bwrap flags=(unconfined) {
+  userns,
+
+  # Stack children into Ubuntu's unprivileged_userns profile so capabilities
+  # acquired inside the new namespace are stripped.
+  allow pix /** -> &unprivileged_userns,
+
+  # Site-specific additions/overrides.
+  include if exists <local/bwrap>
+}

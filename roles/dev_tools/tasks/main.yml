@@ -76,6 +76,56 @@
     state: present
   when: codex_version not in (dt_codex.stdout | default(''))
 
+# ---- AppArmor: let bubblewrap create unprivileged user namespaces (Codex sandbox) ----
+# Ubuntu 24.04 blocks unprivileged userns unless the creating binary has a profile
+# granting `userns`. Codex's Linux sandbox uses /usr/bin/bwrap, so without this
+# `codex exec` silently writes nothing while `codex --version` still passes.
+# Scoped to bwrap on purpose — see files/apparmor-bwrap for why NOT the global
+# sysctl, and for the A/B verification done on hetz 2026-07-16.
+- name: Install AppArmor profile permitting bwrap unprivileged user namespaces
+  ansible.builtin.copy:
+    src: apparmor-bwrap
+    dest: /etc/apparmor.d/bwrap
+    owner: root
+    group: root
+    mode: "0644"
+  when: codex_bwrap_apparmor | bool
+  register: dt_bwrap_profile
+
+- name: Load the bwrap AppArmor profile
+  ansible.builtin.command: apparmor_parser -r /etc/apparmor.d/bwrap
+  when:
+    - codex_bwrap_apparmor | bool
+    - dt_bwrap_profile is changed
+    - not ansible_check_mode
+  changed_when: true
+
+# Prove the exception actually works, as an UNPRIVILEGED user. Root is not subject
+# to the restriction, so a root check would pass even if the profile did nothing.
+# Non-fatal: report loudly rather than failing the whole play.
+- name: Verify bwrap can create a user namespace as {{ codex_bwrap_verify_user }}
+  ansible.builtin.command: bwrap --dev-bind / / --unshare-user true
+  become: true
+  become_user: "{{ codex_bwrap_verify_user }}"
+  register: dt_bwrap_check
+  changed_when: false
+  failed_when: false
+  when:
+    - codex_bwrap_apparmor | bool
+    - not ansible_check_mode
+
+- name: Report if bwrap user namespaces are still blocked
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: bwrap still cannot create a user namespace as
+      {{ codex_bwrap_verify_user }} ({{ dt_bwrap_check.stderr | default('') | trim }}).
+      Codex's sandbox will silently write nothing. Verify with:
+      `ai-devops doctor` (expects "codex sandbox can write").
+  when:
+    - codex_bwrap_apparmor | bool
+    - not ansible_check_mode
+    - dt_bwrap_check.rc | default(0) != 0
+
 # ---- cloudflared symlink (binary is apt-installed by the packages role to /usr/bin) ----
 - name: Symlink /usr/local/bin/cloudflared -> /usr/bin/cloudflared (used by Tunnel 1 unit)
   ansible.builtin.file:
