@@ -4,7 +4,12 @@
 dev_tools_arch: "amd64"          # x86_64
 go_version: "1.26.4"
 supabase_version: "2.98.2"
-codex_version: "0.141.0"         # @openai/codex (standalone, installs under /opt/codex)
+# Pin MUST match what is actually running, or the guard in tasks/main.yml
+# (`when: codex_version not in (codex --version)`) never matches and npm reinstalls
+# on EVERY apply — which re-creates npm's own /usr/local/bin/codex symlink and would
+# clobber the standalone install, silently DOWNGRADING the codex Albert actually uses.
+# Live on hetz 2026-07-16: /usr/local/bin/codex -> /opt/codex -> standalone 0.144.5.
+codex_version: "0.144.5"         # @openai/codex (standalone, installs under /opt/codex)
 
 # AppArmor exception letting bubblewrap create unprivileged user namespaces.
 # Ubuntu 24.04 blocks these (kernel.apparmor_restrict_unprivileged_userns=1), and
