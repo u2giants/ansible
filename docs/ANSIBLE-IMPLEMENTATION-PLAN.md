@@ -453,8 +453,8 @@ fresh throwaway box rebuilt entirely from bootstrap + pipeline **diffs clean** a
 - **Repo push approval** — pushing here requires the owner's explicit OK (the classifier blocks
   agent-initiated repo creation/bulk push). This project lives in its own dedicated repo
   (`u2giants/Ansible`) — commit to its `main` branch, don't create new repos.
-- **Directus teardown** — deprecated (PopPIM migrating to hosted supabase.com); a scheduled reminder
-  (2026-07-22) handles decommission via Coolify (not Ansible). Don't add a Directus role.
+- **Legacy-backend teardown** — PopPIM migrated to hosted supabase.com; a scheduled reminder
+  (2026-07-22) handles decommission via Coolify (not Ansible). Do not add a legacy-app role.
 
 **Resolved (kept here for the record):**
 - ~~`cron_glue` ownership~~ → **decided** (§4a): Ansible owns the cron *entry*; the keeper *scripts*
