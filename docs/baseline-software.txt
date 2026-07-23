@@ -4,10 +4,12 @@ APT  acpid
 APT  adduser
 APT  apparmor
 APT  apport
+APT  audispd-plugins
 APT  apt
 APT  apt-transport-https
 APT  apt-utils
 APT  at
+APT  auditd
 APT  azure-cli
 APT  base-files
 APT  bash
@@ -135,6 +137,7 @@ APT  parted
 APT  passwd
 APT  patch
 APT  pciutils
+APT  pipx
 APT  plymouth
 APT  plymouth-theme-ubuntu-text
 APT  pollinate
@@ -183,6 +186,7 @@ APT  ubuntu-keyring
 APT  ubuntu-pro-client
 APT  ubuntu-release-upgrader-core
 APT  udev
+APT  uidmap
 APT  unattended-upgrades
 APT  unminimize
 APT  unzip
