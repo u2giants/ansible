@@ -112,6 +112,7 @@ are managed declaratively by roles, not source files in this repo.)
 | Change Docker daemon config | `roles/docker/files/daemon.json` (verbatim), `roles/docker/` | anything that restarts Docker automatically |
 | Change firewall (SSH) rules | `roles/firewall/` + `firewall_ssh_trusted_v4/v6`, `firewall_ssh_public_ports` in defaults | Docker/Tailscale/fail2ban chains; never a full-table capture |
 | Add/change a cron entry | `inventory/group_vars/all.yml` (`cron_glue_entries`), `roles/cron_glue/` | the keeper scripts under `/worksp/hiclaw/` (owned by HiClaw repo) |
+| Remove an exact retired host file | `roles/retired_platform_cleanup/` | Coolify apps, containers, proxy state, certificates, or volumes |
 | Manage Cloudflare Tunnel 1 | `roles/cloudflared_coolify/` | Tunnels 2 & 3 (Coolify-managed) |
 | Add an SSH public key for `ai` | `inventory/group_vars/all.yml` (`users_authorized_keys`) | private keys (never commit) |
 | Change the apply/CI flow | `.github/workflows/apply.yml` / `check.yml` / `drift.yml` | the `concurrency: apply-hetzner` guard (serialization) |

@@ -70,6 +70,10 @@
       tags: [phase1, backrest_watchdog]
       when: enable_phase1 | bool
 
+    - role: retired_platform_cleanup
+      tags: [phase1, retired_platform_cleanup]
+      when: enable_phase1 | bool
+
     # ---- Phase 2: risky live-service roles (can take the box down) ----
     - role: coolify
       tags: [phase2, coolify]

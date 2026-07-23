@@ -1,0 +1,5 @@
+---
+# Exact host files left behind by retired application platforms. Keep this list
+# deliberately narrow: application containers and Coolify data remain Coolify-owned.
+retired_platform_host_files_absent:
+  - /home/ai/.directus-deploy.env

@@ -1,0 +1,8 @@
+---
+- name: Remove retired platform host files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ retired_platform_host_files_absent }}"
+  loop_control:
+    label: "{{ item }}"
