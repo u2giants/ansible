@@ -1,0 +1,4 @@
+---
+dev_windows_manage_openssh: true
+dev_windows_disable_winrm: true
+dev_windows_run_ai_setup: true

@@ -1,0 +1,23 @@
+---
+# Static, localhost-only contract test. It never contacts or changes a managed host.
+- name: Validate developer-computer configuration contract
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../inventory/group_vars/dev_computers.yml
+  tasks:
+    - name: Assert safe defaults and required desired state
+      ansible.builtin.assert:
+        that:
+          - not dev_apply_secrets | bool
+          - dev_windows_disable_winrm | bool
+          - dev_tailscale_ipv4_cidr == '100.64.0.0/10'
+          - dev_ai_repo_url == 'https://github.com/u2giants/ai-devops.git'
+          - dev_windows_winget_config_relative_path == '.config/configuration.winget'
+          - dev_windows_bootstrap_relative_path == 'bin/bootstrap-windows-dev.ps1'
+          - dev_windows_packages | length > 0
+          - dev_ubuntu_packages | length > 0
+          - dev_owner_public_key is match('^ssh-ed25519 ')
+          - dev_ssh_private_key_ref is match('^op://vibe_coding/')
+        fail_msg: "Developer-computer desired-state contract is unsafe or incomplete."

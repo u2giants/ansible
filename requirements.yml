@@ -12,3 +12,8 @@ collections:
   # For the idempotent global-npm install in the dev_tools role (recovery R2).
   - name: community.general
     version: ">=8.0.0"
+  # Windows developer workstations are managed over OpenSSH.
+  - name: ansible.windows
+    version: ">=2.3.0"
+  - name: community.windows
+    version: ">=2.2.0"

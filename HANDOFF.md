@@ -1,5 +1,123 @@
 # HANDOFF
 
+## 2026-07-17 addendum — cross-platform developer computers (unfinished, not applied)
+
+### 1. What this application is
+
+This `u2giants/ansible` repository is the desired-state controller for host and
+computer configuration. Its existing production responsibility is the Hetzner
+Ubuntu host. A separate `playbooks/dev-computers.yml` entrypoint now begins
+managing Albert's Windows 11 and Ubuntu coding computers without mixing them
+into the production `site.yml` path.
+
+### 2. What this session set out to do, and why
+
+Replace manually juggled setup scripts with one Ansible command that installs
+packages, secures OpenSSH over Tailscale, updates `u2giants/ai-devops`, installs
+Claude/Codex skills and managed instructions, retrieves secrets from the scoped
+1Password `vibe_coding` service account at runtime, configures SSH aliases/MCPs,
+and prints an explicit verification report.
+
+### 3. Current state
+
+Source implementation is complete but intentionally not applied. Windows and
+Ubuntu roles, shared non-secret variables, opt-in inventory groups, a static
+contract test, and `docs/dev-computers.md` exist. All real hosts remain
+commented out. `dev_apply_secrets` defaults false. No commit, push, CI run, or
+host change was made in this subtask.
+
+The companion ai-devops repo now contains the missing local first-connection
+bootstrap: it installs/detects Tailscale, configures OpenSSH, disables WinRM,
+installs WSL Ubuntu/Ansible and collections, and then runs the canonical AI
+setup. This removes separate Windows prerequisite commands. It is still
+uncommitted and has not passed clean-machine or second-run live proof.
+
+### 4. What did not work
+
+- Native validation through WSL on machine 4837 was attempted, but this machine
+  reports WSL is not installed. This is an environment limitation, not a YAML
+  or Ansible failure. Run the documented validation on t16/another Ubuntu
+  control node before applying.
+- Passing only an environment variable to Windows `setup-machine.ps1` would
+  have hung because that script accepts its token through `-Token`. The role now
+  invokes it from PowerShell with the environment value as the parameter; the
+  entire task is `no_log`.
+
+### 5. Root causes and key findings
+
+Ansible cannot create its own first connection. For Windows, the local
+ai-devops bootstrap now creates it before invoking this controller; remote
+Ubuntu targets still require a minimal reachable bootstrap. Security-sensitive
+MCP/SSH/skills logic remains canonical in ai-devops, so roles delegate instead
+of duplicating it. Secrets are only `op://` references or in-memory injection.
+
+### 6. Exact next steps
+
+1. Commit/push both repositories only after Albert requests it; a fresh machine
+   cannot retrieve the current local implementation until then.
+2. On a disposable Windows 11 machine, run the ai-devops bootstrap and rerun it
+   unchanged. Success means its PASS report, working key-only Tailscale SSH,
+   disabled WinRM, working WSL Ansible, and no unintended second-run changes.
+3. On the resulting WSL/Ubuntu control node, install collections with
+   `ansible-galaxy collection install -r requirements.yml`; success means all
+   three collections resolve.
+4. Run `ansible-lint`, both playbook syntax checks, and
+   `ansible-playbook playbooks/test-dev-computers.yml`; success means all exit 0.
+5. Prove each role on disposable Windows 11 and Ubuntu machines over Tailscale;
+   success means the final PASS report and a second run with zero changes.
+6. Add real Tailscale inventory addresses only after proof, then run
+   `--check --diff` and review before a real apply.
+7. For secret wiring, securely load `OP_SERVICE_ACCOUNT_TOKEN`, verify `op
+   whoami`, and explicitly pass `-e dev_apply_secrets=true`; success means MCP,
+   SSH-key, and config checks pass without a token appearing in output.
+
+### 7. Constraints and gotchas
+
+Never use public/LAN target addresses, commit secrets, or run Ansible natively
+on Windows. WinGet and Windows optional-capability commands have limited check
+mode fidelity, so first proof belongs on a disposable VM. A dirty ai-devops
+checkout fails its fast-forward update loudly to preserve local work.
+
+### 8. Access and environment
+
+Controller: Ubuntu/WSL with Ansible and the collections in `requirements.yml`.
+Transport: target Tailscale IPv4 address and OpenSSH key authentication.
+Secrets: scoped 1Password service account, vault `vibe_coding`, provided through
+`OP_SERVICE_ACCOUNT_TOKEN` only for an explicitly enabled secret run.
+
+### 9. Open questions and risks
+
+Package manifests are a conservative baseline and should be expanded only from
+an approved inventory. The roles have not yet been proven on disposable hosts.
+Windows OpenSSH capability installation can depend on Windows Update and may
+stall, as observed on 4837. The existing production auto-apply path uses
+`site.yml`; the new dev-computer playbook is separate and is not wired to CI.
+
+The Windows secret-backed setup must run under `pwsh` (PowerShell 7), not the
+Ansible SSH connection's default Windows PowerShell 5 shell. The role now
+launches `setup-machine.ps1` through `pwsh`, keeps the token in the environment
+with `no_log`, and fails on a nonzero child exit. It also disables WinRM and
+removes the obsolete custom WinRM firewall rule so OpenSSH/Tailscale remains
+the only managed remote path.
+
+The canonical Windows bootstrap also invokes ai-devops's internal reconciler
+for Vercel/Trigger.dev (npm) and Supabase CLI (Scoop). They are intentionally
+not duplicated in this Ansible role or falsely represented as WinGet packages.
+
+Integration hardening on 2026-07-17 removed the production Hetz `apt_repos`
+role from the Ubuntu workstation play because its captured sources are not
+proven portable. Ubuntu treats Tailscale and `op` as bootstrap prerequisites.
+Windows package ownership now prefers the canonical
+`ai-devops/.config/configuration.winget` file through the canonical
+`bin/bootstrap-windows-dev.ps1` entrypoint after a three-package bootstrap and
+uses the role list only as a compatibility fallback. Inventory and docs record
+4837's exact `IML\ahazan2` identity and the WSL/controller private-key path
+`~/.ssh/916-alien`, while every real dev host remains commented out.
+
+**Handoff self-audit:** PASS — a new developer can continue without chat
+context; failed attempts, concrete verification gates, paths, access, and risks
+are recorded.
+
 Continuation doc for a new developer or AI session with no prior chat context. When the work
 below is fully complete, **delete this file** (and remove its mentions from `README.md` and
 `AGENTS.md`). Canonical rules: [`AGENTS.md`](AGENTS.md).

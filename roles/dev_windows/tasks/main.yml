@@ -1,0 +1,209 @@
+---
+- name: Require Windows and a Tailscale target address
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.os_family == 'Windows'
+      - ansible_host is match('^100\\.')
+    fail_msg: "Windows developer computers must be reached through their Tailscale IPv4 address."
+
+- name: Check WinGet availability
+  ansible.windows.win_command: winget --version
+  register: dev_windows_winget
+  changed_when: false
+
+- name: Install or upgrade bootstrap WinGet packages
+  ansible.windows.win_shell: |
+    $id = '{{ item }}'
+    $installed = winget list --id $id -e --accept-source-agreements 2>$null
+    if ($LASTEXITCODE -ne 0) {
+      winget install --id $id -e --silent --accept-package-agreements --accept-source-agreements
+      if ($LASTEXITCODE -ne 0) { throw "winget install failed for $id" }
+      'ANSIBLE_CHANGED'
+    } elseif ('{{ dev_run_package_upgrades | bool | lower }}' -eq 'true') {
+      $out = winget upgrade --id $id -e --silent --accept-package-agreements --accept-source-agreements 2>&1
+      if ($LASTEXITCODE -ne 0 -and $out -notmatch 'No applicable upgrade') { throw ($out -join "`n") }
+      if ($out -notmatch 'No applicable upgrade') { 'ANSIBLE_CHANGED' }
+    }
+  loop: "{{ dev_windows_bootstrap_packages }}"
+  register: dev_windows_package_results
+  changed_when: "'ANSIBLE_CHANGED' in dev_windows_package_results.stdout"
+
+- name: Ensure OpenSSH Server capability is installed
+  ansible.windows.win_powershell:
+    script: |
+      $cap = Get-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+      if ($cap.State -ne 'Installed') {
+        Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0 | Out-Null
+        $Ansible.Changed = $true
+      }
+  when: dev_windows_manage_openssh | bool
+
+- name: Ensure sshd is automatic and running
+  ansible.windows.win_service:
+    name: sshd
+    start_mode: auto
+    state: started
+  when: dev_windows_manage_openssh | bool
+
+- name: Disable the obsolete WinRM service
+  ansible.windows.win_service:
+    name: WinRM
+    start_mode: disabled
+    state: stopped
+  when: dev_windows_disable_winrm | bool
+
+- name: Remove the obsolete Tailscale WinRM firewall rule
+  community.windows.win_firewall_rule:
+    name: "WinRM HTTPS — Tailscale only"
+    state: absent
+  when: dev_windows_disable_winrm | bool
+
+- name: Enforce public-key-only OpenSSH authentication
+  community.windows.win_lineinfile:
+    path: 'C:\ProgramData\ssh\sshd_config'
+    regex: "^#?{{ item.key }}\\s+"
+    line: "{{ item.key }} {{ item.value }}"
+  loop:
+    - { key: PasswordAuthentication, value: 'no' }
+    - { key: PubkeyAuthentication, value: 'yes' }
+  notify: Restart Windows sshd
+  when: dev_windows_manage_openssh | bool
+
+- name: Install owner public key for administrator SSH logins
+  ansible.windows.win_copy:
+    content: "{{ dev_owner_public_key }}\n"
+    dest: 'C:\ProgramData\ssh\administrators_authorized_keys'
+  notify: Restart Windows sshd
+  when: dev_windows_manage_openssh | bool
+
+- name: Disable inherited ACLs on administrator authorized keys
+  ansible.windows.win_acl_inheritance:
+    path: 'C:\ProgramData\ssh\administrators_authorized_keys'
+    state: absent
+    reorganize: false
+  when: dev_windows_manage_openssh | bool
+
+- name: Grant required ACLs on administrator authorized keys
+  ansible.windows.win_acl:
+    path: 'C:\ProgramData\ssh\administrators_authorized_keys'
+    user: "{{ item }}"
+    rights: FullControl
+    type: allow
+    state: present
+  loop:
+    - SYSTEM
+    - BUILTIN\Administrators
+  when: dev_windows_manage_openssh | bool
+
+- name: Disable the broad OpenSSH firewall rule
+  community.windows.win_firewall_rule:
+    name: OpenSSH-Server-In-TCP
+    enabled: false
+  when: dev_windows_manage_openssh | bool
+
+- name: Allow SSH only to the target Tailscale address from the tailnet
+  community.windows.win_firewall_rule:
+    name: "OpenSSH Server - Tailscale only"
+    localport: 22
+    protocol: tcp
+    direction: in
+    action: allow
+    localip: "{{ ansible_host }}"
+    remoteip: "{{ dev_tailscale_ipv4_cidr }}"
+    profiles: [domain, private, public]
+    enabled: true
+  when: dev_windows_manage_openssh | bool
+
+- name: Clone or update AI DevOps
+  ansible.windows.win_powershell:
+    script: |
+      $path = '{{ dev_windows_repo_path }}'
+      if (-not (Test-Path (Join-Path $path '.git'))) {
+        New-Item -ItemType Directory -Force -Path (Split-Path $path) | Out-Null
+        git clone --branch '{{ dev_ai_repo_branch }}' '{{ dev_ai_repo_url }}' $path
+        if ($LASTEXITCODE -ne 0) { throw 'git clone failed' }
+        $Ansible.Changed = $true
+      } else {
+        $before = git -C $path rev-parse HEAD
+        git -C $path pull --ff-only origin '{{ dev_ai_repo_branch }}'
+        if ($LASTEXITCODE -ne 0) { throw 'git pull failed (local edits may require attention)' }
+        $after = git -C $path rev-parse HEAD
+        $Ansible.Changed = $before -ne $after
+      }
+
+- name: Check for the canonical AI DevOps WinGet Configuration
+  ansible.windows.win_stat:
+    path: "{{ dev_windows_repo_path }}\\{{ dev_windows_winget_config_relative_path }}"
+  register: dev_windows_winget_config
+
+- name: Apply the canonical AI DevOps Windows bootstrapper
+  ansible.windows.win_command: >-
+    powershell -NoProfile -ExecutionPolicy Bypass -File
+    {{ dev_windows_repo_path }}\{{ dev_windows_bootstrap_relative_path }}
+    -RepoPath {{ dev_windows_repo_path }} -SkipMachineSetup
+  register: dev_windows_winget_config_apply
+  changed_when: "'APPLIED' in dev_windows_winget_config_apply.stdout"
+  when: dev_windows_winget_config.stat.exists
+
+- name: Install or upgrade fallback packages when no WinGet Configuration exists
+  ansible.windows.win_shell: |
+    $id = '{{ item }}'
+    $installed = winget list --id $id -e --accept-source-agreements 2>$null
+    if ($LASTEXITCODE -ne 0) {
+      winget install --id $id -e --silent --accept-package-agreements --accept-source-agreements
+      if ($LASTEXITCODE -ne 0) { throw "winget install failed for $id" }
+      'ANSIBLE_CHANGED'
+    } elseif ('{{ dev_run_package_upgrades | bool | lower }}' -eq 'true') {
+      $out = winget upgrade --id $id -e --silent --accept-package-agreements --accept-source-agreements 2>&1
+      if ($LASTEXITCODE -ne 0 -and $out -notmatch 'No applicable upgrade') { throw ($out -join "`n") }
+      if ($out -notmatch 'No applicable upgrade') { 'ANSIBLE_CHANGED' }
+    }
+  loop: "{{ dev_windows_packages | difference(dev_windows_bootstrap_packages) }}"
+  register: dev_windows_fallback_package_results
+  changed_when: "'ANSIBLE_CHANGED' in dev_windows_fallback_package_results.stdout"
+  when: not dev_windows_winget_config.stat.exists
+
+- name: Install skills and managed global instructions
+  ansible.windows.win_command: >-
+    powershell -NoProfile -ExecutionPolicy Bypass -File
+    {{ dev_windows_repo_path }}\bin\install-ai-devops-windows.ps1
+    -RepoPath {{ dev_windows_repo_path }} -SkipGitInstall
+  register: dev_windows_ai_install
+  changed_when: "'Installed' in dev_windows_ai_install.stdout or 'skills installed' in dev_windows_ai_install.stdout"
+
+- name: Apply 1Password-backed SSH, MCP, and dotfile configuration
+  ansible.windows.win_shell: |
+    $pwsh = (Get-Command pwsh -ErrorAction Stop).Source
+    & $pwsh -NoProfile -NonInteractive -Command `
+      "& '{{ dev_windows_repo_path }}\bin\setup-machine.ps1' -RepoPath '{{ dev_windows_repo_path }}' -Token `$env:OP_SERVICE_ACCOUNT_TOKEN"
+    if ($LASTEXITCODE -ne 0) { throw "setup-machine.ps1 failed with exit code $LASTEXITCODE" }
+  environment:
+    OP_SERVICE_ACCOUNT_TOKEN: "{{ lookup('ansible.builtin.env', 'OP_SERVICE_ACCOUNT_TOKEN') }}"
+  no_log: true
+  register: dev_windows_secret_setup
+  changed_when: "'Installed' in dev_windows_secret_setup.stdout or 'Wrote' in dev_windows_secret_setup.stdout or 'Restored' in dev_windows_secret_setup.stdout"
+  when:
+    - dev_windows_run_ai_setup | bool
+    - dev_apply_secrets | bool
+
+- name: Verify Windows developer-computer state
+  ansible.windows.win_powershell:
+    script: |
+      $checks = [ordered]@{
+        Git = [bool](Get-Command git -ErrorAction SilentlyContinue)
+        OnePassword = [bool](Get-Command op -ErrorAction SilentlyContinue)
+        SSHD = (Get-Service sshd -ErrorAction SilentlyContinue).Status -eq 'Running'
+        AiDevOpsRepo = Test-Path '{{ dev_windows_repo_path }}\.git'
+        ClaudeSkills = Test-Path "$HOME\.claude\skills"
+        CodexSkills = Test-Path "$HOME\.codex\skills"
+        McpLauncher = if ('{{ dev_apply_secrets | bool | lower }}' -eq 'true') { Test-Path "$HOME\.config\ai-devops\mcp-launch.cmd" } else { $true }
+      }
+      $Ansible.Result = $checks
+      if ($checks.Values -contains $false) { throw ('FAILED: ' + ($checks | ConvertTo-Json -Compress)) }
+      Write-Output ('WINDOWS DEV COMPUTER: PASS ' + ($checks | ConvertTo-Json -Compress))
+  register: dev_windows_report
+  changed_when: false
+
+- name: Print Windows verification report
+  ansible.builtin.debug:
+    var: dev_windows_report.output

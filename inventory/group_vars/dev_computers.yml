@@ -1,0 +1,50 @@
+---
+# Desired state shared by Windows and Ubuntu developer computers. No secrets.
+dev_ai_repo_url: "https://github.com/u2giants/ai-devops.git"
+dev_ai_repo_branch: "main"
+dev_op_vault: "vibe_coding"
+dev_apply_secrets: false
+dev_run_package_upgrades: true
+
+dev_windows_repo_path: 'C:\repos\ai-devops'
+# Fallback only. The canonical AI DevOps WinGet Configuration owns packages
+# whenever it exists.
+dev_windows_winget_config_relative_path: ".config/configuration.winget"
+dev_windows_bootstrap_relative_path: "bin/bootstrap-windows-dev.ps1"
+dev_windows_bootstrap_packages:
+  - Git.Git
+  - Microsoft.PowerShell
+  - AgileBits.1Password.CLI
+dev_windows_packages:
+  - Git.Git
+  - Microsoft.PowerShell
+  - AgileBits.1Password.CLI
+  - OpenJS.NodeJS.LTS
+  - GitHub.cli
+  - Microsoft.VisualStudioCode
+  - Cloudflare.cloudflared
+  - Tailscale.Tailscale
+
+dev_ubuntu_repo_path: "/worksp/ai-devops"
+dev_ubuntu_packages:
+  - ca-certificates
+  - curl
+  - git
+  - jq
+  - openssh-client
+  - openssh-server
+  - python3
+  - python3-apt
+  - nodejs
+  - npm
+
+# The public key may be committed. The private half is read from 1Password by
+# ai-devops at runtime and is never returned to the Ansible controller output.
+dev_owner_public_key: >-
+  ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDzgWGrKmHE0Tgds2DDQWN7AwFCBkY6mpRZhinc6Wv0C 916-alien
+dev_tailscale_ipv4_cidr: "100.64.0.0/10"
+dev_ssh_private_key_ref: "op://vibe_coding/916-alien SSH key/private key"
+dev_ssh_public_key_ref: "op://vibe_coding/916-alien SSH key/public key"
+dev_ssh_aliases:
+  - { name: vps, hostname: "100.66.37.58", user: root }
+  - { name: coolify, hostname: "100.66.37.58", user: root }

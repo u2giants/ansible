@@ -8,6 +8,12 @@ those).
 > **To change the server, change this repo** — never SSH in and hand-edit `/etc`, `apt install`,
 > or `crontab -e`. Manual changes are drift and get reverted by the next apply.
 
+Developer-computer management is a separate, opt-in path. It is not part of
+the Hetz production `site.yml`/auto-apply pipeline. A new Windows machine first
+runs the minimum-touch bootstrap from `u2giants/ai-devops`; that establishes
+Tailscale/OpenSSH and a WSL Ansible controller before this repository manages
+Windows and Ubuntu computers through `playbooks/dev-computers.yml`.
+
 ## Start here
 
 - **[`AGENTS.md`](AGENTS.md)** — the canonical operating guide for developers and AI sessions.
@@ -24,11 +30,13 @@ those).
 | [`docs/development.md`](docs/development.md) | local setup (WSL), validate, check, apply |
 | [`docs/configuration.md`](docs/configuration.md) | vars, gates, secrets (no values) |
 | [`docs/deployment.md`](docs/deployment.md) | the apply pipeline, SSH, rollback |
+| [`docs/dev-computers.md`](docs/dev-computers.md) | Windows/Ubuntu developer-computer desired state |
 | [`docs/DISCOVERY-2026-06-23.md`](docs/DISCOVERY-2026-06-23.md) | live host state captured + reconciled |
 | [`docs/ANSIBLE-IMPLEMENTATION-PLAN.md`](docs/ANSIBLE-IMPLEMENTATION-PLAN.md) | the full original brief (long) |
 
 ## Status (short)
 
-Phase 0 (scaffold + discovery) and Phase 1 (non-disruptive roles) are **applied to prod and
-idempotent**. Phase 2 (risky roles), Phase 3 (secrets → 1Password), and Phase 4 (CI auto-apply)
-are pending — see [`HANDOFF.md`](HANDOFF.md) and `AGENTS.md` §14.
+The Hetz host pipeline is applied and operational; see `HANDOFF.md` for its
+detailed history. The developer-computer roles are source-complete but have not
+yet passed disposable Windows/Ubuntu live proof or second-run idempotency.
+Real developer hosts remain commented out and are not wired into production CI.

@@ -1,0 +1,173 @@
+---
+- name: Require Ubuntu and a Tailscale target address
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution == 'Ubuntu'
+      - ansible_host is match('^100\\.')
+    fail_msg: "Ubuntu developer computers must be reached through their Tailscale IPv4 address."
+
+- name: Resolve the managed user's home directory
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ ansible_user }}"
+
+- name: Record the managed user's home directory
+  ansible.builtin.set_fact:
+    dev_ubuntu_user_home: "{{ ansible_facts.getent_passwd[ansible_user][4] }}"
+
+- name: Install declared Ubuntu packages
+  ansible.builtin.apt:
+    name: "{{ dev_ubuntu_packages }}"
+    state: "{{ 'latest' if dev_run_package_upgrades | bool else 'present' }}"
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Verify vendor bootstrap tools are already installed
+  ansible.builtin.command: "{{ item }} --version"
+  loop:
+    - tailscale
+    - op
+  changed_when: false
+  register: dev_ubuntu_bootstrap_tool
+  failed_when: dev_ubuntu_bootstrap_tool.rc != 0
+
+- name: Ensure SSH server is enabled
+  ansible.builtin.service:
+    name: ssh
+    enabled: true
+    state: started
+  when: dev_ubuntu_manage_sshd | bool
+
+- name: Authorize the owner key
+  ansible.posix.authorized_key:
+    user: "{{ ansible_user }}"
+    key: "{{ dev_owner_public_key }}"
+    state: present
+  when: dev_ubuntu_manage_sshd | bool
+
+- name: Bind OpenSSH to Tailscale and require keys
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/90-ai-devops-tailscale.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by u2giants/ansible: developer computers use Tailscale SSH only.
+      ListenAddress {{ ansible_host }}
+      PasswordAuthentication no
+      PubkeyAuthentication yes
+  notify: Restart Ubuntu ssh
+  when: dev_ubuntu_manage_sshd | bool
+
+- name: Allow Tailscale SSH with UFW
+  community.general.ufw:
+    rule: allow
+    direction: in
+    interface_in: tailscale0
+    port: '22'
+    proto: tcp
+    comment: ai-devops Tailscale SSH
+  when: dev_ubuntu_manage_sshd | bool
+
+- name: Clone or update AI DevOps
+  ansible.builtin.git:
+    repo: "{{ dev_ai_repo_url }}"
+    dest: "{{ dev_ubuntu_repo_path }}"
+    version: "{{ dev_ai_repo_branch }}"
+    update: true
+
+- name: Install AI DevOps command links
+  ansible.builtin.command: "{{ dev_ubuntu_repo_path }}/install.sh"
+  register: dev_ubuntu_install
+  changed_when: "'Created symlink' in dev_ubuntu_install.stdout or 'Installed' in dev_ubuntu_install.stdout"
+
+- name: Install Claude and Codex skills and managed instructions
+  ansible.builtin.command: "{{ dev_ubuntu_repo_path }}/bin/ai-install-skills"
+  become: false
+  register: dev_ubuntu_skills
+  changed_when: "'Installed' in dev_ubuntu_skills.stdout or ' skills installed' in dev_ubuntu_skills.stdout"
+
+- name: Apply 1Password-backed MCP and shell configuration
+  ansible.builtin.command: "{{ dev_ubuntu_repo_path }}/bin/setup-secrets.sh --no-legacy"
+  become: false
+  environment:
+    OP_SERVICE_ACCOUNT_TOKEN: "{{ lookup('ansible.builtin.env', 'OP_SERVICE_ACCOUNT_TOKEN') }}"
+  no_log: true
+  register: dev_ubuntu_secret_setup
+  changed_when: "'Installed' in dev_ubuntu_secret_setup.stdout or 'Wrote' in dev_ubuntu_secret_setup.stdout"
+  when:
+    - dev_ubuntu_run_ai_setup | bool
+    - dev_apply_secrets | bool
+
+- name: Restore the owner SSH key from 1Password without returning it to Ansible
+  ansible.builtin.shell: |
+    set -eu
+    install -d -m 700 "$HOME/.ssh"
+    umask 077
+    changed=0
+    private_tmp="$(mktemp)"
+    public_tmp="$(mktemp)"
+    trap 'rm -f "$private_tmp" "$public_tmp"' EXIT
+    op read '{{ dev_ssh_private_key_ref }}' > "$private_tmp"
+    printf '\n' >> "$private_tmp"
+    op read '{{ dev_ssh_public_key_ref }}' > "$public_tmp"
+    if ! cmp -s "$private_tmp" "$HOME/.ssh/916-alien"; then
+      install -m 600 "$private_tmp" "$HOME/.ssh/916-alien"
+      changed=1
+    fi
+    if ! cmp -s "$public_tmp" "$HOME/.ssh/916-alien.pub"; then
+      install -m 644 "$public_tmp" "$HOME/.ssh/916-alien.pub"
+      changed=1
+    fi
+    chmod 600 "$HOME/.ssh/916-alien"
+    chmod 644 "$HOME/.ssh/916-alien.pub"
+    [ "$changed" -eq 0 ] || printf '%s\n' ANSIBLE_CHANGED
+  args:
+    executable: /bin/bash
+  environment:
+    OP_SERVICE_ACCOUNT_TOKEN: "{{ lookup('ansible.builtin.env', 'OP_SERVICE_ACCOUNT_TOKEN') }}"
+  become: false
+  no_log: true
+  register: dev_ubuntu_ssh_key
+  changed_when: "'ANSIBLE_CHANGED' in dev_ubuntu_ssh_key.stdout"
+  when: dev_apply_secrets | bool
+
+- name: Install managed SSH aliases
+  ansible.builtin.template:
+    src: ssh-aliases.conf.j2
+    dest: "{{ dev_ubuntu_user_home }}/.ssh/ai-devops.conf"
+    mode: "0600"
+  become: false
+
+- name: Include managed SSH aliases from the user config
+  ansible.builtin.lineinfile:
+    path: "{{ dev_ubuntu_user_home }}/.ssh/config"
+    line: "Include ~/.ssh/ai-devops.conf"
+    create: true
+    mode: "0600"
+  become: false
+
+- name: Verify Ubuntu developer-computer state
+  ansible.builtin.shell: |
+    set -eu
+    command -v git >/dev/null
+    command -v op >/dev/null
+    systemctl is-active --quiet ssh
+    test -d '{{ dev_ubuntu_repo_path }}/.git'
+    test -d "$HOME/.claude/skills"
+    test -d "$HOME/.codex/skills"
+    test -f "$HOME/.ssh/ai-devops.conf"
+    if [ '{{ dev_apply_secrets | bool | lower }}' = true ]; then
+      test -f "$HOME/.config/ai-devops/mcp.env"
+      test -f "$HOME/.config/ai-devops/shellrc"
+    fi
+    printf '%s\n' 'UBUNTU DEV COMPUTER: PASS packages, ssh, ai-devops, skills, dotfiles, MCP'
+  args:
+    executable: /bin/bash
+  become: false
+  changed_when: false
+  register: dev_ubuntu_report
+
+- name: Print Ubuntu verification report
+  ansible.builtin.debug:
+    var: dev_ubuntu_report.stdout_lines

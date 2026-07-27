@@ -51,6 +51,7 @@ Then load additional docs only when relevant:
 | Modify a host role's behavior | `AGENTS.md`, the relevant `roles/<role>/README.md`, `docs/architecture.md` | `docs/deployment.md` unless the apply flow changes |
 | Add/change config, vars, secrets, runtime settings | `AGENTS.md`, `docs/configuration.md`, `docs/deployment.md` if CI/runtime is affected | unrelated role READMEs |
 | Change local setup / how to run, lint, test, apply | `AGENTS.md`, `docs/development.md`, `ansible.cfg`, `requirements.yml` | `docs/deployment.md` unless CI changes |
+| Manage Windows/Ubuntu developer computers | `AGENTS.md`, `docs/dev-computers.md`, `playbooks/dev-computers.yml`, `roles/dev_windows/`, `roles/dev_ubuntu/` | Production Hetz roles |
 | Change deployment, CI/CD, the apply pipeline, rollback | `AGENTS.md`, `docs/deployment.md`, `.github/workflows/*`, `docs/configuration.md` | `docs/development.md` unless local flow changes |
 | Change firewall / docker / cloudflared (risky roles) | `AGENTS.md`, `docs/architecture.md`, that role's README, `docs/ANSIBLE-IMPLEMENTATION-PLAN.md` §4a | unrelated roles |
 | Investigate an incident or breakage | `AGENTS.md` (Critical incidents §13), `docs/incidents/*`, `HANDOFF.md` if present, `docs/DISCOVERY-2026-06-23.md` | unrelated role READMEs |

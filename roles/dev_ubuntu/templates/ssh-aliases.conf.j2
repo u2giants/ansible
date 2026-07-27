@@ -1,0 +1,9 @@
+# Managed by u2giants/ansible. Local custom aliases belong in ~/.ssh/config.
+{% for alias in dev_ssh_aliases %}
+Host {{ alias.name }}
+  HostName {{ alias.hostname }}
+  User {{ alias.user }}
+  IdentityFile ~/.ssh/916-alien
+  IdentitiesOnly yes
+
+{% endfor %}
