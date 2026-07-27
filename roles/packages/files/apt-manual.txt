@@ -4,10 +4,12 @@ acpid
 adduser
 apparmor
 apport
+audispd-plugins
 apt
 apt-transport-https
 apt-utils
 at
+auditd
 azure-cli
 base-files
 bash
@@ -135,6 +137,7 @@ parted
 passwd
 patch
 pciutils
+pipx
 plymouth
 plymouth-theme-ubuntu-text
 pollinate
@@ -183,6 +186,7 @@ ubuntu-keyring
 ubuntu-pro-client
 ubuntu-release-upgrader-core
 udev
+uidmap
 unattended-upgrades
 unminimize
 unzip
