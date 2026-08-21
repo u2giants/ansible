@@ -67,6 +67,7 @@ server without drift: host changes can only land through this pipeline.
 | `users` | 1 | `ai` user, passwordless sudo, authorized public keys |
 | `dns_hardening` | 1 | `resolved` FallbackDNS (May 2026 outage fix) |
 | `backrest_watchdog` | 1 | docker.sock self-heal timer (June 2026 outage fix) |
+| `memory_sync_containment` | 1 | preserve Claude memory and remove the retired public-repository sync cron |
 | `firewall` | 2 | declarative `iptables` SSH lockdown only (host-owned INPUT rules), netfilter-persistent, fail2ban |
 | `docker` | 2 | `daemon.json` only, pinned engine, never auto-restart |
 | `cron_glue` | 2 | host cron entries only (not the keeper scripts) |
