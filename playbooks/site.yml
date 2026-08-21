@@ -74,6 +74,13 @@
       tags: [phase1, retired_platform_cleanup]
       when: enable_phase1 | bool
 
+    # Incident containment: preserve the current private memory state, then
+    # remove the obsolete public-repository writer. This is deliberately phase
+    # 1 because stopping a data publisher is non-disruptive and urgent.
+    - role: memory_sync_containment
+      tags: [phase1, memory_sync_containment]
+      when: enable_phase1 | bool
+
     # ---- Phase 2: risky live-service roles (can take the box down) ----
     - role: coolify
       tags: [phase2, coolify]

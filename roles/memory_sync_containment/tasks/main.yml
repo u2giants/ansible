@@ -1,0 +1,37 @@
+---
+- name: Create the private incident-backup directory
+  ansible.builtin.file:
+    path: "{{ memory_sync_incident_backup }}"
+    state: directory
+    owner: "{{ managed_user }}"
+    group: "{{ managed_user }}"
+    mode: "0700"
+
+- name: Preserve Claude memory before disabling the retired public writer
+  ansible.builtin.shell: |
+    set -euo pipefail
+    backup={{ memory_sync_incident_backup | quote }}
+    source_root=/home/{{ managed_user | quote }}/.claude/projects
+    mkdir -p "$backup/projects"
+    if [[ -d "$source_root" ]]; then
+      while IFS= read -r -d '' memory_dir; do
+        slug="$(basename "$(dirname "$memory_dir")")"
+        destination="$backup/projects/$slug/memory"
+        mkdir -p "$destination"
+        cp -a "$memory_dir/." "$destination/"
+      done < <(find "$source_root" -type d -name memory -print0)
+    fi
+    find "$backup/projects" -type f -print0 \
+      | sort -z \
+      | xargs -0 -r sha256sum > "$backup/manifest.sha256"
+    chown -R {{ managed_user | quote }}:{{ managed_user | quote }} "$backup"
+    chmod -R go-rwx "$backup"
+  args:
+    executable: /bin/bash
+    creates: "{{ memory_sync_incident_backup }}/manifest.sha256"
+
+- name: Remove the retired public memory-sync schedule
+  ansible.builtin.cron:
+    name: "{{ memory_sync_retired_cron_name }}"
+    user: "{{ managed_user }}"
+    state: absent

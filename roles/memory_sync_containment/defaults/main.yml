@@ -1,0 +1,3 @@
+---
+memory_sync_incident_backup: "/home/ai/.local/state/ai-devops/incidents/memory-sync-20260821T234500Z"
+memory_sync_retired_cron_name: "sync claude memory across machines"
