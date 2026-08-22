@@ -26,8 +26,7 @@ ai_devops_toolkit_version: "dde60a90a6acbf60507c6943932894d644826a4c"
 ai_devops_toolkit_backup_path: "/worksp/ai-devops-pre-rewrite-20260822"
 ai_devops_toolkit_rewrite_predecessors:
   - "2daa757268fa825407ec2ae7a62e24da29b4e652"
-ai_devops_toolkit_upgrade_predecessors:
-  - "768186c05abc1f85848210f163e7ec9609fc36d6"
+ai_devops_toolkit_upgrade_predecessors: []
 
 # ----------------------------------------------------------------------------------
 # base role

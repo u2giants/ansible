@@ -50,15 +50,16 @@ privilege boundary for root-owned configuration artifacts and the Windows
 Git-Bash-to-PowerShell protected-path boundary. The first cutover attempt safely
 stopped at candidate `768186c05abc1f85848210f163e7ec9609fc36d6`: the new
 checkout was clean, the original backup was intact, and no completion marker was
-written. That candidate is therefore approved only for one in-place recovery to
-the new pin; it is not a history-rewrite predecessor and the existing backup must
-not be replaced.
+written. The one-time in-place recovery from that candidate completed on
+2026-08-22, and the temporary upgrade allowlist is now empty. The candidate is
+not a history-rewrite predecessor and can no longer be selected as an installed
+source revision.
 
 Claude Opus 5 reviewed exact release `dde60a90a6acbf60507c6943932894d644826a4c`
 read-only and returned `APPROVE` in provider session
-`0c978767-de80-4e87-a8a8-8b43107e321f` on 2026-08-22. The recovery dispatch is
-still forbidden until that commit's hosted Linux and Windows jobs and this
-repository's exact-head review pass.
+`0c978767-de80-4e87-a8a8-8b43107e321f` on 2026-08-22. The hosted Linux and
+Windows jobs passed, the governed recovery dispatch installed the release, and
+a second exact tagged run completed successfully without changing the server.
 
 Before the first toolkit dispatch, a read-only check on 2026-08-22 confirmed
 `/worksp/ai-devops` was clean at

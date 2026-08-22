@@ -415,7 +415,7 @@ See `HANDOFF.md` for the detailed continuation state. Summary:
 | done | Phase 4 CI **pipeline working** (2026-06-24) — Tailscale tag:ci + 1Password + CI key; **drift detection LIVE** (daily); PR diffs via check.yml | — |
 | done | **Phase 4 COMPLETE (2026-06-24)** — `ENABLE_AUTO_APPLY=true`; self-test passed (pushed a motd line to main → apply.yml auto-applied it to hetz, verified live). Push to main now auto-applies, serialized. |
 | note | Auto-apply is ON: **every push to `main` triggers a real apply** (doc-only pushes are no-op applies). Drift detection daily. `cloudflared` token mgmt still manual (`cloudflared_manage_token: false`). |
-| in progress | 2026-08-21 incident: run and verify the default-off toolkit maintenance dispatch | current governed rollout |
+| done | 2026-08-21 incident: reviewed release installed; second tagged run clean; temporary upgrade allowlist emptied | governed rollout completed 2026-08-22 |
 | open | Phase 3: migrate secrets into 1Password one at a time | needs 1Password vault access |
 
 ## 15. How to make a change (the supported path)

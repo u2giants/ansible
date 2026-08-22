@@ -22,8 +22,10 @@ owner-only marker only after `install.sh --skip-secrets`,
 `ai-install-skills --adopt-globals`, and `ai-devops doctor` all succeed. If any
 step fails after cloning, the marker remains absent and the next serialized
 apply retries the installation instead of leaving a false-success checkout. A
-separate, explicit in-place-upgrade allowlist handles a reviewed successor after
-such a partial cutover without moving or replacing the original history backup.
+separate, explicit in-place-upgrade allowlist can handle a reviewed successor
+after such a partial cutover without moving or replacing the original history
+backup. The 2026-08-22 recovery consumed its temporary entry; the production
+allowlist is now empty.
 
 This role is deliberately absent from routine Phase 1. It runs only when the
 operator selects `--tags ai_devops_toolkit` and
