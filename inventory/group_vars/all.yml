@@ -22,7 +22,7 @@ managed_user: "ai"
 # ----------------------------------------------------------------------------------
 ai_devops_toolkit_repo_url: "https://github.com/u2giants/ai-devops.git"
 ai_devops_toolkit_path: "/worksp/ai-devops"
-ai_devops_toolkit_version: "d881dbdfbe281a30b18a069209e68f7135b3b144"
+ai_devops_toolkit_version: "a9b38c232962ecb936d88283c5c484ab8aa77f99"
 ai_devops_toolkit_backup_path: "/worksp/ai-devops-pre-rewrite-20260822"
 ai_devops_toolkit_rewrite_predecessors:
   - "2daa757268fa825407ec2ae7a62e24da29b4e652"
