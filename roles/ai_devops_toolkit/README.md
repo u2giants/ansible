@@ -23,9 +23,11 @@ owner-only marker only after `install.sh --skip-secrets`,
 step fails after cloning, the marker remains absent and the next serialized
 apply retries the installation instead of leaving a false-success checkout. A
 separate, explicit in-place-upgrade allowlist can handle a reviewed successor
-after such a partial cutover without moving or replacing the original history
-backup. The 2026-08-22 recovery consumed its temporary entry; the production
-allowlist is now empty.
+without moving or replacing the original history backup. The current temporary
+entry permits only the reviewed `dde60a90a6acbf60507c6943932894d644826a4c`
+installation to advance to `d24884fd073081bb2eb43ce6880ba8714fdd6e17`.
+It must be removed after the successor is installed and a second tagged run
+reports no changes.
 
 This role is deliberately absent from routine Phase 1. It runs only when the
 operator selects `--tags ai_devops_toolkit` and

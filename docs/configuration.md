@@ -32,7 +32,7 @@ see [`deployment.md`](deployment.md).
 |---|---|---|
 | `host_timezone` | `America/New_York` | confirmed live 2026-06-23 |
 | `managed_user` | `ai` | passwordless sudo user |
-| `ai_devops_toolkit_version` | `dde60a90a6acbf60507c6943932894d644826a4c` | exact reviewed toolkit release |
+| `ai_devops_toolkit_version` | `d24884fd073081bb2eb43ce6880ba8714fdd6e17` | exact reviewed toolkit release |
 | `ai_devops_toolkit_backup_path` | `/worksp/ai-devops-pre-rewrite-20260822` | fixed recoverable predecessor checkout |
 | `dns_fallback_servers` | `1.1.1.1 1.0.0.1 8.8.8.8 8.8.4.4` | resolved FallbackDNS |
 | `docker_ce_version` | `5:29.6.0-1~ubuntu.24.04~noble` | pinned/held |
@@ -43,23 +43,26 @@ see [`deployment.md`](deployment.md).
 
 ### AI DevOps toolkit release evidence
 
-The `dde60a90a6acbf60507c6943932894d644826a4c` pin is the reviewed canonical
+The `d24884fd073081bb2eb43ce6880ba8714fdd6e17` pin is the reviewed canonical
 AI DevOps remediation release for every supported platform, including the
-production Linux checkout on `hetz`. It repairs the production-discovered
-privilege boundary for root-owned configuration artifacts and the Windows
-Git-Bash-to-PowerShell protected-path boundary. The first cutover attempt safely
+production Linux checkout on `hetz`. It includes the production-discovered
+privilege-boundary repairs for root-owned configuration artifacts and the
+Windows Git-Bash-to-PowerShell protected-path boundary. It also makes the
+seven-stage plan and review verdict contract exact, scope-bound, and convergent.
+The first cutover attempt safely
 stopped at candidate `768186c05abc1f85848210f163e7ec9609fc36d6`: the new
 checkout was clean, the original backup was intact, and no completion marker was
 written. The one-time in-place recovery from that candidate completed on
-2026-08-22, and the temporary upgrade allowlist is now empty. The candidate is
+2026-08-22. The candidate is
 not a history-rewrite predecessor and can no longer be selected as an installed
 source revision.
 
-Claude Opus 5 reviewed exact release `dde60a90a6acbf60507c6943932894d644826a4c`
+Claude Opus 5 reviewed exact successor `d24884fd073081bb2eb43ce6880ba8714fdd6e17`
 read-only and returned `APPROVE` in provider session
-`0c978767-de80-4e87-a8a8-8b43107e321f` on 2026-08-22. The hosted Linux and
-Windows jobs passed, the governed recovery dispatch installed the release, and
-a second exact tagged run completed successfully without changing the server.
+`97858f87-dc0e-418f-b490-780f8054c6b0` on 2026-08-22. The temporary upgrade
+allowlist names only the currently installed reviewed predecessor
+`dde60a90a6acbf60507c6943932894d644826a4c`; it must be removed after the
+successor is installed and a second exact tagged run reports no changes.
 
 Before the first toolkit dispatch, a read-only check on 2026-08-22 confirmed
 `/worksp/ai-devops` was clean at
