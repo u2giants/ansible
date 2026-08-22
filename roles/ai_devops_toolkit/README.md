@@ -21,7 +21,9 @@ Installation completion is separate from Git revision. The role writes an
 owner-only marker only after `install.sh --skip-secrets`,
 `ai-install-skills --adopt-globals`, and `ai-devops doctor` all succeed. If any
 step fails after cloning, the marker remains absent and the next serialized
-apply retries the installation instead of leaving a false-success checkout.
+apply retries the installation instead of leaving a false-success checkout. A
+separate, explicit in-place-upgrade allowlist handles a reviewed successor after
+such a partial cutover without moving or replacing the original history backup.
 
 This role is deliberately absent from routine Phase 1. It runs only when the
 operator selects `--tags ai_devops_toolkit` and
@@ -50,6 +52,7 @@ tagged run must report zero changes. Before writing its completion marker, the
 role also proves the installer did not recreate the retired `ai-memory-sync`
 schedule.
 
-The pinned release and predecessor are verified public commits in
-`u2giants/ai-devops`. Any third revision fails closed so an unexpected or
-concurrent checkout is never overwritten silently.
+The pinned release, history predecessor, and any one-time partial-release
+upgrade predecessor are verified public commits in `u2giants/ai-devops`. Any
+other revision fails closed so an unexpected or concurrent checkout is never
+overwritten silently.

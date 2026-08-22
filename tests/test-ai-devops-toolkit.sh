@@ -68,19 +68,24 @@ make_predecessor() {
 }
 
 run_role() {
-  local target="$1" backup="$2" state="$3" predecessor="$4"
+  local target="$1" backup="$2" state="$3" predecessor="$4" pinned="${5:-$release}" upgrade="${6:-}" extra
+  if [[ -n "$upgrade" ]]; then
+    extra='{"ai_devops_toolkit_rewrite_predecessors":["'"$predecessor"'"],"ai_devops_toolkit_upgrade_predecessors":["'"$upgrade"'"]}'
+  else
+    extra='{"ai_devops_toolkit_rewrite_predecessors":["'"$predecessor"'"],"ai_devops_toolkit_upgrade_predecessors":[]}'
+  fi
   ANSIBLE_CONFIG="$REPO_ROOT/ansible.cfg" ansible-playbook -i localhost, "$playbook" \
     -e "managed_user=$managed_user" \
     -e "ai_devops_toolkit_group=$managed_group" \
     -e ai_devops_toolkit_verify_memory_schedule=false \
     -e "ai_devops_toolkit_home=$home_dir" \
     -e "ai_devops_toolkit_state_dir=$state" \
-    -e "ai_devops_toolkit_completion_marker=$state/$release.installed" \
+    -e "ai_devops_toolkit_completion_marker=$state/$pinned.installed" \
     -e "ai_devops_toolkit_repo_url=$source_repo" \
     -e "ai_devops_toolkit_path=$target" \
     -e "ai_devops_toolkit_backup_path=$backup" \
-    -e "ai_devops_toolkit_version=$release" \
-    -e '{"ai_devops_toolkit_rewrite_predecessors":["'"$predecessor"'"]}'
+    -e "ai_devops_toolkit_version=$pinned" \
+    -e "$extra"
 }
 
 target="$TMP_ROOT/worksp/ai-devops"
@@ -109,5 +114,15 @@ fi
 [[ ! -e "$retry_state/$release.installed" ]]
 run_role "$retry_target" "$retry_backup" "$retry_state" "$retry_predecessor" >/dev/null
 [[ -f "$retry_state/$release.installed" ]]
+printf '%s\n' repaired > "$source_repo/repaired.txt"
+git -C "$source_repo" add repaired.txt
+git -C "$source_repo" commit -qm repaired-release
+repaired_release="$(git -C "$source_repo" rev-parse HEAD)"
+run_role "$retry_target" "$retry_backup" "$retry_state" "$retry_predecessor" "$repaired_release" "$release" >/dev/null
+[[ "$(git -C "$retry_target" rev-parse HEAD)" == "$repaired_release" ]]
+[[ "$(git -C "$retry_backup" rev-parse HEAD)" == "$retry_predecessor" ]]
+[[ -f "$retry_state/$repaired_release.installed" ]]
+upgrade_second="$(run_role "$retry_target" "$retry_backup" "$retry_state" "$retry_predecessor" "$repaired_release" "$release")"
+grep -Eq 'changed=0' <<< "$upgrade_second"
 
-echo "PASS: AI DevOps toolkit cutover is recoverable and idempotent"
+echo "PASS: AI DevOps toolkit cutover, partial-release upgrade, and idempotence are recoverable"

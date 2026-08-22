@@ -68,7 +68,7 @@ server without drift: host changes can only land through this pipeline.
 | `dns_hardening` | 1 | `resolved` FallbackDNS (May 2026 outage fix) |
 | `backrest_watchdog` | 1 | docker.sock self-heal timer (June 2026 outage fix) |
 | `memory_sync_containment` | 1 | preserve Claude memory and remove the retired public-repository sync cron |
-| `ai_devops_toolkit` | maintenance | explicitly gated, one-time recoverable toolkit history cutover; never routine Phase 1 |
+| `ai_devops_toolkit` | maintenance | explicitly gated toolkit history cutover and declared partial-release recovery; never routine Phase 1 |
 | `firewall` | 2 | declarative `iptables` SSH lockdown only (host-owned INPUT rules), netfilter-persistent, fail2ban |
 | `docker` | 2 | `daemon.json` only, pinned engine, never auto-restart |
 | `cron_glue` | 2 | host cron entries only (not the keeper scripts) |

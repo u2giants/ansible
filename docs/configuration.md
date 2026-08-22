@@ -32,7 +32,7 @@ see [`deployment.md`](deployment.md).
 |---|---|---|
 | `host_timezone` | `America/New_York` | confirmed live 2026-06-23 |
 | `managed_user` | `ai` | passwordless sudo user |
-| `ai_devops_toolkit_version` | `768186c05abc1f85848210f163e7ec9609fc36d6` | exact reviewed toolkit release |
+| `ai_devops_toolkit_version` | `dde60a90a6acbf60507c6943932894d644826a4c` | exact reviewed toolkit release |
 | `ai_devops_toolkit_backup_path` | `/worksp/ai-devops-pre-rewrite-20260822` | fixed recoverable predecessor checkout |
 | `dns_fallback_servers` | `1.1.1.1 1.0.0.1 8.8.8.8 8.8.4.4` | resolved FallbackDNS |
 | `docker_ce_version` | `5:29.6.0-1~ubuntu.24.04~noble` | pinned/held |
@@ -43,20 +43,31 @@ see [`deployment.md`](deployment.md).
 
 ### AI DevOps toolkit release evidence
 
-The `768186c05abc1f85848210f163e7ec9609fc36d6` pin is the reviewed canonical
+The `dde60a90a6acbf60507c6943932894d644826a4c` pin is the reviewed canonical
 AI DevOps remediation release for every supported platform, including the
-production Linux checkout on `hetz`; its final change makes informational native
-CLI probes safe under Windows PowerShell 5.1 without narrowing the cross-platform
-release. Claude Opus 5 reviewed that exact commit read-only and returned
-`APPROVE` in provider session `b4d90a4a-4d9f-4169-aa0f-660bf4bd09f2` on
-2026-08-22. The manual toolkit dispatch remains forbidden until the exact commit's
-hosted Linux and Windows verification jobs pass.
+production Linux checkout on `hetz`. It repairs the production-discovered
+privilege boundary for root-owned configuration artifacts and the Windows
+Git-Bash-to-PowerShell protected-path boundary. The first cutover attempt safely
+stopped at candidate `768186c05abc1f85848210f163e7ec9609fc36d6`: the new
+checkout was clean, the original backup was intact, and no completion marker was
+written. That candidate is therefore approved only for one in-place recovery to
+the new pin; it is not a history-rewrite predecessor and the existing backup must
+not be replaced.
 
-A read-only pre-deployment check on 2026-08-22 confirmed `/worksp/ai-devops` was
-still clean at `2daa757268fa825407ec2ae7a62e24da29b4e652`, with no rewrite backup
-or completion marker. Candidate `a9b38c232962ecb936d88283c5c484ab8aa77f99`
-was pinned temporarily but was never dispatched to `hetz`, so it is deliberately
-not an approved installed predecessor.
+Claude Opus 5 reviewed exact release `dde60a90a6acbf60507c6943932894d644826a4c`
+read-only and returned `APPROVE` in provider session
+`0c978767-de80-4e87-a8a8-8b43107e321f` on 2026-08-22. The recovery dispatch is
+still forbidden until that commit's hosted Linux and Windows jobs and this
+repository's exact-head review pass.
+
+Before the first toolkit dispatch, a read-only check on 2026-08-22 confirmed
+`/worksp/ai-devops` was clean at
+`2daa757268fa825407ec2ae7a62e24da29b4e652`, with no rewrite backup or
+completion marker. That is historical pre-dispatch evidence; the later partial
+cutover state is recorded above. Candidate
+`a9b38c232962ecb936d88283c5c484ab8aa77f99` was pinned temporarily but was
+never dispatched to `hetz`, so it is deliberately not an approved installed
+predecessor.
 
 ## Secrets (1Password vault `vibe_coding`)
 

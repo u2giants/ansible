@@ -93,6 +93,9 @@
     ai_devops_toolkit_requires_history_cutover: >-
       {{ ai_devops_toolkit_checkout.stat.exists
          and ai_devops_toolkit_installed_revision.stdout in ai_devops_toolkit_rewrite_predecessors }}
+    ai_devops_toolkit_requires_in_place_upgrade: >-
+      {{ ai_devops_toolkit_checkout.stat.exists
+         and ai_devops_toolkit_installed_revision.stdout in ai_devops_toolkit_upgrade_predecessors }}
 
 - name: Refuse an undeclared AI DevOps history transition
   ansible.builtin.assert:
@@ -100,9 +103,11 @@
       - not ai_devops_toolkit_checkout.stat.exists
         or ai_devops_toolkit_installed_revision.stdout == ai_devops_toolkit_version
         or ai_devops_toolkit_requires_history_cutover
+        or ai_devops_toolkit_requires_in_place_upgrade
     fail_msg: >-
       Installed AI DevOps revision {{ ai_devops_toolkit_installed_revision.stdout }} is neither
-      the pinned release nor an approved rewrite predecessor. Refusing to replace it.
+      the pinned release, an approved rewrite predecessor, nor an approved in-place
+      upgrade predecessor. Refusing to replace it.
 
 - name: Inspect the fixed pre-rewrite backup path
   ansible.builtin.stat:
