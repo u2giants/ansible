@@ -60,9 +60,11 @@ source revision.
 Claude Opus 5 reviewed exact successor `d24884fd073081bb2eb43ce6880ba8714fdd6e17`
 read-only and returned `APPROVE` in provider session
 `97858f87-dc0e-418f-b490-780f8054c6b0` on 2026-08-22. The temporary upgrade
-allowlist names only the currently installed reviewed predecessor
-`dde60a90a6acbf60507c6943932894d644826a4c`; it must be removed after the
-successor is installed and a second exact tagged run reports no changes.
+allowlist permitted only the installed reviewed predecessor
+`dde60a90a6acbf60507c6943932894d644826a4c`. Governed dispatch `32583326484`
+installed the successor, live doctor checks passed, the original backup remained
+at `2daa757268fa825407ec2ae7a62e24da29b4e652`, and exact tagged rerun
+`32583852811` completed successfully. The one-time allowlist is now empty.
 
 Before the first toolkit dispatch, a read-only check on 2026-08-22 confirmed
 `/worksp/ai-devops` was clean at
