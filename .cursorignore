@@ -5,6 +5,8 @@ fact_cache/
 *.retry
 *.log
 .git/
+.ai/
+.ai-review*/
 .DS_Store
 Thumbs.db
 .idea/

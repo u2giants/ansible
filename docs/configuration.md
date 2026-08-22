@@ -20,10 +20,11 @@ see [`deployment.md`](deployment.md).
 |---|---|---|
 | `enable_phase1` | `true` | runs the non-disruptive roles |
 | `enable_phase2` | `false` | gates the risky roles (firewall/docker/cron_glue/cloudflared); a pre-task asserts opt-in |
+| `enable_ai_devops_toolkit_deploy` | `false` | default-off maintenance gate; the exact manual toolkit dispatch opens it for one run |
 | `firewall_lock_ipv6` | `true` | also lock down IPv6 port 22 (closes the live v6 gap) |
 | `ssh_trusted_root_password` | `true` | allow root password login from trusted sources (Tailscale) — no-key break-glass |
 | `docker_auto_restart` | `false` | MUST stay false — Ansible never restarts Docker |
-| `ENABLE_AUTO_APPLY` | unset | GitHub repo variable; gates real apply-on-merge in `apply.yml` |
+| `ENABLE_AUTO_APPLY` | `true` | GitHub repo variable; enables real serialized apply-on-push in `apply.yml` |
 
 ## Key non-secret variables (`group_vars/all.yml`)
 
@@ -31,6 +32,8 @@ see [`deployment.md`](deployment.md).
 |---|---|---|
 | `host_timezone` | `America/New_York` | confirmed live 2026-06-23 |
 | `managed_user` | `ai` | passwordless sudo user |
+| `ai_devops_toolkit_version` | `d881dbdfbe281a30b18a069209e68f7135b3b144` | exact reviewed toolkit release |
+| `ai_devops_toolkit_backup_path` | `/worksp/ai-devops-pre-rewrite-20260822` | fixed recoverable predecessor checkout |
 | `dns_fallback_servers` | `1.1.1.1 1.0.0.1 8.8.8.8 8.8.4.4` | resolved FallbackDNS |
 | `docker_ce_version` | `5:29.6.0-1~ubuntu.24.04~noble` | pinned/held |
 | `users_authorized_keys` | 916-alien public key | installed for `ai`; PUBLIC keys only (never strips keys) |
@@ -45,20 +48,22 @@ CLI (already installed on the box). Values are **not** recorded here — only in
 
 | Secret (1Password item) | Purpose | Consumed by | Status |
 |---|---|---|---|
-| `ci-deploy-ssh` (private key) | CI → host SSH | CI runner (Phase 4) | planned |
+| `ci-deploy-ssh` (private key) | CI → host SSH | CI runner | active |
 | `cf-tunnel-hetz` | Cloudflare Tunnel 1 token | `cloudflared_coolify` role | in 1Password (per plan); not yet wired by Ansible |
 | `github-pat` | git/GitHub | git, MCP | migrated (per plan) |
 | `restic-hetzner`, `do-spaces`, `cf-dns-token`, `ghcr-pat`, `oauth2-proxy`, app secrets | backups, certs, image pulls, app | various | **Phase 3, not yet migrated** |
 
 Full migration table and order: `ANSIBLE-IMPLEMENTATION-PLAN.md` §5.2.
 
-## GitHub secrets/variables for CI (Phase 4 — not yet created)
+## GitHub secrets/variables for CI
 
 | Name | Type | Purpose |
 |---|---|---|
 | `OP_SERVICE_ACCOUNT_TOKEN` | secret | 1Password access in CI (the only secret stored in GitHub) |
 | `TS_OAUTH_CLIENT_ID`, `TS_OAUTH_SECRET` | secret | Tailscale `tag:ci` ephemeral node |
-| `ENABLE_AUTO_APPLY` | variable | set to `true` to enable apply-on-merge |
+| `ENABLE_AUTO_APPLY` | variable | set to `true`; enables apply-on-push |
 
 Verify what exists: `gh secret list -R u2giants/ansible` and `gh variable list -R u2giants/ansible`.
-**Currently unknown/none** — these are created in Phase 4.
+Verified active on 2026-08-22: all three secrets are configured and
+`ENABLE_AUTO_APPLY=true`. Re-check names and the non-secret variable value with the commands
+above; secret values are never printed.

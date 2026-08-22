@@ -8,10 +8,9 @@ Claude-Code-specific notes that do not belong in `AGENTS.md`.
 
 - **Ignore files:** `.claudeignore` controls what Claude Code skips. Keep it aligned with the
   "What to ignore" section of `AGENTS.md`.
-- **SSH / applies:** SSH to the host is currently a routine part of manual applies (see
-  `docs/deployment.md`) — `ssh vps` reaches root@hetz over Tailscale. This is *not* the long-term
-  norm: once CI runs applies (Phase 4), direct SSH becomes exceptional. Do not change host state
-  by hand outside an Ansible run.
+- **SSH / applies:** pushes to `main` run the serialized Phase 1 production apply (see
+  `docs/deployment.md`). Direct SSH is exceptional and is used for read-only verification or
+  recovery, never as a substitute for an Ansible source change.
 - **Allowed tooling:** `gh` for GitHub, `ansible*` via WSL, `ssh vps` for the host. The owner's
   1Password (`op`) holds secrets — never print or commit secret values.
 

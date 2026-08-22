@@ -9,12 +9,23 @@
 # ----------------------------------------------------------------------------------
 enable_phase1: true
 enable_phase2: false        # flip to true ONLY on scratch, or in a prod maintenance window
+enable_ai_devops_toolkit_deploy: false  # default-off; exact manual dispatch opens it for one run
 
 # ----------------------------------------------------------------------------------
 # Host facts (plan §2)
 # ----------------------------------------------------------------------------------
 host_timezone: "America/New_York"   # confirmed live 2026-06-23 (timedatectl)
 managed_user: "ai"
+
+# ----------------------------------------------------------------------------------
+# ai_devops_toolkit role — exact reviewed release and recoverable history cutover
+# ----------------------------------------------------------------------------------
+ai_devops_toolkit_repo_url: "https://github.com/u2giants/ai-devops.git"
+ai_devops_toolkit_path: "/worksp/ai-devops"
+ai_devops_toolkit_version: "d881dbdfbe281a30b18a069209e68f7135b3b144"
+ai_devops_toolkit_backup_path: "/worksp/ai-devops-pre-rewrite-20260822"
+ai_devops_toolkit_rewrite_predecessors:
+  - "2daa757268fa825407ec2ae7a62e24da29b4e652"
 
 # ----------------------------------------------------------------------------------
 # base role
@@ -87,12 +98,6 @@ cron_glue_entries:
     job: "/home/ai/bin/sync-infra-docs.sh >> /home/ai/logs/sync-infra-docs.log 2>&1"
     minute: "*/15"
     # The script itself is NOT managed here — it lives in its source repo.
-  - name: "sync claude memory across machines"  # ai crontab, added 2026-07-14
-    user: "{{ managed_user }}"
-    job: "/worksp/ai-devops/bin/ai-memory-sync >> /home/ai/logs/ai-memory-sync.log 2>&1"
-    minute: "*/30"
-    # Keeper script lives in the ai-devops repo (isolated clone + secret gate);
-    # NOT managed here. Ansible owns only that this cron entry exists.
 # NOT adopted (app-layer, owned by the HiClaw repo per plan §4a — 5 minute-by-minute
 # /worksp/hiclaw/*-keeper.sh entries on the box). Left to that repo on purpose.
 

@@ -1,3 +1,4 @@
 ---
 memory_sync_incident_backup: "/home/ai/.local/state/ai-devops/incidents/memory-sync-20260821T234500Z"
 memory_sync_retired_cron_name: "sync claude memory across machines"
+memory_sync_retired_cron_fragment: "/worksp/ai-devops/bin/ai-memory-sync"

@@ -1,7 +1,7 @@
 # Deployment
 
-How changes reach the live host. This describes the **real, current** process, which is part
-manual today (Phase 4 CI not yet enabled). For variables/secrets see
+How changes reach the live host. This describes the **real, current** automated process. For
+variables/secrets see
 [`configuration.md`](configuration.md).
 
 ## What "deploy" means here
@@ -20,29 +20,32 @@ This project deploys **configuration to a host**, not images or packages. "Deplo
 All three reach the host over **Tailscale** using the `tailscale/github-action` with an
 **ephemeral `tag:ci`** node, and pull secrets via `1password/load-secrets-action`.
 
+The `ai_devops_toolkit` role is not part of routine Phase 1. Its recoverability
+test gates the exact maintenance dispatch, and the role runs only through a manual `apply.yml` dispatch with
+`tags=ai_devops_toolkit`; that exact workflow path opens the otherwise
+default-off maintenance gate for one run.
+
 ## Current reality (important)
 
-- **CI auto-apply is NOT enabled.** `ENABLE_AUTO_APPLY` is unset, and the Tailscale/1Password
-  GitHub secrets do not exist yet (Phase 4). So `apply.yml` is effectively check-only.
-- **Applies are currently manual.** The owner / an AI session runs `ansible-playbook` from WSL
-  against `hetz`. Phase 1 was applied this way on 2026-06-23 (idempotency gate passed). Phase 2
-  is not applied.
+- **CI auto-apply is enabled.** `ENABLE_AUTO_APPLY=true`, and pushes to `main` run the serialized
+  Phase 1 apply through the authenticated Tailscale/1Password path.
+- **Routine applies are automated.** Direct SSH is for read-only verification and exceptional
+  recovery only. Phase 2 remains gated and is not applied.
 
-Manual apply command (Phase 1):
+Emergency manual fallback command (Phase 1; connects as the managed `ai` user):
 
 ```bash
 ANSIBLE_CONFIG=/mnt/c/repos/ansible/ansible/ansible.cfg \
 ansible-playbook playbooks/site.yml -l hetzner --tags phase1 \
-  --user root --private-key ~/.ssh/916-alien -e ansible_user=root
+  --private-key ~/.ssh/916-alien
 ```
 
 ## SSH
 
 - **Path:** `ssh vps` → root@`100.66.37.58` over Tailscale, key `916-alien`. Public SSH (port 22
   from the internet) is firewalled off — Tailscale only.
-- **Is SSH routine?** **Yes, currently** — applies are run manually over SSH during this phase.
-  The target model (Phase 4) moves applies into CI, after which direct SSH should become
-  **exceptional** (debugging/maintenance), not the deploy path. We are not there yet.
+- **Is SSH routine?** **No.** The CI apply workflow is the deployment path. Direct SSH is
+  exceptional and does not replace an Ansible source change.
 
 ## Rollback
 

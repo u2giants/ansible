@@ -81,6 +81,12 @@
       tags: [phase1, memory_sync_containment]
       when: enable_phase1 | bool
 
+    # Dedicated maintenance path, never part of routine Phase 1. Invoke only
+    # with --tags ai_devops_toolkit while its explicit gate is open.
+    - role: ai_devops_toolkit
+      tags: [ai_devops_toolkit]
+      when: enable_ai_devops_toolkit_deploy | bool
+
     # ---- Phase 2: risky live-service roles (can take the box down) ----
     - role: coolify
       tags: [phase2, coolify]

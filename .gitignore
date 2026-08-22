@@ -29,6 +29,8 @@ discovery/
 .ansible/
 fact_cache/
 *.log
+.ai/
+.ai-review*/
 
 # --- Editor / OS ---
 .DS_Store

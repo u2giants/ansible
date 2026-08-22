@@ -71,6 +71,7 @@ If `HANDOFF.md` exists, it is **required reading** for any continuation work.
 | `inventory/hosts.ini` | Hosts: `[hetzner]`, `[scratch]` (placeholder), `[do_backup_wiz]` (placeholder) | project-owned |
 | `inventory/group_vars/all.yml` | Non-secret vars; reconciled with live state | project-owned |
 | `.github/workflows/` | `check.yml`, `apply.yml`, `drift.yml` | project-owned |
+| `tests/` | dependency-light recovery and idempotency checks used by CI | project-owned |
 | `files/cloud-init/` | First-boot bootstrap template (`user-data.yaml.j2`) | project-owned |
 | `bin/discover.sh` | Read-only live-state capture script (run on the box) | project-owned (script) |
 | `docs/` | Plan, discovery report, status, and topic docs | docs |
@@ -114,6 +115,8 @@ are managed declaratively by roles, not source files in this repo.)
 | Change firewall (SSH) rules | `roles/firewall/` + `firewall_ssh_trusted_v4/v6`, `firewall_ssh_public_ports` in defaults | Docker/Tailscale/fail2ban chains; never a full-table capture |
 | Add/change a cron entry | `inventory/group_vars/all.yml` (`cron_glue_entries`), `roles/cron_glue/` | the keeper scripts under `/worksp/hiclaw/` (owned by HiClaw repo) |
 | Remove an exact retired host file | `roles/retired_platform_cleanup/` | Coolify apps, containers, proxy state, certificates, or volumes |
+| Contain the retired public memory publisher | `roles/memory_sync_containment/`, `cron_glue_entries` | private memory contents or application data |
+| Install or update the AI workflow toolkit | `roles/ai_devops_toolkit/`, its pinned vars | Coolify apps, containers, or machine-local secrets |
 | Manage Cloudflare Tunnel 1 | `roles/cloudflared_coolify/` | Tunnels 2 & 3 (Coolify-managed) |
 | Add an SSH public key for `ai` | `inventory/group_vars/all.yml` (`users_authorized_keys`) | private keys (never commit) |
 | Change the apply/CI flow | `.github/workflows/apply.yml` / `check.yml` / `drift.yml` | the `concurrency: apply-hetzner` guard (serialization) |
@@ -133,7 +136,7 @@ casually changed:
 | Docker engine | pinned `5:29.6.0-1~ubuntu.24.04~noble` | `group_vars` / `roles/docker/defaults` | held; never auto-upgraded |
 | Cloudflare Tunnel 1 | `cloudflared-coolify.service` | `roles/cloudflared_coolify/` | host systemd unit; token in 1Password |
 | 1Password vault | `vibe_coding` | `docs/*`, workflows | all secrets live here; injected at apply time |
-| Phase gates | `enable_phase1` (true), `enable_phase2` (false), `ENABLE_AUTO_APPLY` (GH repo var, unset) | `group_vars`, `apply.yml` | control what runs/applies |
+| Phase gates | `enable_phase1` (true), `enable_phase2` (false), `ENABLE_AUTO_APPLY` (GH repo var, true) | `group_vars`, `apply.yml` | control what runs/applies |
 
 ## 8. Container and service inventory
 
@@ -160,6 +163,7 @@ These exist (or are produced locally) but should not consume AI context:
 - `discovery/` — local output of `bin/discover.sh` (host ports/iptables/config dumps); gitignored.
 - `.ansible/`, `fact_cache/`, `*.retry`, `*.log` — Ansible runtime cruft.
 - `.git/`
+- `.ai/` — ignored local independent-review reports and lifecycle evidence.
 - `docs/ANSIBLE-IMPLEMENTATION-PLAN.md` is **long (480+ lines)** — read it only when you need the
   full original rationale/landmines, not for routine edits.
 
@@ -269,29 +273,28 @@ are injected at apply time. See `docs/configuration.md` for the full table.
 
 | Variable / reference | Purpose | Stored where | Required (local apply) | Required (CI) |
 |---|---|---|---|---|
-| `op://vibe_coding/ci-deploy-ssh/private_key` | SSH to the host | 1Password | no (uses owner's key today) | yes (Phase 4) |
+| `op://vibe_coding/ci-deploy-ssh/private_key` | SSH to the host | 1Password | no (uses owner's key today) | yes (active) |
 | `op://vibe_coding/cf-tunnel-hetz` | Cloudflare Tunnel 1 token | 1Password | only for `cloudflared_coolify` | yes |
-| `OP_SERVICE_ACCOUNT_TOKEN` | 1Password access in CI | **GitHub secret (planned)** | no | yes (Phase 4) |
-| `TS_OAUTH_CLIENT_ID` / `TS_OAUTH_SECRET` | Tailscale `tag:ci` ephemeral node | **GitHub secret (planned)** | no | yes (Phase 4) |
-| `ENABLE_AUTO_APPLY` | GH repo variable gating real applies | **GitHub repo variable (unset)** | n/a | yes to enable apply-on-merge |
+| `OP_SERVICE_ACCOUNT_TOKEN` | 1Password access in CI | **GitHub secret (active)** | no | yes |
+| `TS_OAUTH_CLIENT_ID` / `TS_OAUTH_SECRET` | Tailscale `tag:ci` ephemeral node | **GitHub secrets (active)** | no | yes |
+| `ENABLE_AUTO_APPLY` | GH repo variable gating real applies | **GitHub repo variable (`true`)** | n/a | yes |
 
-**Unknown / not yet created:** the GitHub secrets and `ENABLE_AUTO_APPLY` do not exist yet
-(Phase 4). Verify with `gh secret list -R u2giants/ansible` and `gh variable list -R u2giants/ansible`.
+The CI secrets and `ENABLE_AUTO_APPLY=true` were re-verified on 2026-08-22. Verify names and the
+non-secret variable value with `gh secret list -R u2giants/ansible` and
+`gh variable list -R u2giants/ansible`; never print secret values.
 
 ## 12. Deployment
 
 See `docs/deployment.md` for full detail. Summary of the **real, current** state:
 
 - **Pipeline:** GitHub Actions — `check.yml` (PR: `ansible-lint` + `--check --diff`, posts diff),
-  `apply.yml` (push to `main`: serialized via `concurrency: apply-hetzner`; real apply **gated by
-  the `ENABLE_AUTO_APPLY` repo variable, currently unset → check-only**), `drift.yml` (daily
+  `apply.yml` (push to `main`: serialized via `concurrency: apply-hetzner`; real apply **enabled by
+  the `ENABLE_AUTO_APPLY=true` repo variable**), `drift.yml` (daily
   `--check`, alerts on drift, never applies).
-- **Current reality:** CI auto-apply is **not yet enabled** (Phase 4 pending). Applies are done
-  **manually** by the owner/an AI session running `ansible-playbook` from WSL against `hetz` over
-  Tailscale. Phase 1 has been applied this way (2026-06-23); Phase 2 is not applied.
-- **Connection / SSH:** `ssh vps` (alias in the owner's `~/.ssh/config`) → root@`100.66.37.58`
-  over Tailscale, key `916-alien`. **SSH is currently routine** (manual apply phase). The target
-  model makes SSH exceptional once CI runs applies; we are not there yet.
+- **Current reality:** CI auto-apply is active and is the routine deployment path. Phase 2 remains
+  gated and is not part of the default apply.
+- **Connection / SSH:** `ssh vps` (alias in the owner's `~/.ssh/config`) reaches the host over
+  Tailscale. SSH is exceptional and is used for verification or recovery, not routine changes.
 - **Rollback:** re-apply the playbook from a previous commit; the `firewall` role additionally
   arms a 60s auto-revert timer. There is no separate release/versioning system.
 - **Image/package names:** none — this deploys configuration, not images.
@@ -375,6 +378,24 @@ without preserving key-only root from `10.0.1.0/24` — see
 [`docs/incidents/2026-07-15-coolify-ssh-deploy-breakage.md`](docs/incidents/2026-07-15-coolify-ssh-deploy-breakage.md)
 and `roles/ssh_hardening/README.md`.
 
+### 2026-08-21 — retired memory sync exposed private workflow memory
+
+What happened: a retired `ai-memory-sync` schedule could publish Claude project memory through
+the public `ai-devops` checkout, and the public repository required a history rewrite.
+
+Impact: private workflow memory entered public Git history; recovery required preserved local
+evidence, a rewritten public history, and a controlled checkout replacement on each machine.
+
+Recovery design: `memory_sync_containment` creates an owner-only memory and crontab backup, removes
+both marked and unmarked forms of the retired schedule, verifies absence, and removes its
+declarative source from `cron_glue_entries`. The rewritten toolkit checkout deploys separately
+through the explicitly gated `ai_devops_toolkit` maintenance role. The pending-work table below is
+the authority for whether that governed rollout has completed.
+
+Rule added: public repositories never receive private memory; memory schedules stay disabled until
+the private two-run union canary passes; history-rewrite cutovers preserve the complete predecessor
+checkout before replacement.
+
 ## 14. Pending work
 
 See `HANDOFF.md` for the detailed continuation state. Summary:
@@ -394,8 +415,8 @@ See `HANDOFF.md` for the detailed continuation state. Summary:
 | done | Phase 4 CI **pipeline working** (2026-06-24) — Tailscale tag:ci + 1Password + CI key; **drift detection LIVE** (daily); PR diffs via check.yml | — |
 | done | **Phase 4 COMPLETE (2026-06-24)** — `ENABLE_AUTO_APPLY=true`; self-test passed (pushed a motd line to main → apply.yml auto-applied it to hetz, verified live). Push to main now auto-applies, serialized. |
 | note | Auto-apply is ON: **every push to `main` triggers a real apply** (doc-only pushes are no-op applies). Drift detection daily. `cloudflared` token mgmt still manual (`cloudflared_manage_token: false`). |
+| in progress | 2026-08-21 incident: run and verify the default-off toolkit maintenance dispatch | current governed rollout |
 | open | Phase 3: migrate secrets into 1Password one at a time | needs 1Password vault access |
-| blocked | Phase 4: enable CI auto-apply + drift alerts | needs `OP_SERVICE_ACCOUNT_TOKEN`, Tailscale `tag:ci`, `ENABLE_AUTO_APPLY` as GitHub secrets/vars |
 
 ## 15. How to make a change (the supported path)
 
@@ -403,7 +424,8 @@ See `HANDOFF.md` for the detailed continuation state. Summary:
 2. Validate locally: `ansible-lint` and `ansible-playbook playbooks/site.yml --syntax-check`
    (see `docs/development.md`).
 3. For host-affecting changes, run a read-only `--check --diff` against `hetz` before applying.
-4. Apply (currently manual from WSL; CI once Phase 4 is enabled). Re-run to confirm 0 changes.
+4. Push to `main` so the serialized CI workflow applies Phase 1. Re-run the read-only check to
+   confirm 0 changes.
 
 **Never** SSH in and `apt install` / `crontab -e` / edit `/etc` by hand. Manual changes are drift
 and get reverted by the next apply.

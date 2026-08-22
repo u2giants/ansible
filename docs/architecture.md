@@ -22,7 +22,7 @@ rule is "manage the install, leave the runtime to Coolify."
 ## Components
 
 ```
-control node (WSL today; GitHub Actions runner in Phase 4)
+control node (GitHub Actions; WSL is an emergency fallback)
    │  ssh over Tailscale (100.66.37.58), become root
    ▼
 playbooks/site.yml ──> roles (phase-tagged)
@@ -40,7 +40,7 @@ secrets ── 1Password (vibe_coding), injected at apply time
 1. A change is made by editing this repo (roles/vars), not the box.
 2. `check.yml` (on PR) runs `ansible-lint` + `ansible-playbook --check --diff` and posts the diff.
 3. On merge to `main`, `apply.yml` runs — serialized by `concurrency: apply-hetzner` so two
-   applies never overlap. Real apply is gated by `ENABLE_AUTO_APPLY` (currently unset → check-only).
+   applies never overlap. Real apply is gated by `ENABLE_AUTO_APPLY` (currently `true`).
 4. `drift.yml` runs daily `--check` and alerts if the live host has drifted from the repo.
 
 The serialization (one apply path) is the mechanism that lets ~7 concurrent AI sessions share one
@@ -68,6 +68,7 @@ server without drift: host changes can only land through this pipeline.
 | `dns_hardening` | 1 | `resolved` FallbackDNS (May 2026 outage fix) |
 | `backrest_watchdog` | 1 | docker.sock self-heal timer (June 2026 outage fix) |
 | `memory_sync_containment` | 1 | preserve Claude memory and remove the retired public-repository sync cron |
+| `ai_devops_toolkit` | maintenance | explicitly gated, one-time recoverable toolkit history cutover; never routine Phase 1 |
 | `firewall` | 2 | declarative `iptables` SSH lockdown only (host-owned INPUT rules), netfilter-persistent, fail2ban |
 | `docker` | 2 | `daemon.json` only, pinned engine, never auto-restart |
 | `cron_glue` | 2 | host cron entries only (not the keeper scripts) |

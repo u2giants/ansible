@@ -11,7 +11,7 @@
   ansible.builtin.shell: |
     set -euo pipefail
     backup={{ memory_sync_incident_backup | quote }}
-    source_root=/home/{{ managed_user | quote }}/.claude/projects
+    source_root={{ ('/home/' ~ managed_user ~ '/.claude/projects') | quote }}
     mkdir -p "$backup/projects"
     if [[ -d "$source_root" ]]; then
       while IFS= read -r -d '' memory_dir; do
@@ -30,8 +30,73 @@
     executable: /bin/bash
     creates: "{{ memory_sync_incident_backup }}/manifest.sha256"
 
-- name: Remove the retired public memory-sync schedule
-  ansible.builtin.cron:
-    name: "{{ memory_sync_retired_cron_name }}"
-    user: "{{ managed_user }}"
-    state: absent
+- name: Read the managed user's current crontab
+  ansible.builtin.command:
+    argv:
+      - crontab
+      - -u
+      - "{{ managed_user }}"
+      - -l
+  register: memory_sync_current_crontab
+  changed_when: false
+  check_mode: false
+  failed_when: memory_sync_current_crontab.rc not in [0, 1]
+
+- name: Detect the retired marked or unmarked memory schedule
+  ansible.builtin.set_fact:
+    memory_sync_retired_cron_present: >-
+      {{ memory_sync_retired_cron_fragment in memory_sync_current_crontab.stdout
+         or ('#Ansible: ' ~ memory_sync_retired_cron_name) in memory_sync_current_crontab.stdout }}
+
+- name: Preview removal of the retired memory schedule
+  ansible.builtin.debug:
+    msg: >-
+      The exact retired memory-sync job and its Ansible marker will be removed from
+      {{ managed_user }}'s crontab after a private backup is written.
+  changed_when: memory_sync_retired_cron_present
+  when: ansible_check_mode
+
+- name: Back up and remove the retired marked or unmarked memory schedule
+  ansible.builtin.shell: |
+    set -euo pipefail
+    current="$(mktemp)"
+    updated="$(mktemp)"
+    trap 'rm -f "$current" "$updated"' EXIT
+    crontab -u {{ managed_user | quote }} -l > "$current" 2>/dev/null || {
+      echo "Could not re-read {{ managed_user }}'s crontab; refusing to replace it." >&2
+      exit 1
+    }
+    if ! grep -Fq -- {{ memory_sync_retired_cron_fragment | quote }} "$current" \
+      && ! grep -Fq -- {{ ('#Ansible: ' ~ memory_sync_retired_cron_name) | quote }} "$current"; then
+      echo "The retired job changed after detection; refusing a stale crontab rewrite." >&2
+      exit 1
+    fi
+    awk \
+      -v fragment={{ memory_sync_retired_cron_fragment | quote }} \
+      -v marker={{ ('#Ansible: ' ~ memory_sync_retired_cron_name) | quote }} \
+      'index($0, fragment) == 0 && index($0, marker) == 0' \
+      "$current" > "$updated"
+    install -o {{ managed_user | quote }} -g {{ managed_user | quote }} -m 0600 \
+      "$current" {{ (memory_sync_incident_backup ~ '/crontab.before') | quote }}
+    crontab -u {{ managed_user | quote }} "$updated"
+  args:
+    executable: /bin/bash
+  when:
+    - memory_sync_retired_cron_present
+    - not ansible_check_mode
+
+- name: Verify the retired memory schedule is absent
+  ansible.builtin.command:
+    argv:
+      - crontab
+      - -u
+      - "{{ managed_user }}"
+      - -l
+  register: memory_sync_verified_crontab
+  changed_when: false
+  check_mode: false
+  failed_when: >-
+    memory_sync_verified_crontab.rc not in [0, 1]
+    or memory_sync_retired_cron_fragment in memory_sync_verified_crontab.stdout
+    or ('#Ansible: ' ~ memory_sync_retired_cron_name) in memory_sync_verified_crontab.stdout
+  when: not ansible_check_mode

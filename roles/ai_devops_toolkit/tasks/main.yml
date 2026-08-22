@@ -1,0 +1,270 @@
+---
+- name: Inspect the shared workspace parent
+  ansible.builtin.stat:
+    path: "{{ ai_devops_toolkit_path | dirname }}"
+  register: ai_devops_toolkit_workspace
+
+- name: Refuse an absent or differently owned shared workspace
+  ansible.builtin.assert:
+    that:
+      - ai_devops_toolkit_workspace.stat.exists
+      - ai_devops_toolkit_workspace.stat.isdir
+      - ai_devops_toolkit_workspace.stat.pw_name == managed_user
+    fail_msg: >-
+      The shared workspace parent is absent or is not owned by {{ managed_user }}.
+      Refusing to change ownership across sibling application checkouts.
+
+- name: Own the AI DevOps release-state directory
+  ansible.builtin.file:
+    path: "{{ ai_devops_toolkit_state_dir }}"
+    state: directory
+    owner: "{{ managed_user }}"
+    group: "{{ ai_devops_toolkit_group }}"
+    mode: "0700"
+
+- name: Inspect the AI DevOps checkout
+  ansible.builtin.stat:
+    path: "{{ ai_devops_toolkit_path }}"
+  register: ai_devops_toolkit_checkout
+
+- name: Refuse an AI DevOps checkout owned by another account
+  ansible.builtin.assert:
+    that:
+      - ai_devops_toolkit_checkout.stat.pw_name == managed_user
+      - ai_devops_toolkit_checkout.stat.gr_name == ai_devops_toolkit_group
+    fail_msg: >-
+      {{ ai_devops_toolkit_path }} is not owned by {{ managed_user }}. Refusing to
+      rewrite or install through an ambiguously owned checkout.
+  when: ai_devops_toolkit_checkout.stat.exists
+
+- name: Inspect the pinned release completion marker
+  ansible.builtin.stat:
+    path: "{{ ai_devops_toolkit_completion_marker }}"
+  register: ai_devops_toolkit_completion
+
+- name: Read the installed AI DevOps revision
+  ansible.builtin.command:
+    argv:
+      - git
+      - -C
+      - "{{ ai_devops_toolkit_path }}"
+      - rev-parse
+      - HEAD
+  become: false
+  environment:
+    HOME: "{{ ai_devops_toolkit_home }}"
+  register: ai_devops_toolkit_installed_revision
+  changed_when: false
+  check_mode: false
+  when: ai_devops_toolkit_checkout.stat.exists
+
+- name: Verify the existing AI DevOps checkout is clean
+  ansible.builtin.command:
+    argv:
+      - git
+      - -C
+      - "{{ ai_devops_toolkit_path }}"
+      - status
+      - --porcelain
+      - --untracked-files=all
+  become: false
+  environment:
+    HOME: "{{ ai_devops_toolkit_home }}"
+  register: ai_devops_toolkit_status
+  changed_when: false
+  check_mode: false
+  when: ai_devops_toolkit_checkout.stat.exists
+
+- name: Refuse to overwrite uncommitted AI DevOps work
+  ansible.builtin.assert:
+    that:
+      - ai_devops_toolkit_status.stdout | length == 0
+    fail_msg: >-
+      {{ ai_devops_toolkit_path }} contains uncommitted work. Preserve and reconcile it
+      before deploying the managed toolkit.
+  when: ai_devops_toolkit_checkout.stat.exists
+
+- name: Classify the installed AI DevOps revision
+  ansible.builtin.set_fact:
+    ai_devops_toolkit_requires_install: >-
+      {{ (not ai_devops_toolkit_checkout.stat.exists)
+         or (ai_devops_toolkit_installed_revision.stdout != ai_devops_toolkit_version)
+         or (not ai_devops_toolkit_completion.stat.exists) }}
+    ai_devops_toolkit_requires_history_cutover: >-
+      {{ ai_devops_toolkit_checkout.stat.exists
+         and ai_devops_toolkit_installed_revision.stdout in ai_devops_toolkit_rewrite_predecessors }}
+
+- name: Refuse an undeclared AI DevOps history transition
+  ansible.builtin.assert:
+    that:
+      - not ai_devops_toolkit_checkout.stat.exists
+        or ai_devops_toolkit_installed_revision.stdout == ai_devops_toolkit_version
+        or ai_devops_toolkit_requires_history_cutover
+    fail_msg: >-
+      Installed AI DevOps revision {{ ai_devops_toolkit_installed_revision.stdout }} is neither
+      the pinned release nor an approved rewrite predecessor. Refusing to replace it.
+
+- name: Inspect the fixed pre-rewrite backup path
+  ansible.builtin.stat:
+    path: "{{ ai_devops_toolkit_backup_path }}"
+  register: ai_devops_toolkit_backup
+  when: ai_devops_toolkit_requires_history_cutover
+
+- name: Refuse to overwrite a prior AI DevOps history backup
+  ansible.builtin.assert:
+    that:
+      - not ai_devops_toolkit_backup.stat.exists
+    fail_msg: >-
+      Backup path {{ ai_devops_toolkit_backup_path }} already exists. Refusing to overwrite it.
+  when: ai_devops_toolkit_requires_history_cutover
+
+- name: Preserve the pre-rewrite AI DevOps checkout
+  ansible.builtin.command:
+    argv:
+      - mv
+      - "{{ ai_devops_toolkit_path }}"
+      - "{{ ai_devops_toolkit_backup_path }}"
+    removes: "{{ ai_devops_toolkit_path }}"
+    creates: "{{ ai_devops_toolkit_backup_path }}"
+  when: ai_devops_toolkit_requires_history_cutover
+
+- name: Report the planned history cutover during check mode
+  ansible.builtin.debug:
+    msg: >-
+      Check mode: the preserved checkout will move to {{ ai_devops_toolkit_backup_path }},
+      then the pinned release will be cloned to {{ ai_devops_toolkit_path }}.
+  when:
+    - ansible_check_mode
+    - ai_devops_toolkit_requires_history_cutover
+
+- name: Clone or update the pinned AI DevOps release
+  ansible.builtin.git:
+    repo: "{{ ai_devops_toolkit_repo_url }}"
+    dest: "{{ ai_devops_toolkit_path }}"
+    version: "{{ ai_devops_toolkit_version }}"
+    update: true
+    force: false
+  become: false
+  environment:
+    HOME: "{{ ai_devops_toolkit_home }}"
+  when:
+    - ai_devops_toolkit_requires_install
+    - not (ansible_check_mode and ai_devops_toolkit_requires_history_cutover)
+
+- name: Attach the pinned AI DevOps release to main
+  ansible.builtin.command:
+    argv:
+      - git
+      - -C
+      - "{{ ai_devops_toolkit_path }}"
+      - checkout
+      - -B
+      - main
+      - "{{ ai_devops_toolkit_version }}"
+  become: false
+  environment:
+    HOME: "{{ ai_devops_toolkit_home }}"
+  when:
+    - ai_devops_toolkit_requires_install
+    - not ansible_check_mode
+
+- name: Install the pinned AI DevOps release
+  ansible.builtin.command:
+    argv:
+      - "{{ ai_devops_toolkit_path }}/install.sh"
+      - --skip-secrets
+  become: false
+  environment:
+    HOME: "{{ ai_devops_toolkit_home }}"
+  when:
+    - ai_devops_toolkit_requires_install
+    - not ansible_check_mode
+
+- name: Adopt reviewed Claude and Codex globals
+  ansible.builtin.command:
+    argv:
+      - "{{ ai_devops_toolkit_path }}/bin/ai-install-skills"
+      - --adopt-globals
+  become: false
+  environment:
+    HOME: "{{ ai_devops_toolkit_home }}"
+  when:
+    - ai_devops_toolkit_requires_install
+    - not ansible_check_mode
+
+- name: Verify the installed AI DevOps revision
+  ansible.builtin.command:
+    argv:
+      - git
+      - -C
+      - "{{ ai_devops_toolkit_path }}"
+      - rev-parse
+      - HEAD
+  become: false
+  environment:
+    HOME: "{{ ai_devops_toolkit_home }}"
+  register: ai_devops_toolkit_verified_revision
+  changed_when: false
+  check_mode: false
+  failed_when: ai_devops_toolkit_verified_revision.stdout != ai_devops_toolkit_version
+  when: not (ansible_check_mode and ai_devops_toolkit_requires_install)
+
+- name: Verify the installed AI DevOps branch
+  ansible.builtin.command:
+    argv:
+      - git
+      - -C
+      - "{{ ai_devops_toolkit_path }}"
+      - branch
+      - --show-current
+  become: false
+  environment:
+    HOME: "{{ ai_devops_toolkit_home }}"
+  register: ai_devops_toolkit_verified_branch
+  changed_when: false
+  check_mode: false
+  failed_when: ai_devops_toolkit_verified_branch.stdout != 'main'
+  when: not (ansible_check_mode and ai_devops_toolkit_requires_install)
+
+- name: Run the AI DevOps health check
+  ansible.builtin.command:
+    argv:
+      - "{{ ai_devops_toolkit_path }}/bin/ai-devops"
+      - doctor
+  become: false
+  environment:
+    HOME: "{{ ai_devops_toolkit_home }}"
+  register: ai_devops_toolkit_doctor
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Verify the toolkit did not recreate the retired memory schedule
+  ansible.builtin.command:
+    argv:
+      - crontab
+      - -u
+      - "{{ managed_user }}"
+      - -l
+  register: ai_devops_toolkit_crontab
+  changed_when: false
+  failed_when: >-
+    ai_devops_toolkit_crontab.rc not in [0, 1]
+    or (ai_devops_toolkit_path ~ '/bin/ai-memory-sync') in ai_devops_toolkit_crontab.stdout
+  when:
+    - not ansible_check_mode
+    - ai_devops_toolkit_verify_memory_schedule | bool
+
+- name: Record successful installation of the pinned AI DevOps release
+  ansible.builtin.copy:
+    dest: "{{ ai_devops_toolkit_completion_marker }}"
+    owner: "{{ managed_user }}"
+    group: "{{ ai_devops_toolkit_group }}"
+    mode: "0600"
+    content: |
+      revision={{ ai_devops_toolkit_version }}
+      installer=install.sh --skip-secrets
+      globals=ai-install-skills --adopt-globals
+      doctor=passed
+  when:
+    - ai_devops_toolkit_requires_install
+    - not ansible_check_mode
