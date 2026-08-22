@@ -13,7 +13,7 @@ This project deploys **configuration to a host**, not images or packages. "Deplo
 
 | Workflow | Trigger | What it does | Applies changes? |
 |---|---|---|---|
-| `.github/workflows/check.yml` | pull request to `main` | `ansible-lint` + `ansible-playbook --check --diff` (phase1) against `hetz`; posts the diff as a PR comment | no (read-only) |
+| `.github/workflows/check.yml` | pull request to `main`; manual dispatch | `ansible-lint` + `ansible-playbook --check --diff` (phase1) against `hetz`; posts the diff to the PR or the manual run summary | no (read-only) |
 | `.github/workflows/apply.yml` | push to `main`; manual dispatch | serialized by `concurrency: apply-hetzner`; runs the real apply **only if repo variable `ENABLE_AUTO_APPLY == 'true'`**, otherwise `--check` only | gated |
 | `.github/workflows/drift.yml` | daily cron 03:00 UTC; manual | `--check --diff` (phase1); fails/alerts on drift | no (never applies) |
 

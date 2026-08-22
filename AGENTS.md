@@ -287,7 +287,7 @@ non-secret variable value with `gh secret list -R u2giants/ansible` and
 
 See `docs/deployment.md` for full detail. Summary of the **real, current** state:
 
-- **Pipeline:** GitHub Actions — `check.yml` (PR: `ansible-lint` + `--check --diff`, posts diff),
+- **Pipeline:** GitHub Actions — `check.yml` (PR/manual: `ansible-lint` + `--check --diff`, posts to the PR or manual run summary),
   `apply.yml` (push to `main`: serialized via `concurrency: apply-hetzner`; real apply **enabled by
   the `ENABLE_AUTO_APPLY=true` repo variable**), `drift.yml` (daily
   `--check`, alerts on drift, never applies).
