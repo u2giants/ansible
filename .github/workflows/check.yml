@@ -78,7 +78,7 @@ jobs:
             --check --diff 2>&1 | tee /tmp/diff.txt
 
       - name: Post diff to PR
-        if: always()
+        if: always() && github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
@@ -88,3 +88,15 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner, repo: context.repo.repo,
               issue_number: context.issue.number, body });
+
+      - name: Publish manual diff summary
+        if: always() && github.event_name == 'workflow_dispatch'
+        run: |
+          {
+            echo '### Ansible `--check --diff` (phase1, read-only)'
+            echo
+            echo '```'
+            if [[ -f /tmp/diff.txt ]]; then head -c 60000 /tmp/diff.txt; else echo 'No diff output was produced.'; fi
+            echo
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
