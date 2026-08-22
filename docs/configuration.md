@@ -32,7 +32,7 @@ see [`deployment.md`](deployment.md).
 |---|---|---|
 | `host_timezone` | `America/New_York` | confirmed live 2026-06-23 |
 | `managed_user` | `ai` | passwordless sudo user |
-| `ai_devops_toolkit_version` | `a9b38c232962ecb936d88283c5c484ab8aa77f99` | exact reviewed toolkit release |
+| `ai_devops_toolkit_version` | `768186c05abc1f85848210f163e7ec9609fc36d6` | exact reviewed toolkit release |
 | `ai_devops_toolkit_backup_path` | `/worksp/ai-devops-pre-rewrite-20260822` | fixed recoverable predecessor checkout |
 | `dns_fallback_servers` | `1.1.1.1 1.0.0.1 8.8.8.8 8.8.4.4` | resolved FallbackDNS |
 | `docker_ce_version` | `5:29.6.0-1~ubuntu.24.04~noble` | pinned/held |
@@ -40,6 +40,23 @@ see [`deployment.md`](deployment.md).
 | `cron_glue_entries` | tailscale keepalive (root, */4), sync-infra-docs (ai, */15) | hiclaw keepers intentionally NOT adopted |
 | `firewall_ssh_trusted_v4` | `100.64.0.0/10`, `127.0.0.1/32`, `10.0.1.0/24` | sources allowed to reach port 22 (else dropped) |
 | `firewall_ssh_public_ports` | `[1904]` | SSH ports left open to the public (ai only, via ssh_hardening) |
+
+### AI DevOps toolkit release evidence
+
+The `768186c05abc1f85848210f163e7ec9609fc36d6` pin is the reviewed canonical
+AI DevOps remediation release for every supported platform, including the
+production Linux checkout on `hetz`; its final change makes informational native
+CLI probes safe under Windows PowerShell 5.1 without narrowing the cross-platform
+release. Claude Opus 5 reviewed that exact commit read-only and returned
+`APPROVE` in provider session `b4d90a4a-4d9f-4169-aa0f-660bf4bd09f2` on
+2026-08-22. The manual toolkit dispatch remains forbidden until the exact commit's
+hosted Linux and Windows verification jobs pass.
+
+A read-only pre-deployment check on 2026-08-22 confirmed `/worksp/ai-devops` was
+still clean at `2daa757268fa825407ec2ae7a62e24da29b4e652`, with no rewrite backup
+or completion marker. Candidate `a9b38c232962ecb936d88283c5c484ab8aa77f99`
+was pinned temporarily but was never dispatched to `hetz`, so it is deliberately
+not an approved installed predecessor.
 
 ## Secrets (1Password vault `vibe_coding`)
 
