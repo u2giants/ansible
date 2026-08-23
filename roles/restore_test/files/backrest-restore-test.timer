@@ -1,0 +1,14 @@
+[Unit]
+Description=Monthly proof that the backups actually restore
+
+[Timer]
+# 1st of the month, 05:00 — after the 03:00 restic prune and the Sunday 04:00 check,
+# so the test never contends with them.
+OnCalendar=*-*-01 05:00:00
+# If the box was down on the 1st, run at next boot rather than silently skipping a month.
+Persistent=true
+RandomizedDelaySec=15m
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

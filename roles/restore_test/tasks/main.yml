@@ -1,0 +1,71 @@
+---
+# restore_test — installs the monthly proof that the backups actually restore.
+#
+# Backrest reporting "snapshot created" is evidence that a backup RAN, not that the data can
+# come BACK. Until 2026-08-23 nothing had ever restored a snapshot and looked at it; the
+# backups were, strictly speaking, unproven. This role installs the test and its schedule so
+# that stays true automatically instead of by somebody remembering.
+#
+# The script is vendored VERBATIM from u2giants/backrest-wiz
+# (hetzner-producer/scripts/test-restore.sh), which is its canonical source — same convention
+# as backrest_watchdog. Do not "improve" the copy here; fix it there and re-vendor, or the two
+# drift and the box stops matching the repo that owns the backup system.
+#
+# Scope boundary: Ansible owns the host layer (this script, its units, its schedule). The
+# backup system's own config, plans, and containers stay owned by backrest-wiz.
+
+- name: Ensure the backrest scripts directory exists
+  ansible.builtin.file:
+    path: /opt/backrest/scripts
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the restore-test script
+  ansible.builtin.copy:
+    src: test-restore.sh
+    dest: /opt/backrest/scripts/test-restore.sh
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Create the restore-test result directory
+  ansible.builtin.file:
+    path: /opt/backrest/restore-tests
+    state: directory
+    owner: root
+    group: root
+    # 0700 — the log can echo restic output; keep it off any other account on the box.
+    mode: "0700"
+
+- name: Install the restore-test service unit
+  ansible.builtin.copy:
+    src: backrest-restore-test.service
+    dest: /etc/systemd/system/backrest-restore-test.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Install the restore-test timer unit
+  ansible.builtin.copy:
+    src: backrest-restore-test.timer
+    dest: /etc/systemd/system/backrest-restore-test.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Flush handlers so the timer unit exists before we enable it
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start the restore-test timer
+  ansible.builtin.systemd:
+    name: backrest-restore-test.timer
+    enabled: true
+    state: started
+
+# Deliberately NOT run on every apply: a restore test pulls ~87 MB from object storage and
+# spins a database. Monthly is the cadence; on-demand runs go through the Restore Wizard's
+# "Run test now" button or `systemctl start backrest-restore-test.service`.
