@@ -47,6 +47,7 @@ Then load additional docs only when relevant:
 |---|---|---|
 | Understand WHY this project exists (the mission) | `docs/DISASTER-RECOVERY.md`, `docs/RECOVERY-GAP-PLAN.md` | role internals until needed |
 | Actually rebuild the server from scratch | `docs/RUNBOOK-REBUILD.md`, `docs/DISASTER-RECOVERY.md` | individual role READMEs |
+| Bring the DO backup-wiz droplet under this pipeline | `docs/DROPLET-ADOPTION-PLAN.md`, [issue #10](https://github.com/u2giants/ansible/issues/10) | Hetz-only role internals |
 | Quick repo orientation | `README.md`, `AGENTS.md` | `docs/ANSIBLE-IMPLEMENTATION-PLAN.md` (long); role READMEs |
 | Modify a host role's behavior | `AGENTS.md`, the relevant `roles/<role>/README.md`, `docs/architecture.md` | `docs/deployment.md` unless the apply flow changes |
 | Add/change config, vars, secrets, runtime settings | `AGENTS.md`, `docs/configuration.md`, `docs/deployment.md` if CI/runtime is affected | unrelated role READMEs |
