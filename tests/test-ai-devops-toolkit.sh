@@ -125,4 +125,23 @@ run_role "$retry_target" "$retry_backup" "$retry_state" "$retry_predecessor" "$r
 upgrade_second="$(run_role "$retry_target" "$retry_backup" "$retry_state" "$retry_predecessor" "$repaired_release" "$release")"
 grep -Eq 'changed=0' <<< "$upgrade_second"
 
+# A concurrently installed checkout may already equal the reviewed pin while
+# the governed completion marker is still absent. With no predecessor
+# exception, the role must run the complete installer path once, write the
+# marker, preserve the history-backup location, and then converge to zero.
+matching_target="$TMP_ROOT/matching/ai-devops"
+matching_backup="$TMP_ROOT/matching/backup"
+matching_state="$TMP_ROOT/matching-state"
+mkdir -p "$(dirname "$matching_target")"
+git clone -q "$source_repo" "$matching_target"
+before_matching="$(wc -l < "$home_dir/toolkit-test.log")"
+run_role "$matching_target" "$matching_backup" "$matching_state" "$retry_predecessor" "$repaired_release" >/dev/null
+after_matching="$(wc -l < "$home_dir/toolkit-test.log")"
+[[ "$((after_matching - before_matching))" -eq 3 ]]
+[[ "$(git -C "$matching_target" rev-parse HEAD)" == "$repaired_release" ]]
+[[ -f "$matching_state/$repaired_release.installed" ]]
+[[ ! -e "$matching_backup" ]]
+matching_second="$(run_role "$matching_target" "$matching_backup" "$matching_state" "$retry_predecessor" "$repaired_release")"
+grep -Eq 'changed=0' <<< "$matching_second"
+
 echo "PASS: AI DevOps toolkit cutover, partial-release upgrade, and idempotence are recoverable"

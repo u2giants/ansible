@@ -23,9 +23,15 @@ owner-only marker only after `install.sh --skip-secrets`,
 step fails after cloning, the marker remains absent and the next serialized
 apply retries the installation instead of leaving a false-success checkout. A
 separate, explicit in-place-upgrade allowlist can handle a reviewed successor
-without moving or replacing the original history backup. The 2026-08-22
-successor promotion and its second tagged run completed successfully, so the
-production allowlist is empty again.
+without moving or replacing the original history backup. For the 2026-08-23
+`82697a8f07fe50338606c4f4b11d3bbf5e90e1cc` promotion, the clean live checkout
+is the reviewed predecessor `d80f468fbf8e7f98c73f9798e0e1de59e2759e01`.
+Read-only SSH evidence at `2026-08-23T06:23:51Z` proves both checkout and
+install-manifest identity; the unexplained transition after the last governed
+`d24884fd` rollout is recorded separately in `AGENTS.md`. The exact predecessor
+is temporarily allowlisted for the governed in-place upgrade. The dispatch
+still owns the complete installer, doctor, schedule check, completion marker,
+and exact tagged rerun; the allowlist is removed after live verification.
 
 This role is deliberately absent from routine Phase 1. It runs only when the
 operator selects `--tags ai_devops_toolkit` and

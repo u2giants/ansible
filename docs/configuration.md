@@ -32,7 +32,7 @@ see [`deployment.md`](deployment.md).
 |---|---|---|
 | `host_timezone` | `America/New_York` | confirmed live 2026-06-23 |
 | `managed_user` | `ai` | passwordless sudo user |
-| `ai_devops_toolkit_version` | `d24884fd073081bb2eb43ce6880ba8714fdd6e17` | exact reviewed toolkit release |
+| `ai_devops_toolkit_version` | `82697a8f07fe50338606c4f4b11d3bbf5e90e1cc` | exact reviewed toolkit release |
 | `ai_devops_toolkit_backup_path` | `/worksp/ai-devops-pre-rewrite-20260822` | fixed recoverable predecessor checkout |
 | `dns_fallback_servers` | `1.1.1.1 1.0.0.1 8.8.8.8 8.8.4.4` | resolved FallbackDNS |
 | `docker_ce_version` | `5:29.6.0-1~ubuntu.24.04~noble` | pinned/held |
@@ -43,12 +43,13 @@ see [`deployment.md`](deployment.md).
 
 ### AI DevOps toolkit release evidence
 
-The `d24884fd073081bb2eb43ce6880ba8714fdd6e17` pin is the reviewed canonical
-AI DevOps remediation release for every supported platform, including the
-production Linux checkout on `hetz`. It includes the production-discovered
-privilege-boundary repairs for root-owned configuration artifacts and the
-Windows Git-Bash-to-PowerShell protected-path boundary. It also makes the
-seven-stage plan and review verdict contract exact, scope-bound, and convergent.
+The `82697a8f07fe50338606c4f4b11d3bbf5e90e1cc` pin is the reviewed canonical
+AI DevOps remediation release for every supported platform. It retains the
+production-discovered privilege-boundary and seven-stage workflow repairs,
+prevents Windows CRLF memory indexes from creating duplicate union commits,
+accepts only proven first-party Haiku helper identities alongside the required
+canonical Claude Opus 5 reviewer model, and isolates paid Grok turns from
+ambient user plugins.
 The first cutover attempt safely
 stopped at candidate `768186c05abc1f85848210f163e7ec9609fc36d6`: the new
 checkout was clean, the original backup was intact, and no completion marker was
@@ -64,7 +65,24 @@ allowlist permitted only the installed reviewed predecessor
 `dde60a90a6acbf60507c6943932894d644826a4c`. Governed dispatch `32583326484`
 installed the successor, live doctor checks passed, the original backup remained
 at `2daa757268fa825407ec2ae7a62e24da29b4e652`, and exact tagged rerun
-`32583852811` completed successfully. The one-time allowlist is now empty.
+`32583852811` completed successfully. That rollout's one-time allowlist was
+then emptied.
+
+Claude Opus 5 reviewed exact release `82697a8f07fe50338606c4f4b11d3bbf5e90e1cc`
+read-only and returned `APPROVE` in provider session
+`5cc80ce8-8ba2-4331-a57a-3c5a4f0c1c9a` on 2026-08-23. Fresh read-only SSH
+evidence at `2026-08-23T06:23:51Z` proved `/worksp/ai-devops` is clean on
+`main` at predecessor `d80f468fbf8e7f98c73f9798e0e1de59e2759e01`, the install
+manifest records that same source SHA, and no completion marker exists for it.
+The last recorded governed rollout ended at `d24884fd073081bb2eb43ce6880ba8714fdd6e17`;
+no governed dispatch establishing the later transition to `d80f468` has been
+found, so that drift remains an explicit audit item rather than being attributed
+to this role. The exact live revision is temporarily allowlisted for the
+governed in-place upgrade; no history cutover or backup replacement is
+permitted. The gated dispatch must run the complete installer, doctor, schedule
+check, and completion-marker path, followed by an exact tagged rerun. After
+live verification, the temporary upgrade allowlist is removed in a follow-up
+commit.
 
 Before the first toolkit dispatch, a read-only check on 2026-08-22 confirmed
 `/worksp/ai-devops` was clean at
