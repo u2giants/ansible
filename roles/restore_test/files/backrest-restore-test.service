@@ -1,0 +1,16 @@
+[Unit]
+Description=Prove the backups restore — restore a real snapshot into a throwaway database and verify it
+Documentation=https://github.com/u2giants/backrest-wiz/blob/main/hetzner-producer/BACKUP-MANIFEST.md
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+# Exit 1 means the RESTORE failed — that is the alarm this whole unit exists to raise.
+# Exit 2 means the test itself could not run. Both leave a verdict in
+# /opt/backrest/restore-tests/latest.json, which the Restore Wizard displays.
+ExecStart=/opt/backrest/scripts/test-restore.sh
+# The restic snapshot listing alone takes ~2 minutes against a repo this size.
+TimeoutStartSec=45min
+Nice=10
+IOSchedulingClass=idle

@@ -70,6 +70,12 @@
       tags: [phase1, backrest_watchdog]
       when: enable_phase1 | bool
 
+    # Proof that the backups restore, not just that they ran. Additive: a script, two
+    # systemd units, and a monthly timer. Runs nothing at apply time.
+    - role: restore_test
+      tags: [phase1, restore_test]
+      when: enable_phase1 | bool
+
     - role: retired_platform_cleanup
       tags: [phase1, retired_platform_cleanup]
       when: enable_phase1 | bool
