@@ -36,7 +36,7 @@ one-release predecessor exception is now removed.
 The subsequent final release
 `3c34bb0785db0a9f1ab548885af279391b196871` replaces the quadratic memory-index
 merge exposed while converging 4837. It has one temporary in-place predecessor:
-the clean governed release `82697a8f07fe50338606c4f4b11d3bbf5e90e1cc`.
+the clean live preflight revision `3fdc87c4502758545373da540b84c77827b49fb0`.
 The exception is valid only for the gated install, live doctor, and exact
 zero-change rerun, after which it must be removed again.
 

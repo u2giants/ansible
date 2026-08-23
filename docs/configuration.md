@@ -93,10 +93,20 @@ Claude Opus 5 reviewed exact final release
 `3c34bb0785db0a9f1ab548885af279391b196871` read-only and returned `APPROVE` in
 provider session `e6fd46aa-338e-48b9-bbe2-48034a3239bf` on 2026-08-23. This
 release makes CRLF memory-index union linear and fail-closed after the governed
-4837 rollout exposed quadratic work on a 19.9 MB incident index. The current
-governed release `82697a8f07fe50338606c4f4b11d3bbf5e90e1cc` is temporarily
-allowlisted only for this exact in-place promotion. The exception must be
-emptied after the live doctor and exact tagged zero-change rerun pass.
+4837 rollout exposed quadratic work on a 19.9 MB incident index. The required
+read-only production preflight found the clean live checkout at
+`3fdc87c4502758545373da540b84c77827b49fb0`, a direct ancestor of the fully
+gated target, rather than the last governed release. Only that exact observed
+revision is temporarily allowlisted for this in-place promotion. The exception
+must be emptied after the live doctor and exact tagged zero-change rerun pass.
+At `2026-08-23T12:16:51Z`, `/worksp/ai-devops` was clean at that SHA, the
+owner-only manifest recorded `source_sha` at the same SHA, and its versioned
+completion marker was absent. In the canonical public checkout,
+`git merge-base --is-ancestor 3fdc87c... 3c34bb0...` returned zero and
+`origin/main` contained `3fdc87c...`, proving the predecessor is published and
+lies on the fully gated target's direct history. No governed dispatch explains
+the transition, so it remains a separate open audit item rather than being
+normalized by this promotion.
 
 Before the first toolkit dispatch, a read-only check on 2026-08-22 confirmed
 `/worksp/ai-devops` was clean at
