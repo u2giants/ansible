@@ -213,12 +213,19 @@ end and the host layer is defined in exactly one place.
 
 ---
 
-## 6. Decisions the owner must make before D1 starts
+## 6. Owner decisions — ANSWERED 2026-08-23, do not re-ask
 
-1. **Adopt the droplet as root, or create a non-root `ai` user first?**
-   *Recommendation: adopt as root now, harden later.* Fewer moving parts, no lockout risk.
-2. **Auto-apply on merge for the droplet, or manual dispatch only?**
-   *Recommendation: manual dispatch until three consecutive clean runs, then auto.* Matches
-   how `hetz` was brought up.
-3. **After D4, is `backrest-wiz/ansible/playbook.yml` deleted or kept for app deploys?**
-   *Recommendation: keep it, stripped to app concerns only* — it documents the app layer.
+1. **Adopt as root, or create a non-root `ai` user first?** → **Adopt as root now, harden
+   later.** Phase D2's inventory line is therefore `ansible_user=root`.
+2. **Auto-apply on merge, or manual dispatch only?** → **Manual dispatch until three
+   consecutive clean runs, then flip to automatic.**
+   *Who does the "manual" part:* an **AI session**, via
+   `gh workflow run apply-droplet.yml`. The owner never clicks anything — "manual" here means
+   *not triggered by a merge*, not *done by a human*. Schedule: three dispatches on three
+   separate days during Phase D3, then set `ENABLE_DROPLET_AUTO_APPLY=true`.
+3. **After D4, delete `backrest-wiz/ansible/playbook.yml` or keep it?** → **Keep it, stripped
+   to app-deploy concerns only.**
+4. **Phase D0 requires running the never-tested playbook against the live droplet, risking a
+   few minutes of Restore Wizard downtime (backups unaffected).** → **Approved.**
+
+Recorded by the session that wrote this plan; owner answers given 2026-08-23.
