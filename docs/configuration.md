@@ -32,7 +32,7 @@ see [`deployment.md`](deployment.md).
 |---|---|---|
 | `host_timezone` | `America/New_York` | confirmed live 2026-06-23 |
 | `managed_user` | `ai` | passwordless sudo user |
-| `ai_devops_toolkit_version` | `3c34bb0785db0a9f1ab548885af279391b196871` | exact reviewed toolkit release |
+| `ai_devops_toolkit_version` | `3e252bcae2b1890a8ca0d00dc11dc0d210e91e0f` | exact reviewed toolkit release |
 | `ai_devops_toolkit_backup_path` | `/worksp/ai-devops-pre-rewrite-20260822` | fixed recoverable predecessor checkout |
 | `dns_fallback_servers` | `1.1.1.1 1.0.0.1 8.8.8.8 8.8.4.4` | resolved FallbackDNS |
 | `docker_ce_version` | `5:29.6.0-1~ubuntu.24.04~noble` | pinned/held |
@@ -43,7 +43,7 @@ see [`deployment.md`](deployment.md).
 
 ### AI DevOps toolkit release evidence
 
-The `3c34bb0785db0a9f1ab548885af279391b196871` pin is the reviewed canonical
+The `3e252bcae2b1890a8ca0d00dc11dc0d210e91e0f` pin is the reviewed canonical
 AI DevOps remediation release for every supported platform. It retains the
 production-discovered privilege-boundary and seven-stage workflow repairs,
 prevents Windows CRLF memory indexes from creating duplicate union commits and
@@ -112,6 +112,23 @@ owner-only manifest, versioned completion marker, and `ai-devops doctor` all
 passed at the exact target SHA. Tagged rerun `32639412554` reported `changed=0`,
 `unreachable=0`, and `failed=0`; the temporary predecessor exception is now
 empty, so the observed drift revision retains no standing deployment authority.
+
+Claude Opus 5 reviewed exact successor
+`3e252bcae2b1890a8ca0d00dc11dc0d210e91e0f` and returned `APPROVE` in provider
+session `91ab8c74-b286-47e9-ad57-43769ef23b38` on 2026-08-23. It preserves the
+linear memory repair and adds the final Windows Muse installer invocation fix,
+deterministic cross-platform interruption proof, a bounded Windows CI budget
+with measured headroom, the intervening fail-closed reviewer and
+protected-topology fixes, and stable physical review-snapshot identity across
+equivalent Windows path spellings. It also makes dynamic reviewer quarantine
+use the same explicit warning status contract as built-in quarantines, isolates
+Kimi's artifact-worker fixture, and makes Windows reviewer process-tree cleanup
+native, bounded, and fail-closed even when termination cannot be confirmed.
+No predecessor is allowlisted yet. Do not dispatch until the successor's hosted
+Linux and Windows gates pass and a fresh read-only production preflight identifies
+the actual clean live predecessor. Open only that exact temporary exception in a
+separately reviewed commit, then remove it after the live doctor and exact tagged
+zero-change rerun pass.
 
 Before the first toolkit dispatch, a read-only check on 2026-08-22 confirmed
 `/worksp/ai-devops` was clean at

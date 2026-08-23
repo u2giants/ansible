@@ -41,6 +41,18 @@ it from the clean live preflight revision
 tagged rerun `32639412554` reported zero changes or failures. The temporary
 predecessor exception is removed.
 
+Exact reviewed successor `3e252bcae2b1890a8ca0d00dc11dc0d210e91e0f`
+contains the final Windows Muse installer invocation, deterministic
+cross-platform interruption proof, a bounded Windows CI budget with measured
+headroom, later fail-closed reviewer/topology repairs, and stable physical
+review-snapshot identity across equivalent Windows path spellings. It also
+normalizes dynamic reviewer quarantine to the shared warning status, isolates
+Kimi's artifact-worker fixture, and makes Windows reviewer process-tree cleanup
+native, bounded, and fail-closed. No predecessor is
+allowlisted before the hosted gate and fresh live preflight. Open only the
+observed predecessor in a separately reviewed commit for the install, doctor,
+and exact zero-change rerun; then remove it.
+
 This role is deliberately absent from routine Phase 1. It runs only when the
 operator selects `--tags ai_devops_toolkit` and
 `enable_ai_devops_toolkit_deploy=true`. The source default is `false`; only the
