@@ -4,4 +4,5 @@ ai_devops_toolkit_group: "{{ managed_user }}"
 ai_devops_toolkit_state_dir: "{{ ai_devops_toolkit_home }}/.local/state/ai-devops/toolkit-releases"
 ai_devops_toolkit_completion_marker: "{{ ai_devops_toolkit_state_dir }}/{{ ai_devops_toolkit_version }}.installed"
 ai_devops_toolkit_verify_memory_schedule: true
+ai_devops_toolkit_rewrite_predecessors: []
 ai_devops_toolkit_upgrade_predecessors: []

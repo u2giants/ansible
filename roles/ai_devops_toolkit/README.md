@@ -11,11 +11,11 @@ that user's passwordless `sudo` only for `/etc`, `/var/log`, and
 supports `--skip-secrets`, and the pinned `ai-install-skills` contract supports
 `--adopt-globals`.
 
-The 2026-08-22 public-history rewrite requires a one-time recoverable cutover.
-The role accepts only the declared predecessor commit, requires a clean
-checkout, moves the complete old checkout to the fixed backup path, and then
-clones the pinned release. It refuses unknown revisions, dirty worktrees, or an
-existing backup rather than overwriting evidence.
+The 2026-08-22 public-history rewrite used a one-time recoverable cutover. For
+that cutover, the role accepted only the declared predecessor commit, required
+a clean checkout, moved the complete old checkout to the fixed backup path,
+and then cloned the pinned release. It refused unknown revisions, dirty
+worktrees, or an existing backup rather than overwriting evidence.
 
 Installation completion is separate from Git revision. The role writes an
 owner-only marker only after `install.sh --skip-secrets`,
@@ -24,14 +24,14 @@ step fails after cloning, the marker remains absent and the next serialized
 apply retries the installation instead of leaving a false-success checkout. A
 separate, explicit in-place-upgrade allowlist can handle a reviewed successor
 without moving or replacing the original history backup. For the 2026-08-23
-`82697a8f07fe50338606c4f4b11d3bbf5e90e1cc` promotion, the clean live checkout
-is the reviewed predecessor `d80f468fbf8e7f98c73f9798e0e1de59e2759e01`.
-Read-only SSH evidence at `2026-08-23T06:23:51Z` proves both checkout and
-install-manifest identity; the unexplained transition after the last governed
-`d24884fd` rollout is recorded separately in `AGENTS.md`. The exact predecessor
-is temporarily allowlisted for the governed in-place upgrade. The dispatch
-still owns the complete installer, doctor, schedule check, completion marker,
-and exact tagged rerun; the allowlist is removed after live verification.
+`82697a8f07fe50338606c4f4b11d3bbf5e90e1cc` promotion, read-only SSH evidence
+first proved the clean live predecessor and matching install manifest at
+`d80f468fbf8e7f98c73f9798e0e1de59e2759e01`; the unexplained transition after
+the last governed `d24884fd` rollout remains recorded separately in
+`AGENTS.md`. Governed dispatch `32624619860` then ran the complete installer,
+doctor, schedule check, and completion-marker path. Exact tagged rerun
+`32625017742` reported `changed=0`, `unreachable=0`, and `failed=0`. The
+one-release predecessor exception is now removed.
 
 This role is deliberately absent from routine Phase 1. It runs only when the
 operator selects `--tags ai_devops_toolkit` and
@@ -54,13 +54,13 @@ ansible-playbook playbooks/site.yml -l hetzner \
   -e enable_ai_devops_toolkit_deploy=true
 ```
 
-After apply, the checkout must equal `ai_devops_toolkit_version`, the backup
-must contain the predecessor commit, `ai-devops doctor` must pass, and a second
-tagged run must report zero changes. Before writing its completion marker, the
-role also proves the installer did not recreate the retired `ai-memory-sync`
-schedule.
+After every apply, the checkout must equal `ai_devops_toolkit_version`,
+`ai-devops doctor` must pass, and a second tagged run must report zero changes.
+After a history cutover, the fixed backup must also contain the predecessor
+commit. Before writing its completion marker, the role proves the installer did
+not recreate the retired `ai-memory-sync` schedule.
 
-The pinned release, history predecessor, and any one-time partial-release
-upgrade predecessor are verified public commits in `u2giants/ai-devops`. Any
-other revision fails closed so an unexpected or concurrent checkout is never
-overwritten silently.
+Every pinned release and any explicitly temporary predecessor must be a
+verified public commit in `u2giants/ai-devops`. Both one-time predecessor lists
+are empty after a successful rollout; any unexpected or concurrent checkout
+therefore fails closed and is never overwritten silently.

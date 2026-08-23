@@ -71,18 +71,22 @@ then emptied.
 Claude Opus 5 reviewed exact release `82697a8f07fe50338606c4f4b11d3bbf5e90e1cc`
 read-only and returned `APPROVE` in provider session
 `5cc80ce8-8ba2-4331-a57a-3c5a4f0c1c9a` on 2026-08-23. Fresh read-only SSH
-evidence at `2026-08-23T06:23:51Z` proved `/worksp/ai-devops` is clean on
+evidence at `2026-08-23T06:23:51Z` showed `/worksp/ai-devops` was clean on
 `main` at predecessor `d80f468fbf8e7f98c73f9798e0e1de59e2759e01`, the install
-manifest records that same source SHA, and no completion marker exists for it.
-The last recorded governed rollout ended at `d24884fd073081bb2eb43ce6880ba8714fdd6e17`;
+manifest recorded that same source SHA, and no completion marker existed for it.
+The last governed rollout recorded before this investigation ended at
+`d24884fd073081bb2eb43ce6880ba8714fdd6e17`;
 no governed dispatch establishing the later transition to `d80f468` has been
 found, so that drift remains an explicit audit item rather than being attributed
-to this role. The exact live revision is temporarily allowlisted for the
-governed in-place upgrade; no history cutover or backup replacement is
-permitted. The gated dispatch must run the complete installer, doctor, schedule
-check, and completion-marker path, followed by an exact tagged rerun. After
-live verification, the temporary upgrade allowlist is removed in a follow-up
-commit.
+to this role. The exact live revision was allowlisted only for the governed
+in-place upgrade; no history cutover or backup replacement was permitted.
+Gated dispatch `32624619860` installed the reviewed release, the live checkout
+and install manifest both matched `82697a8`, the completion marker was present,
+and every required doctor check passed. Exact tagged rerun `32625017742`
+reported `changed=0`, `unreachable=0`, and `failed=0`. The temporary upgrade
+allowlist is now empty. The completed 2026-08-22 history-cutover predecessor
+allowlist is also empty, so no historical revision retains standing deployment
+authority.
 
 Before the first toolkit dispatch, a read-only check on 2026-08-22 confirmed
 `/worksp/ai-devops` was clean at
