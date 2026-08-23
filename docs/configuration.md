@@ -32,7 +32,7 @@ see [`deployment.md`](deployment.md).
 |---|---|---|
 | `host_timezone` | `America/New_York` | confirmed live 2026-06-23 |
 | `managed_user` | `ai` | passwordless sudo user |
-| `ai_devops_toolkit_version` | `82697a8f07fe50338606c4f4b11d3bbf5e90e1cc` | exact reviewed toolkit release |
+| `ai_devops_toolkit_version` | `3c34bb0785db0a9f1ab548885af279391b196871` | exact reviewed toolkit release |
 | `ai_devops_toolkit_backup_path` | `/worksp/ai-devops-pre-rewrite-20260822` | fixed recoverable predecessor checkout |
 | `dns_fallback_servers` | `1.1.1.1 1.0.0.1 8.8.8.8 8.8.4.4` | resolved FallbackDNS |
 | `docker_ce_version` | `5:29.6.0-1~ubuntu.24.04~noble` | pinned/held |
@@ -43,10 +43,11 @@ see [`deployment.md`](deployment.md).
 
 ### AI DevOps toolkit release evidence
 
-The `82697a8f07fe50338606c4f4b11d3bbf5e90e1cc` pin is the reviewed canonical
+The `3c34bb0785db0a9f1ab548885af279391b196871` pin is the reviewed canonical
 AI DevOps remediation release for every supported platform. It retains the
 production-discovered privilege-boundary and seven-stage workflow repairs,
-prevents Windows CRLF memory indexes from creating duplicate union commits,
+prevents Windows CRLF memory indexes from creating duplicate union commits and
+merges existing duplicate-storm indexes in linear time,
 accepts only proven first-party Haiku helper identities alongside the required
 canonical Claude Opus 5 reviewer model, and isolates paid Grok turns from
 ambient user plugins.
@@ -87,6 +88,15 @@ reported `changed=0`, `unreachable=0`, and `failed=0`. The temporary upgrade
 allowlist is now empty. The completed 2026-08-22 history-cutover predecessor
 allowlist is also empty, so no historical revision retains standing deployment
 authority.
+
+Claude Opus 5 reviewed exact final release
+`3c34bb0785db0a9f1ab548885af279391b196871` read-only and returned `APPROVE` in
+provider session `e6fd46aa-338e-48b9-bbe2-48034a3239bf` on 2026-08-23. This
+release makes CRLF memory-index union linear and fail-closed after the governed
+4837 rollout exposed quadratic work on a 19.9 MB incident index. The current
+governed release `82697a8f07fe50338606c4f4b11d3bbf5e90e1cc` is temporarily
+allowlisted only for this exact in-place promotion. The exception must be
+emptied after the live doctor and exact tagged zero-change rerun pass.
 
 Before the first toolkit dispatch, a read-only check on 2026-08-22 confirmed
 `/worksp/ai-devops` was clean at

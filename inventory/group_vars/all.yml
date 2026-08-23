@@ -22,10 +22,11 @@ managed_user: "ai"
 # ----------------------------------------------------------------------------------
 ai_devops_toolkit_repo_url: "https://github.com/u2giants/ai-devops.git"
 ai_devops_toolkit_path: "/worksp/ai-devops"
-ai_devops_toolkit_version: "82697a8f07fe50338606c4f4b11d3bbf5e90e1cc"
+ai_devops_toolkit_version: "3c34bb0785db0a9f1ab548885af279391b196871"
 ai_devops_toolkit_backup_path: "/worksp/ai-devops-pre-rewrite-20260822"
 ai_devops_toolkit_rewrite_predecessors: []
-ai_devops_toolkit_upgrade_predecessors: []
+ai_devops_toolkit_upgrade_predecessors:
+  - "82697a8f07fe50338606c4f4b11d3bbf5e90e1cc"
 
 # ----------------------------------------------------------------------------------
 # base role

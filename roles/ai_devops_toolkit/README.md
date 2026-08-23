@@ -33,6 +33,13 @@ doctor, schedule check, and completion-marker path. Exact tagged rerun
 `32625017742` reported `changed=0`, `unreachable=0`, and `failed=0`. The
 one-release predecessor exception is now removed.
 
+The subsequent final release
+`3c34bb0785db0a9f1ab548885af279391b196871` replaces the quadratic memory-index
+merge exposed while converging 4837. It has one temporary in-place predecessor:
+the clean governed release `82697a8f07fe50338606c4f4b11d3bbf5e90e1cc`.
+The exception is valid only for the gated install, live doctor, and exact
+zero-change rerun, after which it must be removed again.
+
 This role is deliberately absent from routine Phase 1. It runs only when the
 operator selects `--tags ai_devops_toolkit` and
 `enable_ai_devops_toolkit_deploy=true`. The source default is `false`; only the
