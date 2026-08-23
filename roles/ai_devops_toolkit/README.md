@@ -35,10 +35,11 @@ one-release predecessor exception is now removed.
 
 The subsequent final release
 `3c34bb0785db0a9f1ab548885af279391b196871` replaces the quadratic memory-index
-merge exposed while converging 4837. It has one temporary in-place predecessor:
-the clean live preflight revision `3fdc87c4502758545373da540b84c77827b49fb0`.
-The exception is valid only for the gated install, live doctor, and exact
-zero-change rerun, after which it must be removed again.
+merge exposed while converging 4837. Governed dispatch `32639239500` installed
+it from the clean live preflight revision
+`3fdc87c4502758545373da540b84c77827b49fb0`; live verification passed and exact
+tagged rerun `32639412554` reported zero changes or failures. The temporary
+predecessor exception is removed.
 
 This role is deliberately absent from routine Phase 1. It runs only when the
 operator selects `--tags ai_devops_toolkit` and

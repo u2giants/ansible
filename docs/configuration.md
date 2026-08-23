@@ -97,8 +97,7 @@ release makes CRLF memory-index union linear and fail-closed after the governed
 read-only production preflight found the clean live checkout at
 `3fdc87c4502758545373da540b84c77827b49fb0`, a direct ancestor of the fully
 gated target, rather than the last governed release. Only that exact observed
-revision is temporarily allowlisted for this in-place promotion. The exception
-must be emptied after the live doctor and exact tagged zero-change rerun pass.
+revision was temporarily allowlisted for the in-place promotion.
 At `2026-08-23T12:16:51Z`, `/worksp/ai-devops` was clean at that SHA, the
 owner-only manifest recorded `source_sha` at the same SHA, and its versioned
 completion marker was absent. In the canonical public checkout,
@@ -107,6 +106,12 @@ completion marker was absent. In the canonical public checkout,
 lies on the fully gated target's direct history. No governed dispatch explains
 the transition, so it remains a separate open audit item rather than being
 normalized by this promotion.
+
+Governed dispatch `32639239500` installed the final release. The live checkout,
+owner-only manifest, versioned completion marker, and `ai-devops doctor` all
+passed at the exact target SHA. Tagged rerun `32639412554` reported `changed=0`,
+`unreachable=0`, and `failed=0`; the temporary predecessor exception is now
+empty, so the observed drift revision retains no standing deployment authority.
 
 Before the first toolkit dispatch, a read-only check on 2026-08-22 confirmed
 `/worksp/ai-devops` was clean at
