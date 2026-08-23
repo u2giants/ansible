@@ -60,11 +60,15 @@
 - name: Flush handlers so the timer unit exists before we enable it
   ansible.builtin.meta: flush_handlers
 
+# Skipped under --check: check mode does not actually write the unit files above, so
+# systemd cannot find the timer and the dry run would fail on a change that is in fact
+# fine. The real apply always runs it.
 - name: Enable and start the restore-test timer
   ansible.builtin.systemd:
     name: backrest-restore-test.timer
     enabled: true
     state: started
+  when: not ansible_check_mode
 
 # Deliberately NOT run on every apply: a restore test pulls ~87 MB from object storage and
 # spins a database. Monthly is the cadence; on-demand runs go through the Restore Wizard's
