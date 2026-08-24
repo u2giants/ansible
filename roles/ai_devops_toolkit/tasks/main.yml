@@ -225,6 +225,60 @@
     - ansible_check_mode
     - ai_devops_toolkit_checkout.stat.exists
 
+- name: Find governed-checkout ownership or mode drift without following symlinks
+  ansible.builtin.command:
+    argv:
+      - find
+      - -P
+      - "{{ ai_devops_toolkit_path }}"
+      - -xdev
+      - "!"
+      - -type
+      - l
+      - "("
+      - "!"
+      - -user
+      - "{{ ai_devops_toolkit_checkout_owner }}"
+      - -o
+      - "!"
+      - -group
+      - "{{ ai_devops_toolkit_checkout_group }}"
+      - -o
+      - "("
+      - -type
+      - d
+      - "!"
+      - -perm
+      - "0750"
+      - ")"
+      - -o
+      - "("
+      - -type
+      - f
+      - "!"
+      - -perm
+      - "0640"
+      - "!"
+      - -perm
+      - "0750"
+      - ")"
+      - -o
+      - "("
+      - "!"
+      - -type
+      - d
+      - "!"
+      - -type
+      - f
+      - ")"
+      - ")"
+      - -print
+      - -quit
+  become: "{{ ai_devops_toolkit_checkout_owner != managed_user }}"
+  register: ai_devops_toolkit_ownership_drift
+  changed_when: false
+  when: not ansible_check_mode
+
 - name: Make the governed checkout readable but not directly mutable by runtime sessions
   ansible.builtin.file:
     path: "{{ ai_devops_toolkit_path }}"
@@ -235,7 +289,9 @@
     recurse: true
     follow: false
   become: "{{ ai_devops_toolkit_checkout_owner != managed_user }}"
-  when: not ansible_check_mode
+  when:
+    - not ansible_check_mode
+    - ai_devops_toolkit_ownership_drift.stdout | default('') | length > 0
 
 - name: Install the pinned AI DevOps release
   ansible.builtin.command:

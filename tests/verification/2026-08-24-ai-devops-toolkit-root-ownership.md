@@ -33,6 +33,7 @@ The test proves all of the following in a disposable filesystem:
   write into the source checkout;
 - an interrupted installation retains the protected ownership contract;
 - a retry completes and the following run is idempotent;
+- a clean protected tree skips recursive enforcement and reports zero changes;
 - the former same-user path remains covered when root/passwordless sudo is not
   available to the test harness.
 

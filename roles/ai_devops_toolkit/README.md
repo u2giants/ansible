@@ -97,6 +97,12 @@ deliberate directory replacement; the role's clean-source and exact-revision
 checks detect and refuse an unauthorized replacement at the next governed run.
 Sibling checkouts are never touched.
 
+Before applying recursive ownership, the role performs a non-following tree
+audit confined to the checkout's filesystem. It skips the operation when every
+same-filesystem, non-symlink entry is already exactly `root:ai` with the managed
+`0640`/`0750` modes. This keeps repeat deployments at zero changes while
+retaining self-healing when any real drift is found.
+
 The pinned toolkit's source was statically audited before this ownership change:
 `install.sh` writes system state only through `/etc/ai-devops`, `/var/log/ai-devops`, and
 `/usr/local/bin`, plus managed-user state under `$HOME`; `ai-install-skills`

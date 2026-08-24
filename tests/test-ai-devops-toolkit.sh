@@ -237,5 +237,10 @@ run_role "$retry_target" "$retry_backup" "$retry_state" "$retry_predecessor" \
   "$symlink_release" "$repaired_release" >/dev/null
 [[ "$(stat -c '%U:%G:%a' "$external_target")" == "$external_target_stat_before" ]]
 [[ "$(cat "$external_target/untouched.txt")" == sibling-state ]]
+symlink_second="$(run_role "$retry_target" "$retry_backup" "$retry_state" \
+  "$retry_predecessor" "$symlink_release" "$repaired_release")"
+grep -Eq 'changed=0' <<< "$symlink_second"
+[[ "$(stat -c '%U:%G:%a' "$external_target")" == "$external_target_stat_before" ]]
+[[ "$(cat "$external_target/untouched.txt")" == sibling-state ]]
 
 echo "PASS: AI DevOps toolkit cutover, protected ownership, partial-release upgrade, and idempotence are recoverable"
