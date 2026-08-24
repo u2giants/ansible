@@ -33,6 +33,8 @@ see [`deployment.md`](deployment.md).
 | `host_timezone` | `America/New_York` | confirmed live 2026-06-23 |
 | `managed_user` | `ai` | passwordless sudo user |
 | `ai_devops_toolkit_version` | `8435f7938d9865158975c2a4dbd7e43a3c3bde97` | exact reviewed toolkit release |
+| `ai_devops_toolkit_checkout_owner` | `root` | blocks direct non-sudo writes; the governed role uses root only for checkout updates |
+| `ai_devops_toolkit_checkout_group` | `ai` | runtime sessions retain read/execute access without direct write authority |
 | `ai_devops_toolkit_backup_path` | `/worksp/ai-devops-pre-rewrite-20260822` | fixed recoverable predecessor checkout |
 | `dns_fallback_servers` | `1.1.1.1 1.0.0.1 8.8.8.8 8.8.4.4` | resolved FallbackDNS |
 | `docker_ce_version` | `5:29.6.0-1~ubuntu.24.04~noble` | pinned/held |
@@ -41,7 +43,13 @@ see [`deployment.md`](deployment.md).
 | `firewall_ssh_trusted_v4` | `100.64.0.0/10`, `127.0.0.1/32`, `10.0.1.0/24` | sources allowed to reach port 22 (else dropped) |
 | `firewall_ssh_public_ports` | `[1904]` | SSH ports left open to the public (ai only, via ssh_hardening) |
 
-### AI DevOps toolkit release evidence
+## Key role defaults (`roles/*/defaults/main.yml`)
+
+| Variable | Default | Notes |
+|---|---|---|
+| `ai_devops_toolkit_runtime_become` | `false` | installer, globals, doctor, and read-only Git stay on the inventory connection user (`ai` in production); privilege integration tests override this |
+
+## AI DevOps toolkit release evidence
 
 The `8435f7938d9865158975c2a4dbd7e43a3c3bde97` pin is the reviewed canonical
 AI DevOps remediation release for every supported platform. It retains the

@@ -22,6 +22,38 @@
     group: "{{ ai_devops_toolkit_group }}"
     mode: "0700"
 
+- name: Read managed-user Git safe directories
+  ansible.builtin.command:
+    argv:
+      - git
+      - config
+      - --global
+      - --get-all
+      - safe.directory
+  become: "{{ ai_devops_toolkit_runtime_become }}"
+  become_user: "{{ managed_user }}"
+  environment:
+    HOME: "{{ ai_devops_toolkit_home }}"
+  register: ai_devops_toolkit_safe_directories
+  changed_when: false
+  failed_when: ai_devops_toolkit_safe_directories.rc not in [0, 1]
+  check_mode: false
+
+- name: Trust the exact governed root-owned checkout for managed-user reads
+  ansible.builtin.command:
+    argv:
+      - git
+      - config
+      - --global
+      - --add
+      - safe.directory
+      - "{{ ai_devops_toolkit_path }}"
+  become: "{{ ai_devops_toolkit_runtime_become }}"
+  become_user: "{{ managed_user }}"
+  environment:
+    HOME: "{{ ai_devops_toolkit_home }}"
+  when: ai_devops_toolkit_path not in ai_devops_toolkit_safe_directories.stdout_lines
+
 - name: Inspect the AI DevOps checkout
   ansible.builtin.stat:
     path: "{{ ai_devops_toolkit_path }}"
@@ -30,11 +62,12 @@
 - name: Refuse an AI DevOps checkout owned by another account
   ansible.builtin.assert:
     that:
-      - ai_devops_toolkit_checkout.stat.pw_name == managed_user
-      - ai_devops_toolkit_checkout.stat.gr_name == ai_devops_toolkit_group
+      - ai_devops_toolkit_checkout.stat.pw_name in [managed_user, ai_devops_toolkit_checkout_owner]
+      - ai_devops_toolkit_checkout.stat.gr_name in [ai_devops_toolkit_group, ai_devops_toolkit_checkout_group]
     fail_msg: >-
-      {{ ai_devops_toolkit_path }} is not owned by {{ managed_user }}. Refusing to
-      rewrite or install through an ambiguously owned checkout.
+      {{ ai_devops_toolkit_path }} is not owned by either the managed account or
+      the governed checkout owner. Refusing to rewrite or install through an
+      ambiguously owned checkout.
   when: ai_devops_toolkit_checkout.stat.exists
 
 - name: Inspect the pinned release completion marker
@@ -50,7 +83,8 @@
       - "{{ ai_devops_toolkit_path }}"
       - rev-parse
       - HEAD
-  become: false
+  become: "{{ ai_devops_toolkit_runtime_become }}"
+  become_user: "{{ managed_user }}"
   environment:
     HOME: "{{ ai_devops_toolkit_home }}"
   register: ai_devops_toolkit_installed_revision
@@ -67,7 +101,8 @@
       - status
       - --porcelain
       - --untracked-files=all
-  become: false
+  become: "{{ ai_devops_toolkit_runtime_become }}"
+  become_user: "{{ managed_user }}"
   environment:
     HOME: "{{ ai_devops_toolkit_home }}"
   register: ai_devops_toolkit_status
@@ -131,6 +166,7 @@
       - "{{ ai_devops_toolkit_backup_path }}"
     removes: "{{ ai_devops_toolkit_path }}"
     creates: "{{ ai_devops_toolkit_backup_path }}"
+  become: "{{ ai_devops_toolkit_checkout_owner != managed_user }}"
   when: ai_devops_toolkit_requires_history_cutover
 
 - name: Report the planned history cutover during check mode
@@ -149,7 +185,7 @@
     version: "{{ ai_devops_toolkit_version }}"
     update: true
     force: false
-  become: false
+  become: "{{ ai_devops_toolkit_checkout_owner != managed_user }}"
   environment:
     HOME: "{{ ai_devops_toolkit_home }}"
   when:
@@ -166,19 +202,48 @@
       - -B
       - main
       - "{{ ai_devops_toolkit_version }}"
-  become: false
+  become: "{{ ai_devops_toolkit_checkout_owner != managed_user }}"
   environment:
     HOME: "{{ ai_devops_toolkit_home }}"
   when:
     - ai_devops_toolkit_requires_install
     - not ansible_check_mode
 
+- name: Report the planned governed-checkout ownership boundary during check mode
+  ansible.builtin.debug:
+    msg: >-
+      The governed checkout top level would converge from
+      {{ ai_devops_toolkit_checkout.stat.pw_name }}:{{ ai_devops_toolkit_checkout.stat.gr_name }}
+      mode {{ ai_devops_toolkit_checkout.stat.mode }} to
+      {{ ai_devops_toolkit_checkout_owner }}:{{ ai_devops_toolkit_checkout_group }}
+      mode 0750; recursive enforcement will not follow symlinks.
+  changed_when: >-
+    ai_devops_toolkit_checkout.stat.pw_name != ai_devops_toolkit_checkout_owner
+    or ai_devops_toolkit_checkout.stat.gr_name != ai_devops_toolkit_checkout_group
+    or ai_devops_toolkit_checkout.stat.mode != '0750'
+  when:
+    - ansible_check_mode
+    - ai_devops_toolkit_checkout.stat.exists
+
+- name: Make the governed checkout readable but not directly mutable by runtime sessions
+  ansible.builtin.file:
+    path: "{{ ai_devops_toolkit_path }}"
+    state: directory
+    owner: "{{ ai_devops_toolkit_checkout_owner }}"
+    group: "{{ ai_devops_toolkit_checkout_group }}"
+    mode: "u=rwX,g=rX,o="
+    recurse: true
+    follow: false
+  become: "{{ ai_devops_toolkit_checkout_owner != managed_user }}"
+  when: not ansible_check_mode
+
 - name: Install the pinned AI DevOps release
   ansible.builtin.command:
     argv:
       - "{{ ai_devops_toolkit_path }}/install.sh"
       - --skip-secrets
-  become: false
+  become: "{{ ai_devops_toolkit_runtime_become }}"
+  become_user: "{{ managed_user }}"
   environment:
     HOME: "{{ ai_devops_toolkit_home }}"
   when:
@@ -190,11 +255,30 @@
     argv:
       - "{{ ai_devops_toolkit_path }}/bin/ai-install-skills"
       - --adopt-globals
-  become: false
+  become: "{{ ai_devops_toolkit_runtime_become }}"
+  become_user: "{{ managed_user }}"
   environment:
     HOME: "{{ ai_devops_toolkit_home }}"
   when:
     - ai_devops_toolkit_requires_install
+    - not ansible_check_mode
+
+- name: Inspect the governed checkout ownership boundary
+  ansible.builtin.stat:
+    path: "{{ ai_devops_toolkit_path }}"
+  register: ai_devops_toolkit_governed_checkout
+
+- name: Verify the governed checkout ownership boundary
+  ansible.builtin.assert:
+    that:
+      - ai_devops_toolkit_governed_checkout.stat.pw_name == ai_devops_toolkit_checkout_owner
+      - ai_devops_toolkit_governed_checkout.stat.gr_name == ai_devops_toolkit_checkout_group
+      - ai_devops_toolkit_governed_checkout.stat.mode == '0750'
+    fail_msg: >-
+      The governed checkout is not owned and protected exactly as declared.
+      Refusing to certify a mutable production runtime checkout.
+  when:
+    - ai_devops_toolkit_governed_checkout.stat.exists
     - not ansible_check_mode
 
 - name: Verify the installed AI DevOps revision
@@ -205,7 +289,8 @@
       - "{{ ai_devops_toolkit_path }}"
       - rev-parse
       - HEAD
-  become: false
+  become: "{{ ai_devops_toolkit_runtime_become }}"
+  become_user: "{{ managed_user }}"
   environment:
     HOME: "{{ ai_devops_toolkit_home }}"
   register: ai_devops_toolkit_verified_revision
@@ -222,7 +307,8 @@
       - "{{ ai_devops_toolkit_path }}"
       - branch
       - --show-current
-  become: false
+  become: "{{ ai_devops_toolkit_runtime_become }}"
+  become_user: "{{ managed_user }}"
   environment:
     HOME: "{{ ai_devops_toolkit_home }}"
   register: ai_devops_toolkit_verified_branch
@@ -236,7 +322,8 @@
     argv:
       - "{{ ai_devops_toolkit_path }}/bin/ai-devops"
       - doctor
-  become: false
+  become: "{{ ai_devops_toolkit_runtime_become }}"
+  become_user: "{{ managed_user }}"
   environment:
     HOME: "{{ ai_devops_toolkit_home }}"
   register: ai_devops_toolkit_doctor

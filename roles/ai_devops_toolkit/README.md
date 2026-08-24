@@ -79,6 +79,32 @@ secrets.
 asserts that owner but never changes the parent, so it cannot take ownership of
 sibling application checkouts such as `/worksp/hiclaw`.
 
+The toolkit checkout itself is different: before the exact installer and globals
+run, the role recursively makes only `/worksp/ai-devops` root-owned and
+readable/executable by `ai`, with no access for other users and no group write
+permission. It also
+adds that exact path to the managed user's Git `safe.directory` list so doctors
+and installed commands can inspect the governed checkout. This makes direct,
+in-place non-sudo commits, pulls, and edits of linked
+production commands fail before a tagged Ansible deployment establishes the matching
+manifest and completion marker. Git release transitions run through root; the
+installer, globals adoption, and doctor continue as `ai` and are verified not to
+need checkout write access. The `ai` account retains host-management sudo for the
+governed Ansible route, so ownership is an accidental-drift guardrail rather than
+a security boundary against an explicitly privileged manual command. Because
+the shared `/worksp` parent remains `ai`-owned, it also does not prevent a
+deliberate directory replacement; the role's clean-source and exact-revision
+checks detect and refuse an unauthorized replacement at the next governed run.
+Sibling checkouts are never touched.
+
+The pinned toolkit's source was statically audited before this ownership change:
+`install.sh` writes system state only through `/etc/ai-devops`, `/var/log/ai-devops`, and
+`/usr/local/bin`, plus managed-user state under `$HOME`; `ai-install-skills`
+writes client state under `$HOME`; and `ai-devops doctor` is read-only. The
+privilege integration test applies mode `0750` before its simulated installer,
+has that installer attempt and fail a checkout write, exercises a failed-install
+retry from the protected ownership state, and requires the next run to converge.
+
 ## Verification
 
 ```bash
@@ -90,6 +116,8 @@ ansible-playbook playbooks/site.yml -l hetzner \
 
 After every apply, the checkout must equal `ai_devops_toolkit_version`,
 `ai-devops doctor` must pass, and a second tagged run must report zero changes.
+The checkout root must be owned by `root:ai` at mode `0750`; a write attempt by
+the `ai` runtime user must fail.
 After a history cutover, the fixed backup must also contain the predecessor
 commit. Before writing its completion marker, the role proves the installer did
 not recreate the retired `ai-memory-sync` schedule.
