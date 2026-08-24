@@ -58,8 +58,14 @@ Reviewed successor `8435f7938d9865158975c2a4dbd7e43a3c3bde97` replaces cross-pro
 machine/hub memory matching with one-time indexes while preserving duplicate,
 CRLF, no-final-newline, and multi-checkout behavior. Its predecessor allowlist
 remains empty. Hosted source gate `32676734390` passed Linux, focused Windows
-reviewer safety, and the complete Windows matrix; a fresh live preflight must
-still identify the exact predecessor before any deployment authority is opened.
+reviewer safety, and the complete Windows matrix. A fresh live preflight found
+the clean checkout already at the exact target with its completion marker absent,
+so no predecessor exception was needed. Governed dispatch `32680766203`
+established the target manifest and marker; live checkout, doctor, and retired
+schedule checks passed. Exact tagged rerun `32680940940` reported `changed=0`,
+`unreachable=0`, and `failed=0`. Both predecessor allowlists remain empty. The
+intervening local commit and pull recorded by the live reflog remain a separate
+open audit item in `AGENTS.md`.
 
 This role is deliberately absent from routine Phase 1. It runs only when the
 operator selects `--tags ai_devops_toolkit` and

@@ -142,10 +142,18 @@ checkout paths for one project, and pins CRLF, duplicate-alias, and no-final-new
 behavior with a 500-by-500 regression. Hosted source gate `32676734390` is
 fully green: Linux passed in 7m50s, focused Windows reviewer safety passed in
 10m38s, and the complete Windows matrix passed in 1h2m29s within its 75-minute
-bound. No predecessor is allowlisted yet. Do not dispatch until a fresh read-only
-production preflight identifies the actual clean live predecessor. Open only that
-exact temporary exception in a separately reviewed commit, then remove it after
-the live doctor and exact tagged zero-change rerun pass.
+bound. The production preflight at `2026-08-24T01:43Z` found the clean checkout
+already at the exact target while its target completion marker was absent, so no
+predecessor exception was needed.
+The live reflog nevertheless records an intervening local commit `32fe573` and a
+`pull --ff-only` to the target at `2026-08-23T20:28:10-04:00`; no governed
+Ansible dispatch established that checkout transition, so it remains an explicit
+open audit item. Routine Phase 1 apply `32680605990` passed without touching the
+toolkit. Governed dispatch `32680766203` then established the exact manifest and
+completion marker and reported `changed=4`, `unreachable=0`, `failed=0`. Live
+checkout, manifest, marker, retired-schedule, and doctor checks all passed. Exact
+tagged rerun `32680940940` reported `changed=0`, `unreachable=0`, and `failed=0`;
+both predecessor allowlists remain empty.
 
 Before the first toolkit dispatch, a read-only check on 2026-08-22 confirmed
 `/worksp/ai-devops` was clean at
