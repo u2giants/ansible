@@ -27,9 +27,10 @@ without moving or replacing the original history backup. For the 2026-08-23
 `82697a8f07fe50338606c4f4b11d3bbf5e90e1cc` promotion, read-only SSH evidence
 first proved the clean live predecessor and matching install manifest at
 `d80f468fbf8e7f98c73f9798e0e1de59e2759e01`; the unexplained transition after
-the last governed `d24884fd` rollout remains recorded separately in
-`AGENTS.md`. Governed dispatch `32624619860` then ran the complete installer,
-doctor, schedule check, and completion-marker path. Exact tagged rerun
+the last governed `d24884fd` rollout remains preserved as historical evidence
+in `AGENTS.md`; the governed ownership boundary closes the direct non-sudo
+recurrence action. Governed dispatch `32624619860` then ran the complete
+installer, doctor, schedule check, and completion-marker path. Exact tagged rerun
 `32625017742` reported `changed=0`, `unreachable=0`, and `failed=0`. The
 one-release predecessor exception is now removed.
 
@@ -52,7 +53,8 @@ native, bounded, and fail-closed. No predecessor is
 allowlisted now. Governed dispatch `32674373667` established its completion
 marker and exact tagged rerun `32674548896` was a zero-change success. The
 preflight found the checkout already at that target through an unexplained
-fast-forward, which remains recorded as a separate audit item in `AGENTS.md`.
+fast-forward. Its historical evidence remains recorded in `AGENTS.md`; the
+governed ownership boundary closes the direct non-sudo recurrence action.
 
 Reviewed successor `8435f7938d9865158975c2a4dbd7e43a3c3bde97` replaces cross-product
 machine/hub memory matching with one-time indexes while preserving duplicate,
@@ -64,8 +66,9 @@ so no predecessor exception was needed. Governed dispatch `32680766203`
 established the target manifest and marker; live checkout, doctor, and retired
 schedule checks passed. Exact tagged rerun `32680940940` reported `changed=0`,
 `unreachable=0`, and `failed=0`. Both predecessor allowlists remain empty. The
-intervening local commit and pull recorded by the live reflog remain a separate
-open audit item in `AGENTS.md`.
+intervening local commit and pull recorded by the live reflog remain preserved
+as historical evidence in `AGENTS.md`; the governed ownership boundary closes
+the direct non-sudo recurrence action.
 
 This role is deliberately absent from routine Phase 1. It runs only when the
 operator selects `--tags ai_devops_toolkit` and

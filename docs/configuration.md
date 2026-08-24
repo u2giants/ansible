@@ -86,8 +86,9 @@ manifest recorded that same source SHA, and no completion marker existed for it.
 The last governed rollout recorded before this investigation ended at
 `d24884fd073081bb2eb43ce6880ba8714fdd6e17`;
 no governed dispatch establishing the later transition to `d80f468` has been
-found, so that drift remains an explicit audit item rather than being attributed
-to this role. The exact live revision was allowlisted only for the governed
+found. That historical evidence remains preserved rather than being attributed
+to this role; the governed ownership boundary closes the direct non-sudo
+recurrence action. The exact live revision was allowlisted only for the governed
 in-place upgrade; no history cutover or backup replacement was permitted.
 Gated dispatch `32624619860` installed the reviewed release, the live checkout
 and install manifest both matched `82697a8`, the completion marker was present,
@@ -112,8 +113,9 @@ completion marker was absent. In the canonical public checkout,
 `git merge-base --is-ancestor 3fdc87c... 3c34bb0...` returned zero and
 `origin/main` contained `3fdc87c...`, proving the predecessor is published and
 lies on the fully gated target's direct history. No governed dispatch explains
-the transition, so it remains a separate open audit item rather than being
-normalized by this promotion.
+the transition. That historical evidence remains preserved rather than being
+normalized by this promotion; the governed ownership boundary closes the direct
+non-sudo recurrence action.
 
 Governed dispatch `32639239500` installed the final release. The live checkout,
 owner-only manifest, versioned completion marker, and `ai-devops doctor` all
@@ -137,7 +139,8 @@ The fresh read-only preflight at `2026-08-23T23:40Z` found the live checkout
 already clean on `main` at that target, with the owner-only manifest matching it
 but the versioned completion marker absent. Git's live reflog records a
 `pull --ff-only` transition at `2026-08-23T18:44:46-04:00`; no governed Ansible
-dispatch established that transition, so it remains an explicit open audit item.
+dispatch established that historical transition. Its evidence remains preserved;
+the governed ownership containment described below closes the recurrence action.
 The live checkout, owner-only manifest, completion marker, retired-schedule check,
 and doctor all passed. Exact tagged rerun `32674548896` reported `changed=0`,
 `unreachable=0`, and `failed=0`; no predecessor exception was required or retained.
@@ -155,13 +158,37 @@ already at the exact target while its target completion marker was absent, so no
 predecessor exception was needed.
 The live reflog nevertheless records an intervening local commit `32fe573` and a
 `pull --ff-only` to the target at `2026-08-23T20:28:10-04:00`; no governed
-Ansible dispatch established that checkout transition, so it remains an explicit
-open audit item. Routine Phase 1 apply `32680605990` passed without touching the
+Ansible dispatch established that historical checkout transition. Its evidence
+remains preserved; the governed ownership containment described below closes the
+recurrence action. Routine Phase 1 apply `32680605990` passed without touching the
 toolkit. Governed dispatch `32680766203` then established the exact manifest and
 completion marker and reported `changed=4`, `unreachable=0`, `failed=0`. Live
 checkout, manifest, marker, retired-schedule, and doctor checks all passed. Exact
 tagged rerun `32680940940` reported `changed=0`, `unreachable=0`, and `failed=0`;
 both predecessor allowlists remain empty.
+
+On 2026-08-24, exact Claude-approved Ansible commit
+`16c614753c40088e7293b02140dcc8266936f906` made only the toolkit checkout
+`root:ai` mode `0750`, retained read/execute access for runtime user `ai`, and
+kept Git release transitions behind the default-off toolkit dispatch. Governed
+run `32687426166` established that boundary. Direct live verification proved the
+checkout and manifest remained at `8435f7938d9865158975c2a4dbd7e43a3c3bde97`,
+the completion marker was present, the checkout was clean, non-sudo writes by
+`ai` were blocked, `/worksp/hiclaw` remained `ai:ai` mode `0755`, the retired
+memory cron entry remained absent, and all required doctor checks passed.
+
+The first repeat correctly exposed an Ansible false-positive change from
+unconditional recursive enforcement. Exact Claude-approved successor
+`b474a59864b09f53cd6f629dae07cbd8bb9d3751` added a non-following,
+same-filesystem ownership audit and skips enforcement only when every
+non-symlink entry on that filesystem is already exact. Its root integration
+test proves real drift repair,
+failed-install recovery, outward-symlink containment, and a zero-change second
+symlink release. Drift run `32689224921` passed both Phase 1 and the corrected
+software inventory. Governed runs `32689410687` and `32689623813` each passed
+the privilege test and reported `changed=0`, `unreachable=0`, `failed=0` on
+production. This is an accidental/direct-write guardrail, not a security
+boundary against a deliberate sudo command or directory replacement.
 
 Before the first toolkit dispatch, a read-only check on 2026-08-22 confirmed
 `/worksp/ai-devops` was clean at
