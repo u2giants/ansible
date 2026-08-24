@@ -232,6 +232,7 @@ BIN  ai-memory-sync
 BIN  ai-model-call
 BIN  ai-muse
 BIN  ai-private-config
+BIN  ai-process-supervisor
 BIN  ai-public-boundary-check
 BIN  ai-qwen
 BIN  ai-repo-policy
