@@ -32,7 +32,7 @@ see [`deployment.md`](deployment.md).
 |---|---|---|
 | `host_timezone` | `America/New_York` | confirmed live 2026-06-23 |
 | `managed_user` | `ai` | passwordless sudo user |
-| `ai_devops_toolkit_version` | `3e252bcae2b1890a8ca0d00dc11dc0d210e91e0f` | exact reviewed toolkit release |
+| `ai_devops_toolkit_version` | `8435f7938d9865158975c2a4dbd7e43a3c3bde97` | exact reviewed toolkit release |
 | `ai_devops_toolkit_backup_path` | `/worksp/ai-devops-pre-rewrite-20260822` | fixed recoverable predecessor checkout |
 | `dns_fallback_servers` | `1.1.1.1 1.0.0.1 8.8.8.8 8.8.4.4` | resolved FallbackDNS |
 | `docker_ce_version` | `5:29.6.0-1~ubuntu.24.04~noble` | pinned/held |
@@ -43,7 +43,7 @@ see [`deployment.md`](deployment.md).
 
 ### AI DevOps toolkit release evidence
 
-The `3e252bcae2b1890a8ca0d00dc11dc0d210e91e0f` pin is the reviewed canonical
+The `8435f7938d9865158975c2a4dbd7e43a3c3bde97` pin is the reviewed canonical
 AI DevOps remediation release for every supported platform. It retains the
 production-discovered privilege-boundary and seven-stage workflow repairs,
 prevents Windows CRLF memory indexes from creating duplicate union commits and
@@ -124,11 +124,28 @@ equivalent Windows path spellings. It also makes dynamic reviewer quarantine
 use the same explicit warning status contract as built-in quarantines, isolates
 Kimi's artifact-worker fixture, and makes Windows reviewer process-tree cleanup
 native, bounded, and fail-closed even when termination cannot be confirmed.
-No predecessor is allowlisted yet. Do not dispatch until the successor's hosted
-Linux and Windows gates pass and a fresh read-only production preflight identifies
-the actual clean live predecessor. Open only that exact temporary exception in a
-separately reviewed commit, then remove it after the live doctor and exact tagged
-zero-change rerun pass.
+Governed dispatch `32674373667` installed `3e252bcae2b1890a8ca0d00dc11dc0d210e91e0f`.
+The fresh read-only preflight at `2026-08-23T23:40Z` found the live checkout
+already clean on `main` at that target, with the owner-only manifest matching it
+but the versioned completion marker absent. Git's live reflog records a
+`pull --ff-only` transition at `2026-08-23T18:44:46-04:00`; no governed Ansible
+dispatch established that transition, so it remains an explicit open audit item.
+The live checkout, owner-only manifest, completion marker, retired-schedule check,
+and doctor all passed. Exact tagged rerun `32674548896` reported `changed=0`,
+`unreachable=0`, and `failed=0`; no predecessor exception was required or retained.
+
+Claude Opus 5 reviewed exact successor
+`8435f7938d9865158975c2a4dbd7e43a3c3bde97` and returned `APPROVE` in provider
+session `1deadafa-1bf3-4f5e-8889-190c8d4ca192` on 2026-08-23. It makes explicit
+memory aliases and hub-to-machine project matching linear, preserves multiple
+checkout paths for one project, and pins CRLF, duplicate-alias, and no-final-newline
+behavior with a 500-by-500 regression. Hosted source gate `32676734390` is
+fully green: Linux passed in 7m50s, focused Windows reviewer safety passed in
+10m38s, and the complete Windows matrix passed in 1h2m29s within its 75-minute
+bound. No predecessor is allowlisted yet. Do not dispatch until a fresh read-only
+production preflight identifies the actual clean live predecessor. Open only that
+exact temporary exception in a separately reviewed commit, then remove it after
+the live doctor and exact tagged zero-change rerun pass.
 
 Before the first toolkit dispatch, a read-only check on 2026-08-22 confirmed
 `/worksp/ai-devops` was clean at

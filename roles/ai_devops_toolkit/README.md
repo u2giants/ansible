@@ -49,9 +49,17 @@ review-snapshot identity across equivalent Windows path spellings. It also
 normalizes dynamic reviewer quarantine to the shared warning status, isolates
 Kimi's artifact-worker fixture, and makes Windows reviewer process-tree cleanup
 native, bounded, and fail-closed. No predecessor is
-allowlisted before the hosted gate and fresh live preflight. Open only the
-observed predecessor in a separately reviewed commit for the install, doctor,
-and exact zero-change rerun; then remove it.
+allowlisted now. Governed dispatch `32674373667` established its completion
+marker and exact tagged rerun `32674548896` was a zero-change success. The
+preflight found the checkout already at that target through an unexplained
+fast-forward, which remains recorded as a separate audit item in `AGENTS.md`.
+
+Reviewed successor `8435f7938d9865158975c2a4dbd7e43a3c3bde97` replaces cross-product
+machine/hub memory matching with one-time indexes while preserving duplicate,
+CRLF, no-final-newline, and multi-checkout behavior. Its predecessor allowlist
+remains empty. Hosted source gate `32676734390` passed Linux, focused Windows
+reviewer safety, and the complete Windows matrix; a fresh live preflight must
+still identify the exact predecessor before any deployment authority is opened.
 
 This role is deliberately absent from routine Phase 1. It runs only when the
 operator selects `--tags ai_devops_toolkit` and
