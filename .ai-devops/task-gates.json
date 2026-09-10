@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "_comment": "Every Ansible repository path is infrastructure and retains local tests, rulebook treatment, read-only preview, and exact-resource authorization before mutation.",
+  "paths": [
+    { "glob": "**", "class": "infrastructure" }
+  ],
+  "gates": {
+    "infrastructure": {
+      "required": ["local-tests", "repository-rulebook-full-treatment", "ansible-lint", "syntax-check", "read-only-check-diff", "separate-policy-change-after-exact-resource-owner-authorization"],
+      "forbidden_actions": ["infrastructure", "production"]
+    }
+  }
+}

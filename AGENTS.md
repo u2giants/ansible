@@ -1,5 +1,11 @@
 # AGENTS.md — canonical operating guide for `u2giants/ansible`
 
+Repository-local task routing is declared in `.ai-devops/task-gates.json` and
+verified by `tests/test-task-gates.sh`. Every path remains infrastructure-classed;
+acknowledgement and owner-request flags cannot bypass mutation or production
+refusals. Required proof is read-only. Exact resource and action authorization
+must be followed by a separately reviewed policy change before mutation can run.
+
 > Read this file first. It is the single source of truth for working in this repo. Load other
 > docs only when the **Documentation map** below says you need them — do **not** ingest every
 > `.md` file.
@@ -15,7 +21,7 @@ system cron, host systemd units (Cloudflare Tunnel 1, the backup watchdog), and 
   diffs, plus any AI session (Claude Code, Codex) that might touch the server.
 - **Key moving parts:** `roles/` (one role per host concern), `playbooks/site.yml` (entrypoint,
   phase-gated), `inventory/` (hosts + non-secret vars), `.github/workflows/` (check / apply /
-  drift), secrets from **1Password** at apply time.
+  drift / task gates), secrets from **1Password** at apply time.
 - **Outcome that matters — THE MISSION (read [`docs/DISASTER-RECOVERY.md`](docs/DISASTER-RECOVERY.md)):**
   the owner is not a sysadmin and must remember NOTHING. Success = they say **"rebuild everything"**
   and the whole `hetz` environment is reconstructed from GitHub + backrest backups + 1Password +
@@ -60,6 +66,7 @@ Then load additional docs only when relevant:
 | Understand the full original brief / rationale | `docs/ANSIBLE-IMPLEMENTATION-PLAN.md` | everything else until you need it |
 | Claude Code session | `CLAUDE.md`, then `AGENTS.md` | other docs unless the task needs them |
 | Documentation-only cleanup | `AGENTS.md`, `README.md`, affected `docs/*`, role READMEs only where relevant | role source except to verify accuracy |
+| Change task routing or protected-action gates | `AGENTS.md`, `.ai-devops/task-gates.json`, `docs/phase-4-task-gates-rollout.md` | role source unless its classification changes |
 
 If `HANDOFF.md` exists, it is **required reading** for any continuation work.
 
@@ -71,8 +78,9 @@ If `HANDOFF.md` exists, it is **required reading** for any continuation work.
 | `roles/<name>/` | One role per host concern (tasks/handlers/defaults/files/templates + README) | project-owned |
 | `inventory/hosts.ini` | Hosts: `[hetzner]`, `[scratch]` (placeholder), `[do_backup_wiz]` (placeholder) | project-owned |
 | `inventory/group_vars/all.yml` | Non-secret vars; reconciled with live state | project-owned |
-| `.github/workflows/` | `check.yml`, `apply.yml`, `drift.yml` | project-owned |
-| `tests/` | dependency-light recovery and idempotency checks used by CI | project-owned |
+| `.ai-devops/task-gates.json` | repository-wide infrastructure classification and protected-action refusals | project-owned |
+| `.github/workflows/` | `check.yml`, `apply.yml`, `drift.yml`, `task-gates.yml` | project-owned |
+| `tests/` | recovery, policy, and idempotency checks used by CI | project-owned |
 | `files/cloud-init/` | First-boot bootstrap template (`user-data.yaml.j2`) | project-owned |
 | `bin/discover.sh` | Read-only live-state capture script (run on the box) | project-owned (script) |
 | `docs/` | Plan, discovery report, status, and topic docs | docs |
@@ -120,7 +128,7 @@ are managed declaratively by roles, not source files in this repo.)
 | Install or update the AI workflow toolkit | `roles/ai_devops_toolkit/`, its pinned vars | Coolify apps, containers, or machine-local secrets |
 | Manage Cloudflare Tunnel 1 | `roles/cloudflared_coolify/` | Tunnels 2 & 3 (Coolify-managed) |
 | Add an SSH public key for `ai` | `inventory/group_vars/all.yml` (`users_authorized_keys`) | private keys (never commit) |
-| Change the apply/CI flow | `.github/workflows/apply.yml` / `check.yml` / `drift.yml` | the `concurrency: apply-hetzner` guard (serialization) |
+| Change the apply/CI flow | `.github/workflows/apply.yml` / `check.yml` / `drift.yml` / `task-gates.yml` | the `concurrency: apply-hetzner` guard (serialization) |
 | Add a new host concern | new `roles/<name>/`, wire into `playbooks/site.yml` with a phase tag | existing roles unless related |
 
 ## 7. Data model and external identifiers
@@ -291,7 +299,8 @@ See `docs/deployment.md` for full detail. Summary of the **real, current** state
 - **Pipeline:** GitHub Actions — `check.yml` (PR/manual: `ansible-lint` + `--check --diff`, posts to the PR or manual run summary),
   `apply.yml` (push to `main`: serialized via `concurrency: apply-hetzner`; real apply **enabled by
   the `ENABLE_AUTO_APPLY=true` repo variable**), `drift.yml` (daily
-  `--check`, alerts on drift, never applies).
+  `--check`, alerts on drift, never applies), and `task-gates.yml` (PR/push/manual:
+  repository classification and refusal fixtures only).
 - **Current reality:** CI auto-apply is active and is the routine deployment path. Phase 2 remains
   gated and is not part of the default apply.
 - **Connection / SSH:** `ssh vps` (alias in the owner's `~/.ssh/config`) reaches the host over

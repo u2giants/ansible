@@ -16,8 +16,9 @@ This project deploys **configuration to a host**, not images or packages. "Deplo
 | `.github/workflows/check.yml` | pull request to `main`; manual dispatch | `ansible-lint` + `ansible-playbook --check --diff` (phase1) against `hetz`; posts the diff to the PR or the manual run summary | no (read-only) |
 | `.github/workflows/apply.yml` | push to `main`; manual dispatch | serialized by `concurrency: apply-hetzner`; runs the real apply **only if repo variable `ENABLE_AUTO_APPLY == 'true'`**, otherwise `--check` only | gated |
 | `.github/workflows/drift.yml` | daily cron 03:00 UTC; manual | `--check --diff` (phase1); fails/alerts on drift | no (never applies) |
+| `.github/workflows/task-gates.yml` | pull request to `main`; push to `main`; manual dispatch | verifies repository-wide infrastructure classification and protected-action refusals using the public pinned task-gate engine | no (verification only) |
 
-All three reach the host over **Tailscale** using the `tailscale/github-action` with an
+The check, apply, and drift workflows reach the host over **Tailscale** using the `tailscale/github-action` with an
 **ephemeral `tag:ci`** node, and pull secrets via `1password/load-secrets-action`.
 
 The `ai_devops_toolkit` role is not part of routine Phase 1. Its recoverability
