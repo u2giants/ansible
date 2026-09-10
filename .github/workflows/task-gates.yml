@@ -1,0 +1,30 @@
+name: Task Gates
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: popcre/ai-devops
+          ref: 4d83f9a5dc400f87408663eddac872b9074c18ed
+          path: .task-gates-toolkit
+          persist-credentials: false
+      - name: Verify Ansible infrastructure policy
+        shell: bash
+        run: |
+          export PATH="$GITHUB_WORKSPACE/.task-gates-toolkit/bin:$PATH"
+          ai-task-gates version
+          ai-repo-policy | jq -e '.repository == "u2giants/ansible"'
+          bash tests/test-task-gates.sh
