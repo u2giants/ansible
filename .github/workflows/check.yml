@@ -30,6 +30,8 @@ jobs:
       - run: ansible-lint
       - name: Test recoverable AI DevOps toolkit cutover
         run: bash tests/test-ai-devops-toolkit.sh
+      - name: Test Ubuntu checkout ownership repair
+        run: bash tests/test-dev-ubuntu-permissions.sh
       - name: Syntax check
         run: ansible-playbook playbooks/site.yml --syntax-check
 
