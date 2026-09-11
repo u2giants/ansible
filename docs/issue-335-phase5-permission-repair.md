@@ -7,9 +7,10 @@ can fetch the landed Phase 5 source. The shared `/worksp` parent and sibling
 repositories remain out of scope.
 
 This is the separate post-authorization policy change required by the local
-task-gate overlay: declared infrastructure work may now reach the infrastructure
-action gate, while production actions remain forbidden. The repair itself runs
-only through the repository's managed developer-computer playbook.
+task-gate overlay: declared infrastructure work may reach the exact serialized
+production workflow after the matching central policy release lands. The repair
+runs only through the `dev_ubuntu_ai_devops` tag against the declared `vps2`
+inventory host; routine Phase 1 remains unchanged.
 
 Verification requires the focused ownership test, Ansible lint and syntax
 checks, the read-only host diff, one exact-head final review, and live proof that

@@ -79,6 +79,11 @@ jobs:
           DEPLOY_TAGS: ${{ github.event.inputs.tags || 'phase1' }}
         run: |
           tags="$DEPLOY_TAGS"
+          if [ "$tags" = "dev_ubuntu_ai_devops" ]; then
+            ansible-playbook playbooks/dev-computers.yml -l vps2 \
+              --tags dev_ubuntu_ai_devops -e dev_ai_repo_branch=origin/main
+            exit 0
+          fi
           extra=()
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "$tags" = "ai_devops_toolkit" ]; then
             extra=(-e enable_ai_devops_toolkit_deploy=true)
@@ -87,6 +92,13 @@ jobs:
 
       - name: Auto-apply disabled — dry run only
         if: vars.ENABLE_AUTO_APPLY != 'true'
+        env:
+          DEPLOY_TAGS: ${{ github.event.inputs.tags || 'phase1' }}
         run: |
           echo "::notice::ENABLE_AUTO_APPLY is not 'true' — running --check only (plan §9)."
+          if [ "$DEPLOY_TAGS" = "dev_ubuntu_ai_devops" ]; then
+            ansible-playbook playbooks/dev-computers.yml -l vps2 \
+              --tags dev_ubuntu_ai_devops -e dev_ai_repo_branch=origin/main --check --diff
+            exit 0
+          fi
           ansible-playbook playbooks/site.yml -l hetzner --tags phase1 --check --diff

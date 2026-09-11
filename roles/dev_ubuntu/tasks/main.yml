@@ -49,6 +49,7 @@
   ansible.builtin.stat:
     path: "{{ dev_ubuntu_repo_path }}"
   register: dev_ubuntu_repo
+  tags: [dev_ubuntu_ai_devops]
 
 - name: Restore the managed user's ownership of the AI DevOps checkout
   ansible.builtin.file:
@@ -58,6 +59,7 @@
     group: "{{ ansible_user }}"
     recurse: true
   when: dev_ubuntu_repo.stat.exists
+  tags: [dev_ubuntu_ai_devops]
 
 - name: Bind OpenSSH to Tailscale and require keys
   ansible.builtin.copy:
@@ -90,12 +92,28 @@
     version: "{{ dev_ai_repo_branch }}"
     update: true
   become: false
+  tags: [dev_ubuntu_ai_devops]
 
 - name: Install AI DevOps command links
   ansible.builtin.command: "{{ dev_ubuntu_repo_path }}/install.sh"
   become: false
   register: dev_ubuntu_install
   changed_when: "'Created symlink' in dev_ubuntu_install.stdout or 'Installed' in dev_ubuntu_install.stdout"
+  tags: [dev_ubuntu_ai_devops]
+
+- name: Verify the AI DevOps checkout repair and installation
+  ansible.builtin.shell: |
+    set -eu
+    test "$(stat -c %U '{{ dev_ubuntu_repo_path }}')" = '{{ ansible_user }}'
+    test "$(stat -c %U '{{ dev_ubuntu_repo_path }}/.git/objects')" = '{{ ansible_user }}'
+    test "$(git -C '{{ dev_ubuntu_repo_path }}' rev-parse HEAD)" = "$(git -C '{{ dev_ubuntu_repo_path }}' rev-parse origin/main)"
+    ai-devops doctor
+    ai-task-gates explain --json | jq -e '.identity_resolved == true and .effective_class != null'
+  args:
+    executable: /bin/bash
+  become: false
+  changed_when: false
+  tags: [dev_ubuntu_ai_devops]
 
 - name: Install Claude and Codex skills and managed instructions
   ansible.builtin.command: "{{ dev_ubuntu_repo_path }}/bin/ai-install-skills"

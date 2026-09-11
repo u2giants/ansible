@@ -78,6 +78,9 @@ jobs:
           set -o pipefail
           ansible-playbook playbooks/site.yml -l hetzner --tags phase1 \
             --check --diff 2>&1 | tee /tmp/diff.txt
+          ansible-playbook playbooks/dev-computers.yml -l vps2 \
+            --tags dev_ubuntu_ai_devops -e dev_ai_repo_branch=origin/main \
+            --check --diff 2>&1 | tee -a /tmp/diff.txt
 
       - name: Post diff to PR
         if: always() && github.event_name == 'pull_request'
