@@ -72,3 +72,9 @@ listed in AllowUsers`, and Coolify marks its localhost server `is_reachable=fals
 Before changing this role's access policy, verify Coolify can still `is_usable=true` its localhost
 server and that a test app deploy actually swaps the container. See
 [`docs/incidents/2026-07-15-coolify-ssh-deploy-breakage.md`](../../docs/incidents/2026-07-15-coolify-ssh-deploy-breakage.md).
+
+## ai account password (#179, 2026-10-14)
+
+- The OS password for user `ai` is NOT managed by Ansible. `roles/users/tasks/main.yml` ensures the user exists and sets no password.
+- The ai password was rotated manually on hetz under the #179 plan (value held only in 1Password vault vibe_coding).
+- sshd password login for `ai` is an owner-chosen policy in this role (`ssh_hardening` defaults); it is recorded here, not the password value.
