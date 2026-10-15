@@ -4,6 +4,8 @@
 dev_tools_arch: "amd64"          # x86_64
 go_version: "1.26.4"
 supabase_version: "2.98.2"
+ast_grep_version: "0.45.2"
+ast_grep_install_prefix: "/opt/ast-grep"
 # codex: DELIBERATE EXCEPTION to the version-pinning rule above.
 # The standalone is canonical (/usr/local/bin/codex -> {{ codex_install_root }}/codex).
 # It SELF-UPDATES and the vendor installer exposes no version-pin variable, so a pin

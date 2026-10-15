@@ -60,6 +60,117 @@
   loop_control:
     label: "{{ item.name }}@{{ item.version }}"
 
+# ---- ast-grep (isolated because its npm package also publishes Linux's `sg` name) ----
+- name: Read the target C library
+  ansible.builtin.command: /usr/bin/ldd --version
+  register: dt_ast_grep_libc
+  changed_when: false
+  check_mode: false
+
+- name: Require the reviewed ast-grep platform
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['distribution'] == 'Ubuntu'
+      - ansible_facts['architecture'] == 'x86_64'
+      - "'GLIBC' in ((dt_ast_grep_libc.stdout | default('')) | upper)"
+    fail_msg: >-
+      ast-grep is pinned to the reviewed Ubuntu x86_64 GNU package. Refusing to
+      guess a binary for {{ ansible_facts['distribution'] | default('unknown') }}
+      {{ ansible_facts['architecture'] | default('unknown') }}.
+
+- name: Record the operating-system sg command before ast-grep reconciliation
+  ansible.builtin.stat:
+    path: /usr/bin/sg
+    follow: true
+    checksum_algorithm: sha256
+  register: dt_ast_grep_sg_before
+
+- name: Require the operating-system sg command
+  ansible.builtin.assert:
+    that:
+      - dt_ast_grep_sg_before.stat.exists
+      - dt_ast_grep_sg_before.stat.checksum is defined
+    fail_msg: /usr/bin/sg is missing or unreadable; refusing ast-grep reconciliation.
+
+- name: Record operating-system package ownership of sg
+  ansible.builtin.command: dpkg-query -S /usr/bin/sg
+  register: dt_ast_grep_sg_owner_before
+  changed_when: false
+  check_mode: false
+
+- name: Create the isolated ast-grep npm prefix
+  ansible.builtin.file:
+    path: "{{ ast_grep_install_prefix }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install isolated ast-grep npm package (pinned, non-global)
+  community.general.npm:
+    name: "@ast-grep/cli"
+    version: "{{ ast_grep_version }}"
+    path: "{{ ast_grep_install_prefix }}"
+    global: false
+    state: present
+
+- name: Inspect the reviewed ast-grep platform binary
+  ansible.builtin.stat:
+    path: "{{ ast_grep_install_prefix }}/node_modules/@ast-grep/cli-linux-x64-gnu/ast-grep"
+  register: dt_ast_grep_binary
+
+- name: Require the reviewed ast-grep platform binary after installation
+  ansible.builtin.assert:
+    that: dt_ast_grep_binary.stat.exists
+    fail_msg: The pinned ast-grep GNU x86_64 binary was not installed at its reviewed path.
+  when: not ansible_check_mode
+
+- name: Expose only the full ast-grep command
+  ansible.builtin.file:
+    src: "{{ ast_grep_install_prefix }}/node_modules/@ast-grep/cli-linux-x64-gnu/ast-grep"
+    dest: /usr/local/bin/ast-grep
+    state: link
+    force: true
+
+- name: Verify the exact ast-grep version
+  ansible.builtin.command: /usr/local/bin/ast-grep --version
+  register: dt_ast_grep_version
+  changed_when: false
+  failed_when: >-
+    not ansible_check_mode and
+    (dt_ast_grep_version.rc != 0 or ast_grep_version not in dt_ast_grep_version.stdout)
+  check_mode: false
+
+- name: Verify a harmless read-only ast-grep search
+  ansible.builtin.command:
+    argv: [/usr/local/bin/ast-grep, --pattern, "console.log($A)", --lang, javascript, --json]
+    stdin: "console.log('ast-grep verification')"
+  register: dt_ast_grep_search
+  changed_when: false
+  failed_when: not ansible_check_mode and dt_ast_grep_search.rc != 0
+  check_mode: false
+
+- name: Record the operating-system sg command after ast-grep reconciliation
+  ansible.builtin.stat:
+    path: /usr/bin/sg
+    follow: true
+    checksum_algorithm: sha256
+  register: dt_ast_grep_sg_after
+
+- name: Re-read operating-system package ownership of sg
+  ansible.builtin.command: dpkg-query -S /usr/bin/sg
+  register: dt_ast_grep_sg_owner_after
+  changed_when: false
+  check_mode: false
+
+- name: Prove ast-grep did not change the operating-system sg command
+  ansible.builtin.assert:
+    that:
+      - dt_ast_grep_sg_after.stat.exists
+      - dt_ast_grep_sg_after.stat.checksum == dt_ast_grep_sg_before.stat.checksum
+      - dt_ast_grep_sg_owner_after.stdout == dt_ast_grep_sg_owner_before.stdout
+    fail_msg: ast-grep reconciliation changed or shadowed the operating-system sg command.
+
 # ---- codex (standalone is canonical; PRESENCE-managed, not version-pinned) ----
 # DELIBERATE EXCEPTION to this role's "version-pinned so a rebuild reproduces them"
 # rule. Codex ships a self-updating standalone (its releases/ dir already held both

@@ -11,12 +11,16 @@ what's live, so a rebuild reproduces them. Recovery gap **R2**
 | `claude-code`, `gemini-cli`, `corepack`, `npm-check-updates` | global npm (`community.general.npm`) | pinned in `dev_tools_npm` |
 | `codex` | `@openai/codex` global npm (standalone → `/opt/codex`) | `codex_version` 0.141.0 |
 | `cloudflared` symlink | `/usr/local/bin/cloudflared` → `/usr/bin/cloudflared` (binary is apt, installed by `packages`) | — |
+| `ast-grep` | isolated official npm package under `/opt/ast-grep`; only `/usr/local/bin/ast-grep` is linked | `ast_grep_version` 0.45.2 |
 
 ## Safe / idempotent
 Every install is guarded by a version check (or an idempotent module), so applying to the live
 box is a **no-op**. **Bump the version vars** when you upgrade a tool, so a rebuild matches.
 
 ## Notes
+- ast-grep is supported on Ubuntu x86_64 with glibc. Its npm package also ships
+  a command named `sg`, which conflicts with Ubuntu's login utility, so it is
+  never installed globally and no `sg` link is created.
 - The live box also has a second, older `gemini` at `/usr/local/bin/gemini` (0.35.2); this role
   installs only the npm `@google/gemini-cli` (0.44.1) — the newer one — and does not reproduce the
   duplicate.
