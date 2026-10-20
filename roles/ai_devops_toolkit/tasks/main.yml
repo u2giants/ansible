@@ -119,12 +119,36 @@
       before deploying the managed toolkit.
   when: ai_devops_toolkit_checkout.stat.exists
 
+- name: Read the installed AI DevOps branch
+  ansible.builtin.command:
+    argv:
+      - git
+      - -C
+      - "{{ ai_devops_toolkit_path }}"
+      - branch
+      - --show-current
+  become: "{{ ai_devops_toolkit_runtime_become }}"
+  become_user: "{{ managed_user }}"
+  environment:
+    HOME: "{{ ai_devops_toolkit_home }}"
+  register: ai_devops_toolkit_installed_branch
+  changed_when: false
+  check_mode: false
+  when: ai_devops_toolkit_checkout.stat.exists
+
 - name: Classify the installed AI DevOps revision
   ansible.builtin.set_fact:
     ai_devops_toolkit_requires_install: >-
       {{ (not ai_devops_toolkit_checkout.stat.exists)
          or (ai_devops_toolkit_installed_revision.stdout != ai_devops_toolkit_version)
          or (not ai_devops_toolkit_completion.stat.exists) }}
+    # The toolkit's installed-checkout guard (ai-devops #1836) refuses any HEAD
+    # move by anything but its own installer, so never touch Git when the clean
+    # checkout is already exactly the pin on main; only the installer runs.
+    ai_devops_toolkit_requires_checkout_move: >-
+      {{ (not ai_devops_toolkit_checkout.stat.exists)
+         or (ai_devops_toolkit_installed_revision.stdout != ai_devops_toolkit_version)
+         or (ai_devops_toolkit_installed_branch.stdout != 'main') }}
     ai_devops_toolkit_requires_history_cutover: >-
       {{ ai_devops_toolkit_checkout.stat.exists
          and ai_devops_toolkit_installed_revision.stdout in ai_devops_toolkit_rewrite_predecessors }}
@@ -190,6 +214,7 @@
     HOME: "{{ ai_devops_toolkit_home }}"
   when:
     - ai_devops_toolkit_requires_install
+    - ai_devops_toolkit_requires_checkout_move
     - not (ansible_check_mode and ai_devops_toolkit_requires_history_cutover)
 
 - name: Attach the pinned AI DevOps release to main
@@ -207,6 +232,7 @@
     HOME: "{{ ai_devops_toolkit_home }}"
   when:
     - ai_devops_toolkit_requires_install
+    - ai_devops_toolkit_requires_checkout_move
     - not ansible_check_mode
 
 - name: Report the planned governed-checkout ownership boundary during check mode

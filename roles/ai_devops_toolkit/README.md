@@ -144,3 +144,9 @@ Every pinned release and any explicitly temporary predecessor must be a
 verified public commit in `u2giants/ai-devops`. Both one-time predecessor lists
 are empty after a successful rollout; any unexpected or concurrent checkout
 therefore fails closed and is never overwritten silently.
+
+Since ai-devops #1836 the installed checkout carries a `reference-transaction`
+guard that refuses any HEAD move made outside the toolkit's own installer. The
+role therefore runs no Git command that moves HEAD when the clean checkout is
+already exactly the pin on `main`; it only runs the installer and writes the
+marker (first hit: dispatch `39456384734`, refused with zero changes, issue #17).
