@@ -48,6 +48,12 @@ see [`deployment.md`](deployment.md).
 | Variable | Default | Notes |
 |---|---|---|
 | `ai_devops_toolkit_runtime_become` | `false` | installer, globals, doctor, and read-only Git stay on the inventory connection user (`ai` in production); privilege integration tests override this |
+| `headroom_version` | `0.41.0` | pinned `headroom-ai` pipx version (`headroom_proxy`); reinstalled with `--force` when the installed version differs |
+| `headroom_tailnet_ip` | `100.66.37.58` | SAN in the generated TLS cert; the vendored units/script also hardcode this address |
+| `headroom_tls_dir` | `/etc/ai-zcode-headroom/tls` | self-signed CA + server cert, generated only when absent |
+
+The Headroom units set `HEADROOM_ALLOW_UNAUTHENTICATED_BIND=1` and bind to the tailnet address only:
+access control is the Tailscale ACL, not the proxy.
 
 ## AI DevOps toolkit release evidence
 

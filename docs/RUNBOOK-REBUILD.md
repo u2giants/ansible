@@ -53,6 +53,10 @@ Log in to the CLIs/services that need it — by design these are not stored:
 `gcloud auth login`, `az login`, `gh auth login`, `op signin`, `supabase login`, `codex` login,
 `tailscale up`, etc.
 
+Also: the Headroom ZCode TLS front gets a **new self-signed CA** on rebuild (`roles/headroom_proxy`).
+Copy `/etc/ai-zcode-headroom/tls/ca.crt` to each tailnet client that uses the ZCode Headroom lane and
+re-trust it there.
+
 ### 8. Verify (rebuild-and-diff)
 Diff the rebuilt box against the recovery definition: `bin/discover-software.sh` vs
 `docs/baseline-software.txt`; enabled services; listening ports; Coolify app list. Chase every

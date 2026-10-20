@@ -6,11 +6,22 @@
 # start fresh after a rebuild. The self-signed CA is regenerated only when absent; a rebuild
 # makes a new CA, so tailnet clients that pinned the old CA must re-trust ca.crt.
 
-- name: Install headroom-ai {{ headroom_version }} with pipx (user ai)
+- name: Read installed headroom-ai version
+  become: true
   become_user: "{{ managed_user }}"
-  ansible.builtin.command: pipx install "headroom-ai=={{ headroom_version }}"
-  args:
-    creates: "/home/{{ managed_user }}/.local/bin/headroom"
+  ansible.builtin.command: pipx list --short
+  register: headroom_pipx
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Install pinned headroom-ai with pipx (user ai)
+  become: true
+  become_user: "{{ managed_user }}"
+  ansible.builtin.command: pipx install --force "headroom-ai=={{ headroom_version }}"
+  when: ('headroom-ai ' ~ headroom_version) not in (headroom_pipx.stdout | default(''))
+  changed_when: true
+  notify: Restart headroom services
 
 - name: Create headroom working and log directories
   ansible.builtin.file:
@@ -32,6 +43,7 @@
     owner: "{{ managed_user }}"
     group: "{{ managed_user }}"
     mode: "0755"
+  notify: Restart headroom services
   loop:
     - { src: zcode_headroom_tls.py, dest: "/home/{{ managed_user }}/zcode-headroom-tls/zcode_headroom_tls.py" }
     - { src: record.py, dest: "/home/{{ managed_user }}/headroom-perf/record.py" }
@@ -45,6 +57,7 @@
     mode: "0700"
 
 - name: Generate self-signed CA and server certificate when absent
+  become: true
   become_user: "{{ managed_user }}"
   ansible.builtin.shell: |
     set -eu
@@ -71,7 +84,9 @@
     group: root
     mode: "0644"
   loop: [headroom.service, headroom-zcode.service, zcode-headroom-tls.service]
-  notify: Reload systemd
+  notify:
+    - Reload systemd
+    - Restart headroom services
 
 - name: Create headroom.service drop-in directory
   ansible.builtin.file:
@@ -86,7 +101,9 @@
     owner: root
     group: root
     mode: "0644"
-  notify: Reload systemd
+  notify:
+    - Reload systemd
+    - Restart headroom services
 
 - name: Flush handlers so units exist before enabling
   ansible.builtin.meta: flush_handlers
@@ -103,6 +120,7 @@
 # The live entry predates Ansible and has no "#Ansible:" marker; drop that exact line once so
 # the managed entry below does not duplicate it.
 - name: Remove unmanaged copy of the PERF recorder cron line
+  become: true
   become_user: "{{ managed_user }}"
   ansible.builtin.shell: |
     set -o pipefail
