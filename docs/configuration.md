@@ -32,7 +32,7 @@ see [`deployment.md`](deployment.md).
 |---|---|---|
 | `host_timezone` | `America/New_York` | confirmed live 2026-06-23 |
 | `managed_user` | `ai` | passwordless sudo user |
-| `ai_devops_toolkit_version` | `b1668dc523501c5644abeedfc8dec49280ab049e` (in-place upgrade from `8435f79…`, issue #17) | exact reviewed toolkit release |
+| `ai_devops_toolkit_version` | `b3a8d606daa4093f70508da6265d7c3f8265c71f` (matches live checkout 2026-10-20, issue #17) | exact reviewed toolkit release |
 | `ai_devops_toolkit_checkout_owner` | `root` | blocks direct non-sudo writes; the governed role uses root only for checkout updates |
 | `ai_devops_toolkit_checkout_group` | `ai` | runtime sessions retain read/execute access without direct write authority |
 | `ai_devops_toolkit_backup_path` | `/worksp/ai-devops-pre-rewrite-20260822` | fixed recoverable predecessor checkout |
@@ -57,7 +57,7 @@ access control is the Tailscale ACL, not the proxy.
 
 ## AI DevOps toolkit release evidence
 
-Current pin `b1668dc523501c5644abeedfc8dec49280ab049e` (issue #17) adds automatic
+Current pin `b3a8d606daa4093f70508da6265d7c3f8265c71f` (issue #17) adds automatic
 reviewer-key restore through `--require-secrets`; its install evidence is recorded
 on issue #17 after the governed dispatch. The prior
 `8435f7938d9865158975c2a4dbd7e43a3c3bde97` pin was the reviewed canonical
