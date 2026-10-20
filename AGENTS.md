@@ -5,6 +5,9 @@ verified by `tests/test-task-gates.sh`. Every path remains infrastructure-classe
 acknowledgement and owner-request flags cannot bypass mutation or production
 refusals. Required proof is read-only. Exact resource and action authorization
 must be followed by a separately reviewed policy change before mutation can run.
+The repository declares `reviewed-production-dispatch` (owner ruling 2026-10-20,
+issue #17, central popcre/ai-devops#1898): a production dispatch reaches the
+reviewer-approval step and runs only with an assigned AI reviewer's exact-head APPROVE.
 
 > Read this file first. It is the single source of truth for working in this repo. Load other
 > docs only when the **Documentation map** below says you need them — do **not** ingest every

@@ -6,7 +6,7 @@
   ],
   "gates": {
     "infrastructure": {
-      "required": ["local-tests", "repository-rulebook-full-treatment", "ansible-lint", "syntax-check", "read-only-check-diff", "separate-policy-change-after-exact-resource-owner-authorization"],
+      "required": ["local-tests", "repository-rulebook-full-treatment", "ansible-lint", "syntax-check", "read-only-check-diff", "separate-policy-change-after-exact-resource-owner-authorization", "reviewed-production-dispatch"],
       "forbidden_actions": ["infrastructure", "production"]
     }
   }
