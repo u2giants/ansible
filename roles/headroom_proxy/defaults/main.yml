@@ -1,0 +1,6 @@
+---
+# Pinned to the version live on hetz (pipx list, 2026-10-20).
+headroom_version: "0.41.0"
+# Tailnet address the TLS front's certificate names (same as inventory ansible_host).
+headroom_tailnet_ip: "100.66.37.58"
+headroom_tls_dir: /etc/ai-zcode-headroom/tls

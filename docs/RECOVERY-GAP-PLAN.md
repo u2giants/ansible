@@ -109,6 +109,13 @@ and diffed its software inventory vs the prod baseline. Results:
   prod: package lists, binaries, enabled services, listening ports, Coolify apps. Every difference
   is a bug to chase to zero. This is what *proves* the mission is met (§8.3 of the plan).
 
+### 2026-10-20 re-audit (issue #17)
+
+Live box vs repo: adopted `nsis` + `pipx` (base), the Headroom proxies / ZCode TLS front / PERF
+cron (`roles/headroom_proxy`), and refreshed `docs/baseline-software.txt` (new entries are
+ai-devops toolkit symlinks). The POP CRM timers are owned and already vendored by the
+`popcrm-web` repo (`systemd/`), secrets in 1Password. `gemini-mcp.service` is retired, not restored.
+
 ## Order & dependencies
 R1 → R2 → R3 can proceed immediately (additive, low-risk, mostly no-op on prod). R4 (Coolify) is
 the big one and benefits from R7's scratch box. R5/R6 are docs+CI. R7 needs a throwaway box and is

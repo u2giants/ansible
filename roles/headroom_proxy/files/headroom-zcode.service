@@ -1,0 +1,28 @@
+[Unit]
+Description=Headroom AI Proxy Service (ZCode / Z.ai lane)
+After=network-online.target tailscaled.service
+Wants=network-online.target tailscaled.service
+
+[Service]
+Environment=HEADROOM_OUTPUT_SHAPER=1
+Environment=HEADROOM_VERBOSITY_LEVEL=2
+Type=simple
+User=ai
+Group=ai
+# Isolated HOME so this instance keeps its own ledger/logs (~/.headroom under
+# this HOME) instead of sharing /home/ai/.headroom with the Claude-lane proxy
+# on 8787 (two writers on one proxy_savings.json would corrupt it).
+Environment=HOME=/home/ai/.headroom-zcode-home
+Environment=HEADROOM_ALLOW_UNAUTHENTICATED_BIND=1
+WorkingDirectory=/home/ai/.headroom-zcode-home
+ExecStart=/home/ai/.local/bin/headroom proxy --port 8788 --host 100.66.37.58 --mode cache --anthropic-api-url https://api.z.ai/api/anthropic
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=300
+StartLimitBurst=5
+StandardOutput=append:/home/ai/.headroom-zcode-home/.headroom/logs/proxy.log
+StandardError=append:/home/ai/.headroom-zcode-home/.headroom/logs/proxy.log
+Environment="PATH=/home/ai/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+[Install]
+WantedBy=multi-user.target
