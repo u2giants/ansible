@@ -64,6 +64,7 @@ jobs:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           SSH_PRIVATE_KEY: op://vibe_coding/ci-deploy-ssh/private_key
           CLOUDFLARED_TUNNEL_TOKEN: op://vibe_coding/cf-tunnel-hetz/password
+          AI_DEVOPS_OP_SA_TOKEN: op://vibe_coding/yw6o7cwwqn5n6zqliddu5d3w4m/OP_SERVICE_ACCOUNT_TOKEN
 
       - name: Install SSH key
         run: |

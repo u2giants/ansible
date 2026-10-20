@@ -293,11 +293,43 @@
     - not ansible_check_mode
     - ai_devops_toolkit_ownership_drift.stdout | default('') | length > 0
 
+- name: Own the AI DevOps secrets config directory
+  ansible.builtin.file:
+    path: "{{ ai_devops_toolkit_op_token_file | dirname }}"
+    state: directory
+    owner: "{{ managed_user }}"
+    group: "{{ ai_devops_toolkit_group }}"
+    mode: "0700"
+  when: ai_devops_toolkit_op_token | length > 0
+
+- name: Restore the vault-locked 1Password service-account token
+  ansible.builtin.copy:
+    dest: "{{ ai_devops_toolkit_op_token_file }}"
+    content: "{{ ai_devops_toolkit_op_token | trim }}\n"
+    owner: "{{ managed_user }}"
+    group: "{{ ai_devops_toolkit_group }}"
+    mode: "0600"
+  no_log: true
+  when: ai_devops_toolkit_op_token | length > 0
+
+- name: Inspect the 1Password service-account token file
+  ansible.builtin.stat:
+    path: "{{ ai_devops_toolkit_op_token_file }}"
+    get_checksum: false
+  register: ai_devops_toolkit_op_token_stat
+
+- name: Choose the installer secrets mode
+  ansible.builtin.set_fact:
+    ai_devops_toolkit_secrets_flag: >-
+      {{ '--require-secrets'
+         if (ai_devops_toolkit_op_token_stat.stat.exists and ai_devops_toolkit_op_token_stat.stat.size > 0)
+         else '--skip-secrets' }}
+
 - name: Install the pinned AI DevOps release
   ansible.builtin.command:
     argv:
       - "{{ ai_devops_toolkit_path }}/install.sh"
-      - --skip-secrets
+      - "{{ ai_devops_toolkit_secrets_flag }}"
   become: "{{ ai_devops_toolkit_runtime_become }}"
   become_user: "{{ managed_user }}"
   environment:
@@ -410,7 +442,7 @@
     mode: "0600"
     content: |
       revision={{ ai_devops_toolkit_version }}
-      installer=install.sh --skip-secrets
+      installer=install.sh {{ ai_devops_toolkit_secrets_flag }}
       globals=ai-install-skills --adopt-globals
       doctor=passed
   when:

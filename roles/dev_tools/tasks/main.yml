@@ -60,6 +60,27 @@
   loop_control:
     label: "{{ item.name }}@{{ item.version }}"
 
+# ---- Claude Code (native install is canonical; PRESENCE-managed like codex) ----
+# Live uses the vendor's native self-updating install (~/.local/bin/claude ->
+# ~/.local/share/claude/versions/<v>), not the npm global, so a pin would be a lie.
+- name: Inspect the native Claude Code launcher
+  ansible.builtin.stat:
+    path: "/home/{{ managed_user }}/.local/bin/claude"
+  register: dt_claude_native
+
+- name: Install native Claude Code for the managed user (only when absent)
+  ansible.builtin.shell: |
+    set -o pipefail
+    curl -fsSL https://claude.ai/install.sh | bash
+  args:
+    executable: /bin/bash
+    creates: "/home/{{ managed_user }}/.local/bin/claude"
+  become: true
+  become_user: "{{ managed_user }}"
+  environment:
+    HOME: "/home/{{ managed_user }}"
+  when: not dt_claude_native.stat.exists
+
 # ---- codex (standalone is canonical; PRESENCE-managed, not version-pinned) ----
 # DELIBERATE EXCEPTION to this role's "version-pinned so a rebuild reproduces them"
 # rule. Codex ships a self-updating standalone (its releases/ dir already held both
