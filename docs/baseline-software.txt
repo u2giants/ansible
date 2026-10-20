@@ -332,7 +332,7 @@ BIN  supabase
 BIN  verify-windows-dev.ps1
 SBIN fix-dns-if-broken.sh
 SBIN updatecodex
-NPM  @anthropic-ai/claude-code
+
 NPM  corepack
 NPM  @google/gemini-cli
 NPM  npm

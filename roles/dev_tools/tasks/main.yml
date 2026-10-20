@@ -81,6 +81,31 @@
     HOME: "/home/{{ managed_user }}"
   when: not dt_claude_native.stat.exists
 
+# Non-login shells (Ansible, cron, CI) lack ~/.local/bin on PATH and used to get the
+# stale npm copy at /usr/bin/claude. Remove it and expose the native launcher instead.
+- name: Remove the shadowed npm Claude Code package (native is canonical)
+  community.general.npm:
+    name: "@anthropic-ai/claude-code"
+    global: true
+    state: absent
+
+- name: Point /usr/local/bin/claude at the native launcher
+  ansible.builtin.file:
+    src: "/home/{{ managed_user }}/.local/bin/claude"
+    dest: /usr/local/bin/claude
+    state: link
+    force: true
+
+- name: Read the Claude Code version now in use
+  ansible.builtin.command: /usr/local/bin/claude --version
+  become: true
+  become_user: "{{ managed_user }}"
+  register: dt_claude
+  changed_when: false
+  # A missing/broken Claude Code MUST fail the apply (same rule as codex below).
+  failed_when: not ansible_check_mode and dt_claude.rc != 0
+  check_mode: false
+
 # ---- codex (standalone is canonical; PRESENCE-managed, not version-pinned) ----
 # DELIBERATE EXCEPTION to this role's "version-pinned so a rebuild reproduces them"
 # rule. Codex ships a self-updating standalone (its releases/ dir already held both

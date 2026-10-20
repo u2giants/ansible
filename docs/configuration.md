@@ -57,7 +57,10 @@ access control is the Tailscale ACL, not the proxy.
 
 ## AI DevOps toolkit release evidence
 
-The `8435f7938d9865158975c2a4dbd7e43a3c3bde97` pin is the reviewed canonical
+Current pin `b1668dc523501c5644abeedfc8dec49280ab049e` (issue #17) adds automatic
+reviewer-key restore through `--require-secrets`; its install evidence is recorded
+on issue #17 after the governed dispatch. The prior
+`8435f7938d9865158975c2a4dbd7e43a3c3bde97` pin was the reviewed canonical
 AI DevOps remediation release for every supported platform. It retains the
 production-discovered privilege-boundary and seven-stage workflow repairs,
 prevents Windows CRLF memory indexes from creating duplicate union commits and
