@@ -150,3 +150,12 @@ guard that refuses any HEAD move made outside the toolkit's own installer. The
 role therefore runs no Git command that moves HEAD when the clean checkout is
 already exactly the pin on `main`; it only runs the installer and writes the
 marker (first hit: dispatch `39456384734`, refused with zero changes, issue #17).
+
+ai-devops also advances its own checkout through its protected `update.sh`
+several times a day, so the live HEAD routinely moves past the pin (dispatches
+`39453604644`, `39456384734`, `39459418074` all refused). The pin is therefore a
+floor, not an exact match: a clean checkout on `main` whose HEAD equals its own
+tracked `refs/remotes/origin/main` and descends from the pin is accepted as-is —
+installer only, no Git move. The completion marker stays keyed by the pin and
+records the actual `revision=` plus `pin=`. Anything else (local commits,
+diverged or non-descendant history, detached HEAD, dirty tree) still fails closed.

@@ -57,6 +57,10 @@ access control is the Tailscale ACL, not the proxy.
 
 ## AI DevOps toolkit release evidence
 
+The pin is a floor: a clean `main` checkout equal to its tracked `origin/main` and
+descending from the pin (ai-devops self-update) is installed in place without a
+Git move; see `roles/ai_devops_toolkit/README.md`.
+
 Current pin `b3a8d606daa4093f70508da6265d7c3f8265c71f` is the ai-devops `main`
 merge of PR u2giants/ai-devops#1883 (merged 11:22 AM EDT 2026-10-20), eight commits
 after the #19 pin `b1668dc` (`git rev-list --count b1668dc..b3a8d60` = 8, ancestor

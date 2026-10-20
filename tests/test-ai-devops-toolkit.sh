@@ -231,6 +231,35 @@ after_matching="$(wc -l < "$home_dir/toolkit-test.log")"
 matching_second="$(run_role "$matching_target" "$matching_backup" "$matching_state" "$retry_predecessor" "$repaired_release")"
 grep -Eq 'changed=0' <<< "$matching_second"
 
+# ai-devops self-updates its checkout past the pin. A clean main checkout that
+# equals its tracked origin/main and descends from the pin is installed in
+# place with no Git move, then converges; anything off origin/main is refused.
+printf '%s\n' advanced > "$source_repo/advanced.txt"
+git -C "$source_repo" add advanced.txt
+git -C "$source_repo" commit -qm self-advanced-release
+advanced_release="$(git -C "$source_repo" rev-parse HEAD)"
+git -C "$matching_target" fetch -q origin
+git -C "$matching_target" merge -q --ff-only origin/main
+advanced_state="$TMP_ROOT/advanced-state"
+before_advanced="$(wc -l < "$home_dir/toolkit-test.log")"
+run_role "$matching_target" "$matching_backup" "$advanced_state" "$retry_predecessor" "$repaired_release" >/dev/null
+after_advanced="$(wc -l < "$home_dir/toolkit-test.log")"
+[[ "$((after_advanced - before_advanced))" -eq 3 ]]
+[[ "$(git -C "$matching_target" rev-parse HEAD)" == "$advanced_release" ]]
+grep -q "^revision=$advanced_release$" "$advanced_state/$repaired_release.installed"
+grep -q "^pin=$repaired_release$" "$advanced_state/$repaired_release.installed"
+advanced_second="$(run_role "$matching_target" "$matching_backup" "$advanced_state" "$retry_predecessor" "$repaired_release")"
+grep -Eq 'changed=0' <<< "$advanced_second"
+git -C "$matching_target" -c user.name=test -c user.email=test@example.invalid \
+  commit -q --allow-empty -m local-only
+local_only="$(git -C "$matching_target" rev-parse HEAD)"
+if run_role "$matching_target" "$matching_backup" "$TMP_ROOT/local-only-state" \
+  "$retry_predecessor" "$repaired_release" >/dev/null 2>&1; then
+  echo 'FAIL: a checkout ahead of origin/main was accepted' >&2
+  exit 1
+fi
+[[ "$(git -C "$matching_target" rev-parse HEAD)" == "$local_only" ]]
+
 # A tracked outward symlink must not expand the recursive ownership boundary.
 # Exercise it in a final release after all idempotence checks so Ansible's file
 # module handling of the symlink itself cannot obscure the core convergence
@@ -268,4 +297,4 @@ secrets_second="$(AI_DEVOPS_OP_SA_TOKEN=test-sa-token run_role "$secrets_target"
 grep -Eq 'changed=0' <<< "$secrets_second"
 rm -f "$home_dir/expect-require-secrets"
 
-echo "PASS: AI DevOps toolkit cutover, protected ownership, partial-release upgrade, and idempotence are recoverable"
+echo "PASS: AI DevOps toolkit cutover, protected ownership, partial-release upgrade, self-advanced descendant, and idempotence are recoverable"
