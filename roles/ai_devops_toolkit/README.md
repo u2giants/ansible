@@ -80,7 +80,12 @@ It does not manage Coolify, application containers, application data, or
 secrets, except one: the hetz `ai` 1Password service-account token file
 (`~/.config/ai-devops/op-service-account`, 0600, written with `no_log`), which is
 the toolkit's own canonical secret location. Rotate it in 1Password and re-dispatch;
-revoke by deleting the file and the service account.
+revoke by deleting the file and the service account. With the token present,
+`install.sh --require-secrets` also runs the toolkit's `setup-secrets.sh`, which
+writes `mcp.env`, `shellrc`, the MCP launcher, shell-profile hooks and the MCP set in
+`~/.claude.json` — all toolkit-owned and regenerated on every install. The installer
+runs only when the pin or completion marker changes; to re-restore deleted reviewer
+keys at the same pin, remove the completion marker and re-dispatch.
 
 `/worksp` is a shared workspace parent verified live as owned by `ai`. The role
 asserts that owner but never changes the parent, so it cannot take ownership of

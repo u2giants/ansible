@@ -303,6 +303,7 @@ BIN  ai-zcode-headroom
 BIN  az-mail
 BIN  backrest-dump-watchdog.sh
 BIN  bootstrap-windows-dev.ps1
+BIN  claude
 BIN  cloudflared
 BIN  codex
 BIN  configure-windows-bootstrap-access.ps1
@@ -332,7 +333,6 @@ BIN  supabase
 BIN  verify-windows-dev.ps1
 SBIN fix-dns-if-broken.sh
 SBIN updatecodex
-
 NPM  corepack
 NPM  @google/gemini-cli
 NPM  npm

@@ -8,7 +8,8 @@ what's live, so a rebuild reproduces them. Recovery gap **R2**
 |---|---|---|
 | `go` / `gofmt` | tarball from go.dev → `/usr/local/go`, symlinked into `/usr/local/bin` | `go_version` 1.26.4 |
 | `supabase` | official `.deb` from GitHub releases | `supabase_version` 2.98.2 |
-| `claude-code`, `gemini-cli`, `corepack`, `npm-check-updates` | global npm (`community.general.npm`) | pinned in `dev_tools_npm` |
+| `claude` | native vendor installer as `ai` → `~/.local/bin/claude`, linked at `/usr/local/bin/claude`; npm copy removed | presence-managed, self-updating (version reported) |
+| `gemini-cli`, `corepack`, `npm-check-updates` | global npm (`community.general.npm`) | pinned in `dev_tools_npm` |
 | `codex` | `@openai/codex` global npm (standalone → `/opt/codex`) | `codex_version` 0.141.0 |
 | `cloudflared` symlink | `/usr/local/bin/cloudflared` → `/usr/bin/cloudflared` (binary is apt, installed by `packages`) | — |
 

@@ -13,7 +13,7 @@ from code.** Based on a full software audit of the live box (2026-06-24).
 | **10 third-party apt repos** (1password, azure-cli, cloudflared, docker, google-chrome, google-cloud-sdk, nodesource, pgdg, tailscale) | ✅ | ❌ |
 | **Third-party CLIs** (`gcloud`, `az`, `gh`, `op`, `psql`, `restic`, `rg`, node/npm) | ✅ | ❌ |
 | **Non-apt binaries** (`go`, `supabase`, `codex`, `cloudflared` binary) | ✅ | ❌ |
-| **Global npm tools** (`@anthropic-ai/claude-code`, `@google/gemini-cli`, corepack, ncu) | ✅ | ❌ |
+| **Global npm tools** (`@google/gemini-cli`, corepack, ncu; Claude Code is now native — see `roles/dev_tools`) | ✅ | ❌ |
 | **Docker engine install** (repo + package) | ✅ | ⚠️ pinned only — repo/install not managed |
 | **Coolify** install + glue scripts (`coolify-autostart.sh`, `coolify-proxy-socket-watchdog.sh`, `restart-coolify-proxy-after-docker.sh`, `docker-update-check.sh`) | ✅ | ❌ |
 | ~202 manual apt packages (full set) | ✅ | ⚠️ only 12 curated |
@@ -39,7 +39,7 @@ the live CI pipeline as a clean no-op (keys/sources matched byte-for-byte). Orig
 
 ### R2 — Non-apt CLIs (binaries / scripts / npm)  ✅ DONE (2026-06-24)
 Built `dev_tools` role: Go 1.26.4 (tarball), supabase 2.98.2 (.deb), global npm CLIs
-(`claude-code` 2.1.160, `gemini-cli` 0.44.1, `corepack`, `npm-check-updates`), codex 0.141.0
+(`gemini-cli` 0.44.1 — Claude Code moved to the native installer 2026-10-20, issue #17, `corepack`, `npm-check-updates`), codex 0.141.0
 (`@openai/codex`), and the `cloudflared` symlink. All version-guarded → no-op on prod (verified).
 Original plan below:
 - New role **`dev_tools`**: install `go` (Go toolchain), `supabase`, `codex`, the global npm tools

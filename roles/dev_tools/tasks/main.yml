@@ -66,6 +66,7 @@
 - name: Inspect the native Claude Code launcher
   ansible.builtin.stat:
     path: "/home/{{ managed_user }}/.local/bin/claude"
+    follow: true   # a dangling launcher (failed self-update) must trigger reinstall
   register: dt_claude_native
 
 - name: Install native Claude Code for the managed user (only when absent)
@@ -74,7 +75,6 @@
     curl -fsSL https://claude.ai/install.sh | bash
   args:
     executable: /bin/bash
-    creates: "/home/{{ managed_user }}/.local/bin/claude"
   become: true
   become_user: "{{ managed_user }}"
   environment:
@@ -103,8 +103,14 @@
   register: dt_claude
   changed_when: false
   # A missing/broken Claude Code MUST fail the apply (same rule as codex below).
-  failed_when: not ansible_check_mode and dt_claude.rc != 0
+  failed_when: >-
+    not ansible_check_mode and
+    (dt_claude.rc != 0 or 'Claude Code' not in dt_claude.stdout)
   check_mode: false
+
+- name: Report the Claude Code version in use (auditability — it is not pinned)
+  ansible.builtin.debug:
+    msg: "claude in use: {{ dt_claude.stdout | default('UNKNOWN') | trim }} (native, self-updating)"
 
 # ---- codex (standalone is canonical; PRESENCE-managed, not version-pinned) ----
 # DELIBERATE EXCEPTION to this role's "version-pinned so a rebuild reproduces them"
