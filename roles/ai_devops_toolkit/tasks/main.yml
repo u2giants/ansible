@@ -142,36 +142,23 @@
   check_mode: false
   when: ai_devops_toolkit_checkout.stat.exists
 
-- name: Read the real ai-devops main without touching the checkout
-  ansible.builtin.command:
-    argv:
-      - git
-      - ls-remote
-      - --exit-code
-      - "{{ ai_devops_toolkit_repo_url }}"
-      - refs/heads/main
-  become: "{{ ai_devops_toolkit_runtime_become }}"
-  become_user: "{{ managed_user }}"
-  environment:
-    HOME: "{{ ai_devops_toolkit_home }}"
-  register: ai_devops_toolkit_remote_main
-  changed_when: false
-  failed_when: false
-  check_mode: false
-  when:
-    - ai_devops_toolkit_checkout.stat.exists
-    - ai_devops_toolkit_installed_revision.stdout != ai_devops_toolkit_version
-
 - name: Test whether the installed revision is on the real ai-devops main
+  # A throwaway treeless fetch keeps the governed checkout untouched and does
+  # not depend on which remote commits the checkout has already fetched.
   ansible.builtin.command:
     argv:
-      - git
-      - -C
-      - "{{ ai_devops_toolkit_path }}"
-      - merge-base
-      - --is-ancestor
-      - HEAD
-      - "{{ (ai_devops_toolkit_remote_main.stdout | default('')).split() | first | default('none') }}"
+      - sh
+      - -c
+      - |
+        set -eu
+        scratch="$(mktemp -d)"
+        trap 'rm -rf "$scratch"' EXIT
+        git init -q --bare "$scratch"
+        git -C "$scratch" fetch -q --filter=tree:0 "$1" +refs/heads/main:refs/heads/main || exit 3
+        git -C "$scratch" merge-base --is-ancestor "$2" refs/heads/main
+      - sh
+      - "{{ ai_devops_toolkit_repo_url }}"
+      - "{{ ai_devops_toolkit_installed_revision.stdout }}"
   become: "{{ ai_devops_toolkit_runtime_become }}"
   become_user: "{{ managed_user }}"
   environment:
@@ -183,7 +170,6 @@
   when:
     - ai_devops_toolkit_checkout.stat.exists
     - ai_devops_toolkit_installed_revision.stdout != ai_devops_toolkit_version
-    - (ai_devops_toolkit_remote_main.rc | default(1)) == 0
 
 - name: Test whether the installed revision descends from the pin
   ansible.builtin.command:
@@ -263,8 +249,10 @@
         or ai_devops_toolkit_requires_in_place_upgrade
     fail_msg: >-
       Installed AI DevOps revision {{ ai_devops_toolkit_installed_revision.stdout | default("none") }} is neither
-      the pinned release, a clean origin/main descendant of it, an approved rewrite
-      predecessor, nor an approved in-place upgrade predecessor. Refusing to replace it.
+      the pinned release, a clean main descendant of it on the real remote main
+      (remote check rc={{ ai_devops_toolkit_on_remote_main.rc | default('n/a') }}: 1 = not on
+      remote main, 3 = remote unreachable; pin ancestry rc={{ ai_devops_toolkit_pin_ancestry.rc | default('n/a') }}),
+      an approved rewrite predecessor, nor an approved in-place upgrade predecessor. Refusing to replace it.
 
 - name: Inspect the fixed pre-rewrite backup path
   ansible.builtin.stat:

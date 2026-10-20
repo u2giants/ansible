@@ -243,7 +243,9 @@ git -C "$matching_target" merge -q --ff-only origin/main
 advanced_state="$TMP_ROOT/advanced-state"
 # The managed user reads the fixture remote with ls-remote; on the real host it
 # is the public GitHub URL, here a root-owned local repository.
-git_as_managed config --global --add safe.directory "$source_repo/.git"
+if [[ "$root_integration" -eq 1 ]]; then
+  git_as_managed config --global --add safe.directory "$source_repo/.git"
+fi
 before_advanced="$(wc -l < "$home_dir/toolkit-test.log")"
 run_role "$matching_target" "$matching_backup" "$advanced_state" "$retry_predecessor" "$repaired_release" >/dev/null
 after_advanced="$(wc -l < "$home_dir/toolkit-test.log")"
@@ -266,6 +268,12 @@ run_role "$matching_target" "$matching_backup" "$advanced_state" "$retry_predece
 grep -q "^revision=$advanced_again$" "$advanced_state/$repaired_release.installed"
 again_second="$(run_role "$matching_target" "$matching_backup" "$advanced_state" "$retry_predecessor" "$repaired_release")"
 grep -Eq 'changed=0' <<< "$again_second"
+# The real main moves ahead before the checkout fetches it: still accepted,
+# with nothing to do because the marker already names the live revision.
+git -C "$source_repo" commit -q --allow-empty -m remote-ahead
+lagging_second="$(run_role "$matching_target" "$matching_backup" "$advanced_state" "$retry_predecessor" "$repaired_release")"
+grep -Eq 'changed=0' <<< "$lagging_second"
+[[ "$(git -C "$matching_target" rev-parse HEAD)" == "$advanced_again" ]]
 # On the real main but not descending from the pin: refused.
 side_branch_pin="$(git -C "$source_repo" commit-tree -m side "$(git -C "$source_repo" rev-parse "HEAD^{tree}")")"
 git -C "$source_repo" update-ref refs/heads/side "$side_branch_pin"

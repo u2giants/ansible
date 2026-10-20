@@ -157,13 +157,13 @@ ai-devops also advances its own checkout through its protected `update.sh`
 several times a day, so the live HEAD routinely moves past the pin (dispatches
 `39453604644`, `39456384734`, `39459418074` all refused). The pin is therefore a
 floor, not an exact match: a clean checkout on `main` whose HEAD is on the real
-remote `main` (read with `git ls-remote`, never the local tracking ref) and
+remote `main` (checked by a throwaway treeless fetch, never the checkout's own
+tracking ref or objects) and
 descends from the pin is accepted as-is — installer only, no Git move. The
 completion marker stays keyed by the pin and records `revision=` plus `pin=`;
 when it names an older revision than the live HEAD, the installer reruns and
 the marker is rewritten, so every dispatch after a self-advance reports a change
-once. Local-only commits, non-descendant history, detached HEAD, a dirty tree,
-or an unreachable remote still fail closed. A lagging checkout behind an
-unfetched remote tip is accepted only if its HEAD object is already on remote
-`main`; a privileged manual fast-forward to a real `main` commit is
+once. A checkout behind a newer remote tip is accepted. Local-only commits,
+non-descendant history, detached HEAD, a dirty tree, or an unreachable remote
+still fail closed (the refusal names which). A privileged manual fast-forward to a real `main` commit is
 indistinguishable from `update.sh`, which is the accepted trust boundary.
