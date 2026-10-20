@@ -64,8 +64,17 @@ verified). It was chosen because live had already reached it outside Ansible: th
 live reflog shows fast-forwards to `b1668dc` (7:38 AM EDT), `b100981` (11:16 AM EDT)
 and `b3a8d60` (11:46 AM EDT) on 2026-10-20, and toolkit dispatch `39453604644`
 correctly refused the unpinned revision with no changes. Live was clean at
-`b3a8d60` at 12:05 PM EDT. No predecessor exception is needed (installed == pin).
-The prior
+`b3a8d60` at 12:05 PM EDT. No predecessor exception is needed (installed == pin), but the `b3a8d60` completion
+marker is absent, so the next `tags=ai_devops_toolkit` dispatch runs the full
+installer (expected `changed`, then a `changed=0` rerun). Its installer contract
+was checked at `b3a8d60`: `install.sh` still accepts `--require-secrets`/`--skip-secrets`,
+`bin/ai-install-skills` still accepts `--adopt-globals`, and `bin/setup-secrets.sh`
+still reads `~/.config/ai-devops/op-service-account`.
+
+The immediately prior pin `b1668dc523501c5644abeedfc8dec49280ab049e` (PR #19, DeepSeek
+APPROVE) introduced automatic reviewer-key restore; it was never dispatched because
+live moved past it first.
+The pin before that,
 `8435f7938d9865158975c2a4dbd7e43a3c3bde97` pin was the reviewed canonical
 AI DevOps remediation release for every supported platform. It retains the
 production-discovered privilege-boundary and seven-stage workflow repairs,
