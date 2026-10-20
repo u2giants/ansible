@@ -1,6 +1,7 @@
 # Role: `ai_devops_toolkit` — explicitly gated maintenance
 
-Installs the exact reviewed `u2giants/ai-devops` release on the governed Hetzner
+Installs the reviewed `u2giants/ai-devops` release (or its self-advanced `main`
+descendant) on the governed Hetzner
 host. It runs as the `ai` user, preserves machine-local configuration under
 `/etc/ai-devops`, refreshes shared Claude/Codex skills and instructions, and
 finishes with `ai-devops doctor`.
@@ -105,7 +106,7 @@ need checkout write access. The `ai` account retains host-management sudo for th
 governed Ansible route, so ownership is an accidental-drift guardrail rather than
 a security boundary against an explicitly privileged manual command. Because
 the shared `/worksp` parent remains `ai`-owned, it also does not prevent a
-deliberate directory replacement; the role's clean-source and exact-revision
+deliberate directory replacement; the role's clean-source and revision
 checks detect and refuse an unauthorized replacement at the next governed run.
 Sibling checkouts are never touched.
 
@@ -132,7 +133,8 @@ ansible-playbook playbooks/site.yml -l hetzner \
   -e enable_ai_devops_toolkit_deploy=true
 ```
 
-After every apply, the checkout must equal `ai_devops_toolkit_version`,
+After every apply, the checkout must equal `ai_devops_toolkit_version` or be an
+accepted self-advanced descendant of it (below),
 `ai-devops doctor` must pass, and a second tagged run must report zero changes.
 The checkout root must be owned by `root:ai` at mode `0750`; a write attempt by
 the `ai` runtime user must fail.
@@ -150,3 +152,18 @@ guard that refuses any HEAD move made outside the toolkit's own installer. The
 role therefore runs no Git command that moves HEAD when the clean checkout is
 already exactly the pin on `main`; it only runs the installer and writes the
 marker (first hit: dispatch `39456384734`, refused with zero changes, issue #17).
+
+ai-devops also advances its own checkout through its protected `update.sh`
+several times a day, so the live HEAD routinely moves past the pin (dispatches
+`39453604644`, `39456384734`, `39459418074` all refused). The pin is therefore a
+floor, not an exact match: a clean checkout on `main` whose HEAD is on the real
+remote `main` (checked by a throwaway treeless fetch, never the checkout's own
+tracking ref or objects) and
+descends from the pin is accepted as-is — installer only, no Git move. The
+completion marker stays keyed by the pin and records `revision=` plus `pin=`;
+when it names an older revision than the live HEAD, the installer reruns and
+the marker is rewritten, so every dispatch after a self-advance reports a change
+once. A checkout behind a newer remote tip is accepted. Local-only commits,
+non-descendant history, detached HEAD, a dirty tree, or an unreachable remote
+still fail closed (the refusal names which). A privileged manual fast-forward to a real `main` commit is
+indistinguishable from `update.sh`, which is the accepted trust boundary.

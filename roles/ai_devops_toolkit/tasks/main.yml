@@ -75,6 +75,12 @@
     path: "{{ ai_devops_toolkit_completion_marker }}"
   register: ai_devops_toolkit_completion
 
+- name: Read the revision recorded in the completion marker
+  ansible.builtin.slurp:
+    src: "{{ ai_devops_toolkit_completion_marker }}"
+  register: ai_devops_toolkit_completion_content
+  when: ai_devops_toolkit_completion.stat.exists
+
 - name: Read the installed AI DevOps revision
   ansible.builtin.command:
     argv:
@@ -136,18 +142,95 @@
   check_mode: false
   when: ai_devops_toolkit_checkout.stat.exists
 
+- name: Test whether the installed revision is on the real ai-devops main
+  # A throwaway treeless fetch keeps the governed checkout untouched and does
+  # not depend on which remote commits the checkout has already fetched.
+  ansible.builtin.command:
+    argv:
+      - sh
+      - -c
+      - |
+        set -eu
+        scratch="$(mktemp -d)"
+        trap 'rm -rf "$scratch"' EXIT
+        git init -q --bare "$scratch"
+        git -C "$scratch" fetch -q --filter=tree:0 "$1" +refs/heads/main:refs/heads/main || exit 3
+        git -C "$scratch" merge-base --is-ancestor "$2" refs/heads/main
+      - sh
+      - "{{ ai_devops_toolkit_repo_url }}"
+      - "{{ ai_devops_toolkit_installed_revision.stdout }}"
+  become: "{{ ai_devops_toolkit_runtime_become }}"
+  become_user: "{{ managed_user }}"
+  environment:
+    HOME: "{{ ai_devops_toolkit_home }}"
+  register: ai_devops_toolkit_on_remote_main
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when:
+    - ai_devops_toolkit_checkout.stat.exists
+    - ai_devops_toolkit_installed_revision.stdout != ai_devops_toolkit_version
+
+- name: Test whether the installed revision descends from the pin
+  ansible.builtin.command:
+    argv:
+      - git
+      - -C
+      - "{{ ai_devops_toolkit_path }}"
+      - merge-base
+      - --is-ancestor
+      - "{{ ai_devops_toolkit_version }}"
+      - HEAD
+  become: "{{ ai_devops_toolkit_runtime_become }}"
+  become_user: "{{ managed_user }}"
+  environment:
+    HOME: "{{ ai_devops_toolkit_home }}"
+  register: ai_devops_toolkit_pin_ancestry
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when:
+    - ai_devops_toolkit_checkout.stat.exists
+    - ai_devops_toolkit_installed_revision.stdout != ai_devops_toolkit_version
+
 - name: Classify the installed AI DevOps revision
   ansible.builtin.set_fact:
+    # ai-devops advances its own checkout (protected update.sh). A clean main
+    # checkout whose HEAD is on the real remote main (ls-remote, not the local
+    # tracking ref) and descends from the pin is accepted as-is: installer
+    # only, never a Git move. Anything else still needs the pin or a declared
+    # predecessor below.
+    ai_devops_toolkit_self_advanced: >-
+      {{ ai_devops_toolkit_checkout.stat.exists
+         and ai_devops_toolkit_installed_revision.stdout != ai_devops_toolkit_version
+         and ai_devops_toolkit_installed_branch.stdout == 'main'
+         and (ai_devops_toolkit_on_remote_main.rc | default(1)) == 0
+         and (ai_devops_toolkit_pin_ancestry.rc | default(1)) == 0 }}
+
+- name: Classify the required AI DevOps transition
+  ansible.builtin.set_fact:
+    ai_devops_toolkit_expected_revision: >-
+      {{ ai_devops_toolkit_installed_revision.stdout if ai_devops_toolkit_self_advanced
+         else ai_devops_toolkit_version }}
+
+- name: Classify the required AI DevOps install and Git move
+  ansible.builtin.set_fact:
+    # A marker naming an older revision means the checkout self-advanced since
+    # the last install, so the installer runs again for the live revision.
     ai_devops_toolkit_requires_install: >-
       {{ (not ai_devops_toolkit_checkout.stat.exists)
-         or (ai_devops_toolkit_installed_revision.stdout != ai_devops_toolkit_version)
-         or (not ai_devops_toolkit_completion.stat.exists) }}
+         or (ai_devops_toolkit_installed_revision.stdout != ai_devops_toolkit_version
+             and not ai_devops_toolkit_self_advanced)
+         or (not ai_devops_toolkit_completion.stat.exists)
+         or ('revision=' ~ (ai_devops_toolkit_expected_revision | trim))
+            not in ((ai_devops_toolkit_completion_content.content | default('')) | b64decode).splitlines() }}
     # The toolkit's installed-checkout guard (ai-devops #1836) refuses any HEAD
     # move by anything but its own installer, so never touch Git when the clean
-    # checkout is already exactly the pin on main; only the installer runs.
+    # checkout is already the pin, or a self-advanced descendant, on main.
     ai_devops_toolkit_requires_checkout_move: >-
       {{ (not ai_devops_toolkit_checkout.stat.exists)
-         or (ai_devops_toolkit_installed_revision.stdout != ai_devops_toolkit_version)
+         or (ai_devops_toolkit_installed_revision.stdout != ai_devops_toolkit_version
+             and not ai_devops_toolkit_self_advanced)
          or (ai_devops_toolkit_installed_branch.stdout != 'main') }}
     ai_devops_toolkit_requires_history_cutover: >-
       {{ ai_devops_toolkit_checkout.stat.exists
@@ -161,12 +244,15 @@
     that:
       - not ai_devops_toolkit_checkout.stat.exists
         or ai_devops_toolkit_installed_revision.stdout == ai_devops_toolkit_version
+        or ai_devops_toolkit_self_advanced
         or ai_devops_toolkit_requires_history_cutover
         or ai_devops_toolkit_requires_in_place_upgrade
     fail_msg: >-
       Installed AI DevOps revision {{ ai_devops_toolkit_installed_revision.stdout | default("none") }} is neither
-      the pinned release, an approved rewrite predecessor, nor an approved in-place
-      upgrade predecessor. Refusing to replace it.
+      the pinned release, a clean main descendant of it on the real remote main
+      (remote check rc={{ ai_devops_toolkit_on_remote_main.rc | default('n/a') }}: 1 = not on
+      remote main, 3 = remote unreachable; pin ancestry rc={{ ai_devops_toolkit_pin_ancestry.rc | default('n/a') }}),
+      an approved rewrite predecessor, nor an approved in-place upgrade predecessor. Refusing to replace it.
 
 - name: Inspect the fixed pre-rewrite backup path
   ansible.builtin.stat:
@@ -413,7 +499,7 @@
   register: ai_devops_toolkit_verified_revision
   changed_when: false
   check_mode: false
-  failed_when: ai_devops_toolkit_verified_revision.stdout != ai_devops_toolkit_version
+  failed_when: ai_devops_toolkit_verified_revision.stdout != ai_devops_toolkit_expected_revision | trim
   when: not (ansible_check_mode and ai_devops_toolkit_requires_install)
 
 - name: Verify the installed AI DevOps branch
@@ -470,7 +556,8 @@
     group: "{{ ai_devops_toolkit_group }}"
     mode: "0600"
     content: |
-      revision={{ ai_devops_toolkit_version }}
+      revision={{ ai_devops_toolkit_expected_revision | trim }}
+      pin={{ ai_devops_toolkit_version }}
       installer=install.sh {{ ai_devops_toolkit_secrets_flag }}
       globals=ai-install-skills --adopt-globals
       doctor=passed
