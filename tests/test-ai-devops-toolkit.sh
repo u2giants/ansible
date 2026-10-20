@@ -66,7 +66,12 @@ git -C "$source_repo" config user.email test@example.invalid
 cat > "$source_repo/install.sh" <<'SCRIPT'
 #!/usr/bin/env bash
 set -euo pipefail
-[[ "${1:-}" == --skip-secrets ]]  # no AI_DEVOPS_OP_SA_TOKEN in tests
+if [[ -f "$HOME/expect-require-secrets" ]]; then
+  [[ "${1:-}" == --require-secrets ]]
+  [[ "$(cat "$HOME/.config/ai-devops/op-service-account")" == test-sa-token ]]
+else
+  [[ "${1:-}" == --skip-secrets ]]
+fi
 if [[ -f "$HOME/fail-next-install" ]]; then
   rm -f "$HOME/fail-next-install"
   exit 23
@@ -242,5 +247,24 @@ symlink_second="$(run_role "$retry_target" "$retry_backup" "$retry_state" \
 grep -Eq 'changed=0' <<< "$symlink_second"
 [[ "$(stat -c '%U:%G:%a' "$external_target")" == "$external_target_stat_before" ]]
 [[ "$(cat "$external_target/untouched.txt")" == sibling-state ]]
+
+# With the toolkit-dispatch token present, the role writes the owner-only token
+# file (no_log) and runs the installer with --require-secrets; then converges.
+secrets_target="$TMP_ROOT/secrets/ai-devops"
+secrets_state="$TMP_ROOT/secrets-state"
+mkdir -p "$(dirname "$secrets_target")"
+[[ "$root_integration" -eq 1 ]] && chown "$managed_user:$managed_group" "$(dirname "$secrets_target")"
+# Fresh host: no checkout yet (the rebuild path).
+touch "$home_dir/expect-require-secrets"
+secrets_first="$(AI_DEVOPS_OP_SA_TOKEN=test-sa-token run_role "$secrets_target" "$TMP_ROOT/secrets/backup" \
+  "$secrets_state" "$retry_predecessor" "$symlink_release")"
+! grep -q test-sa-token <<< "$secrets_first"
+[[ "$(stat -c '%a' "$home_dir/.config/ai-devops/op-service-account")" == 600 ]]
+[[ "$(stat -c '%a' "$home_dir/.config/ai-devops")" == 700 ]]
+grep -q 'installer=install.sh --require-secrets' "$secrets_state/$symlink_release.installed"
+secrets_second="$(AI_DEVOPS_OP_SA_TOKEN=test-sa-token run_role "$secrets_target" "$TMP_ROOT/secrets/backup" \
+  "$secrets_state" "$retry_predecessor" "$symlink_release")"
+grep -Eq 'changed=0' <<< "$secrets_second"
+rm -f "$home_dir/expect-require-secrets"
 
 echo "PASS: AI DevOps toolkit cutover, protected ownership, partial-release upgrade, and idempotence are recoverable"

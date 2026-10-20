@@ -140,7 +140,7 @@
         or ai_devops_toolkit_requires_history_cutover
         or ai_devops_toolkit_requires_in_place_upgrade
     fail_msg: >-
-      Installed AI DevOps revision {{ ai_devops_toolkit_installed_revision.stdout }} is neither
+      Installed AI DevOps revision {{ ai_devops_toolkit_installed_revision.stdout | default("none") }} is neither
       the pinned release, an approved rewrite predecessor, nor an approved in-place
       upgrade predecessor. Refusing to replace it.
 

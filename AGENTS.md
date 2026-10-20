@@ -125,7 +125,7 @@ are managed declaratively by roles, not source files in this repo.)
 | Add/change a cron entry | `inventory/group_vars/all.yml` (`cron_glue_entries`), `roles/cron_glue/` | the keeper scripts under `/worksp/hiclaw/` (owned by HiClaw repo) |
 | Remove an exact retired host file | `roles/retired_platform_cleanup/` | Coolify apps, containers, proxy state, certificates, or volumes |
 | Contain the retired public memory publisher | `roles/memory_sync_containment/`, `cron_glue_entries` | private memory contents or application data |
-| Install or update the AI workflow toolkit | `roles/ai_devops_toolkit/`, its pinned vars | Coolify apps, containers, or machine-local secrets |
+| Install or update the AI workflow toolkit | `roles/ai_devops_toolkit/`, its pinned vars, the one toolkit 1Password SA token file (#17) | Coolify apps, containers, or other machine-local secrets |
 | Manage Cloudflare Tunnel 1 | `roles/cloudflared_coolify/` | Tunnels 2 & 3 (Coolify-managed) |
 | Add an SSH public key for `ai` | `inventory/group_vars/all.yml` (`users_authorized_keys`) | private keys (never commit) |
 | Change the apply/CI flow | `.github/workflows/apply.yml` / `check.yml` / `drift.yml` / `task-gates.yml` | the `concurrency: apply-hetzner` guard (serialization) |
