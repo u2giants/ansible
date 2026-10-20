@@ -8,7 +8,7 @@ finishes with `ai-devops doctor`.
 The pinned toolkit's `install.sh` explicitly requires the normal user and uses
 that user's passwordless `sudo` only for `/etc`, `/var/log`, and
 `/usr/local/bin`; this keeps per-user skills out of `/root`. Its usage contract
-supports `--skip-secrets`, and the pinned `ai-install-skills` contract supports
+supports `--skip-secrets` and `--require-secrets` (verified in `b1668dc` install.sh), and the pinned `ai-install-skills` contract supports
 `--adopt-globals`.
 
 The 2026-08-22 public-history rewrite used a one-time recoverable cutover. For
@@ -18,7 +18,8 @@ and then cloned the pinned release. It refused unknown revisions, dirty
 worktrees, or an existing backup rather than overwriting evidence.
 
 Installation completion is separate from Git revision. The role writes an
-owner-only marker only after `install.sh --skip-secrets`,
+owner-only marker only after `install.sh` (`--require-secrets` when the toolkit
+dispatch supplies `AI_DEVOPS_OP_SA_TOKEN`, else `--skip-secrets`),
 `ai-install-skills --adopt-globals`, and `ai-devops doctor` all succeed. If any
 step fails after cloning, the marker remains absent and the next serialized
 apply retries the installation instead of leaving a false-success checkout. A
@@ -76,7 +77,15 @@ operator selects `--tags ai_devops_toolkit` and
 exact manual `apply.yml` dispatch with `tags=ai_devops_toolkit` opens it for one
 run. The role manages only the toolkit checkout and its documented installer.
 It does not manage Coolify, application containers, application data, or
-secrets.
+secrets, except one: the hetz `ai` 1Password service-account token file
+(`~/.config/ai-devops/op-service-account`, 0600, written with `no_log`), which is
+the toolkit's own canonical secret location. Rotate it in 1Password and re-dispatch;
+revoke by deleting the file and the service account. With the token present,
+`install.sh --require-secrets` also runs the toolkit's `setup-secrets.sh`, which
+writes `mcp.env`, `shellrc`, the MCP launcher, shell-profile hooks and the MCP set in
+`~/.claude.json` — all toolkit-owned and regenerated on every install. The installer
+runs only when the pin or completion marker changes; to re-restore deleted reviewer
+keys at the same pin, remove the completion marker and re-dispatch.
 
 `/worksp` is a shared workspace parent verified live as owned by `ai`. The role
 asserts that owner but never changes the parent, so it cannot take ownership of

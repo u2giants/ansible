@@ -49,9 +49,19 @@ With its state restored, Coolify redeploys the ~20 application containers from t
 wired to the restored data + 1Password secrets.
 
 ### 7. Authenticate (the ONLY manual step)
-Log in to the CLIs/services that need it — by design these are not stored:
-`gcloud auth login`, `az login`, `gh auth login`, `op signin`, `supabase login`, `codex` login,
-`tailscale up`, etc.
+First log in as `ai` with `gh auth login` (u2giants): the toolkit's secrets stage syncs the
+private config repo and fails without it. Then restore reviewer API keys (Muse, StepFun,
+DeepSeek, GLM/OpenCode) with the toolkit dispatch (`apply.yml` → workflow_dispatch
+`tags=ai_devops_toolkit`): it loads the hetz `ai` 1Password service-account token
+(`op://vibe_coding/yw6o7cwwqn5n6zqliddu5d3w4m/OP_SERVICE_ACCOUNT_TOKEN`) into
+`~/.config/ai-devops/op-service-account` (0600, no_log) and runs `install.sh --require-secrets`.
+
+Still log in by hand as `ai` — by design these are not stored:
+- `claude` (Claude Code native, Anthropic sign-in) and `codex login` (OpenAI/ChatGPT)
+- `gcloud auth login`, `az login`, `supabase login`
+- `kimi` / `grok` / `gemini` / `qwen` CLI sign-ins if those (frozen) reviewers are wanted
+- `tailscale up`
+Then run `/worksp/ai-devops/bin/ai-devops doctor` and one `ai-review` per rotation reviewer.
 
 Also: the Headroom ZCode TLS front gets a **new self-signed CA** on rebuild (`roles/headroom_proxy`).
 Copy `/etc/ai-zcode-headroom/tls/ca.crt` to each tailnet client that uses the ZCode Headroom lane and
