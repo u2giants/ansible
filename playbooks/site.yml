@@ -70,6 +70,11 @@
       tags: [phase1, backrest_watchdog]
       when: enable_phase1 | bool
 
+    # Headroom AI proxies + ZCode TLS front + PERF recorder (issue #17).
+    - role: headroom_proxy
+      tags: [phase1, headroom_proxy]
+      when: enable_phase1 | bool
+
     # Proof that the backups restore, not just that they ran. Additive: a script, two
     # systemd units, and a monthly timer. Runs nothing at apply time.
     - role: restore_test

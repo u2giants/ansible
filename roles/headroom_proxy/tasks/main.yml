@@ -1,0 +1,126 @@
+---
+# headroom_proxy — the two Headroom AI proxies (Claude lane :8787, Z.ai/ZCode lane :8788),
+# the ZCode TLS front (:8443) and the hourly PERF recorder. Units and scripts are vendored
+# VERBATIM from the live box (captured 2026-10-20); the TLS-front's canonical installer is
+# ai-devops config/zcode-headroom/. Logs/ledgers under ~/.headroom* are NOT backed up and
+# start fresh after a rebuild. The self-signed CA is regenerated only when absent; a rebuild
+# makes a new CA, so tailnet clients that pinned the old CA must re-trust ca.crt.
+
+- name: Install headroom-ai {{ headroom_version }} with pipx (user ai)
+  become_user: "{{ managed_user }}"
+  ansible.builtin.command: pipx install "headroom-ai=={{ headroom_version }}"
+  args:
+    creates: "/home/{{ managed_user }}/.local/bin/headroom"
+
+- name: Create headroom working and log directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ managed_user }}"
+    group: "{{ managed_user }}"
+    mode: "0755"
+  loop:
+    - /home/{{ managed_user }}/.headroom/logs
+    - /home/{{ managed_user }}/.headroom-zcode-home/.headroom/logs
+    - /home/{{ managed_user }}/zcode-headroom-tls
+    - /home/{{ managed_user }}/headroom-perf
+
+- name: Install TLS front and PERF recorder scripts
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ managed_user }}"
+    group: "{{ managed_user }}"
+    mode: "0755"
+  loop:
+    - { src: zcode_headroom_tls.py, dest: "/home/{{ managed_user }}/zcode-headroom-tls/zcode_headroom_tls.py" }
+    - { src: record.py, dest: "/home/{{ managed_user }}/headroom-perf/record.py" }
+
+- name: Create TLS directory
+  ansible.builtin.file:
+    path: "{{ headroom_tls_dir }}"
+    state: directory
+    owner: "{{ managed_user }}"
+    group: "{{ managed_user }}"
+    mode: "0700"
+
+- name: Generate self-signed CA and server certificate when absent
+  become_user: "{{ managed_user }}"
+  ansible.builtin.shell: |
+    set -eu
+    cd "{{ headroom_tls_dir }}"
+    openssl req -x509 -newkey rsa:2048 -nodes -keyout ca.key -out ca.crt -days 3650 \
+      -subj "/CN=ai-devops-zcode-headroom-ca" \
+      -addext "basicConstraints=critical,CA:TRUE" -addext "keyUsage=critical,keyCertSign,cRLSign"
+    openssl req -newkey rsa:2048 -nodes -keyout server.key -out server.csr \
+      -subj "/CN=hetz.coho-banded.ts.net"
+    echo "subjectAltName=DNS:hetz.coho-banded.ts.net,IP:{{ headroom_tailnet_ip }}" > server.ext
+    openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
+      -out server.crt -days 825 -extfile server.ext
+    cat server.crt ca.crt > server-chain.crt
+    chmod 600 ca.key server.key
+  args:
+    executable: /bin/bash
+    creates: "{{ headroom_tls_dir }}/server-chain.crt"
+
+- name: Install headroom systemd units
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: [headroom.service, headroom-zcode.service, zcode-headroom-tls.service]
+  notify: Reload systemd
+
+- name: Create headroom.service drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/headroom.service.d
+    state: directory
+    mode: "0755"
+
+- name: Install headroom.service unauthenticated-bind drop-in
+  ansible.builtin.copy:
+    src: headroom-unauth-bind.conf
+    dest: /etc/systemd/system/headroom.service.d/unauth-bind.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Flush handlers so units exist before enabling
+  ansible.builtin.meta: flush_handlers
+
+# headroom-zcode was running but not enabled live (would not survive a reboot while the
+# enabled TLS front depends on it) — enabled here deliberately.
+- name: Enable and start headroom services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop: [headroom.service, headroom-zcode.service, zcode-headroom-tls.service]
+
+# The live entry predates Ansible and has no "#Ansible:" marker; drop that exact line once so
+# the managed entry below does not duplicate it.
+- name: Remove unmanaged copy of the PERF recorder cron line
+  become_user: "{{ managed_user }}"
+  ansible.builtin.shell: |
+    set -o pipefail
+    line='17 * * * * /usr/bin/python3 /home/{{ managed_user }}/headroom-perf/record.py >> /home/{{ managed_user }}/headroom-perf/record.log 2>&1'
+    current="$(crontab -l 2>/dev/null || true)"
+    if printf '%s\n' "$current" | grep -B1 -xF "$line" | grep -q '^#Ansible: headroom perf recorder$'; then exit 0; fi
+    if printf '%s\n' "$current" | grep -qxF "$line"; then
+      printf '%s\n' "$current" | grep -vxF "$line" | crontab -
+      echo removed
+    fi
+  args:
+    executable: /bin/bash
+  register: headroom_cron_cleanup
+  changed_when: "'removed' in headroom_cron_cleanup.stdout"
+
+- name: Hourly Headroom PERF recorder (ai crontab)
+  ansible.builtin.cron:
+    name: "headroom perf recorder"
+    user: "{{ managed_user }}"
+    minute: "17"
+    job: "/usr/bin/python3 /home/{{ managed_user }}/headroom-perf/record.py >> /home/{{ managed_user }}/headroom-perf/record.log 2>&1"

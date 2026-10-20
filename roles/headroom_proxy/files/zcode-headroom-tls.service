@@ -1,0 +1,17 @@
+[Unit]
+Description=TLS front for Z-code Headroom lane (tailnet)
+After=network-online.target tailscaled.service headroom-zcode.service
+Wants=network-online.target tailscaled.service
+
+[Service]
+Type=simple
+User=ai
+Group=ai
+ExecStart=/usr/bin/python3 /home/ai/zcode-headroom-tls/zcode_headroom_tls.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/home/ai/.headroom-zcode-home/.headroom/logs/tls-front.log
+StandardError=append:/home/ai/.headroom-zcode-home/.headroom/logs/tls-front.log
+
+[Install]
+WantedBy=multi-user.target

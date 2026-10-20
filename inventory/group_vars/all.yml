@@ -47,6 +47,8 @@ base_packages:
   - unattended-upgrades
   - python3
   - python3-apt          # required for Ansible apt module idempotency
+  - pipx                 # installs headroom-ai (headroom_proxy role)
+  - nsis                 # Windows installer builds; manually installed 2026-10-05, adopted 2026-10-20
 base_unattended_upgrades: true
 base_journald_max_use: "1G"   # cap journald disk usage; VERIFY desired size
 
