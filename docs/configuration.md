@@ -57,7 +57,11 @@ access control is the Tailscale ACL, not the proxy.
 
 ## AI DevOps toolkit release evidence
 
-Current pin `b3a8d606daa4093f70508da6265d7c3f8265c71f` (issue #17) adds automatic
+Current pin `b3a8d606daa4093f70508da6265d7c3f8265c71f` (the ai-devops `main`
+squash-merge of reviewed, CI-gated PR u2giants/ai-devops#1883, merged 2026-10-20
+15:22 UTC; a direct descendant of the #19 pin `b1668dc`; it is selected because it
+is reviewed upstream `main`, not because live reached it — live was verified
+clean at that exact commit before the pin) (issue #17) adds automatic
 reviewer-key restore through `--require-secrets`; its install evidence is recorded
 on issue #17 after the governed dispatch. The prior
 `8435f7938d9865158975c2a4dbd7e43a3c3bde97` pin was the reviewed canonical
