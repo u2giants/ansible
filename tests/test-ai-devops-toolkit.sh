@@ -241,6 +241,9 @@ advanced_release="$(git -C "$source_repo" rev-parse HEAD)"
 git -C "$matching_target" fetch -q origin
 git -C "$matching_target" merge -q --ff-only origin/main
 advanced_state="$TMP_ROOT/advanced-state"
+# The managed user reads the fixture remote with ls-remote; on the real host it
+# is the public GitHub URL, here a root-owned local repository.
+git_as_managed config --global --add safe.directory "$source_repo/.git"
 before_advanced="$(wc -l < "$home_dir/toolkit-test.log")"
 run_role "$matching_target" "$matching_backup" "$advanced_state" "$retry_predecessor" "$repaired_release" >/dev/null
 after_advanced="$(wc -l < "$home_dir/toolkit-test.log")"
@@ -250,15 +253,46 @@ grep -q "^revision=$advanced_release$" "$advanced_state/$repaired_release.instal
 grep -q "^pin=$repaired_release$" "$advanced_state/$repaired_release.installed"
 advanced_second="$(run_role "$matching_target" "$matching_backup" "$advanced_state" "$retry_predecessor" "$repaired_release")"
 grep -Eq 'changed=0' <<< "$advanced_second"
+# A further self-advance makes the marker stale: the installer reruns for the
+# live revision and the marker is rewritten, then converges again.
+printf '%s\n' advanced-again > "$source_repo/advanced.txt"
+git -C "$source_repo" commit -qam self-advanced-again
+advanced_again="$(git -C "$source_repo" rev-parse HEAD)"
+git -C "$matching_target" fetch -q origin
+git -C "$matching_target" merge -q --ff-only origin/main
+before_again="$(wc -l < "$home_dir/toolkit-test.log")"
+run_role "$matching_target" "$matching_backup" "$advanced_state" "$retry_predecessor" "$repaired_release" >/dev/null
+[[ "$(($(wc -l < "$home_dir/toolkit-test.log") - before_again))" -eq 3 ]]
+grep -q "^revision=$advanced_again$" "$advanced_state/$repaired_release.installed"
+again_second="$(run_role "$matching_target" "$matching_backup" "$advanced_state" "$retry_predecessor" "$repaired_release")"
+grep -Eq 'changed=0' <<< "$again_second"
+# On the real main but not descending from the pin: refused.
+side_branch_pin="$(git -C "$source_repo" commit-tree -m side "$(git -C "$source_repo" rev-parse "HEAD^{tree}")")"
+git -C "$source_repo" update-ref refs/heads/side "$side_branch_pin"
+git -C "$matching_target" fetch -q origin side
+if run_role "$matching_target" "$matching_backup" "$TMP_ROOT/side-state" \
+  "$retry_predecessor" "$side_branch_pin" >/dev/null 2>&1; then
+  echo 'FAIL: a checkout not descending from the pin was accepted' >&2
+  exit 1
+fi
+[[ "$(git -C "$matching_target" rev-parse HEAD)" == "$advanced_again" ]]
 git -C "$matching_target" -c user.name=test -c user.email=test@example.invalid \
   commit -q --allow-empty -m local-only
 local_only="$(git -C "$matching_target" rev-parse HEAD)"
+# Forging the local tracking ref must not help: only the real remote counts.
+git -C "$matching_target" update-ref refs/remotes/origin/main "$local_only"
 if run_role "$matching_target" "$matching_backup" "$TMP_ROOT/local-only-state" \
   "$retry_predecessor" "$repaired_release" >/dev/null 2>&1; then
   echo 'FAIL: a checkout ahead of origin/main was accepted' >&2
   exit 1
 fi
 [[ "$(git -C "$matching_target" rev-parse HEAD)" == "$local_only" ]]
+git -C "$matching_target" checkout -q --detach "$advanced_again"
+if run_role "$matching_target" "$matching_backup" "$TMP_ROOT/detached-state" \
+  "$retry_predecessor" "$repaired_release" >/dev/null 2>&1; then
+  echo 'FAIL: a detached self-advanced checkout was accepted' >&2
+  exit 1
+fi
 
 # A tracked outward symlink must not expand the recursive ownership boundary.
 # Exercise it in a final release after all idempotence checks so Ansible's file

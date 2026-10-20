@@ -75,6 +75,12 @@
     path: "{{ ai_devops_toolkit_completion_marker }}"
   register: ai_devops_toolkit_completion
 
+- name: Read the revision recorded in the completion marker
+  ansible.builtin.slurp:
+    src: "{{ ai_devops_toolkit_completion_marker }}"
+  register: ai_devops_toolkit_completion_content
+  when: ai_devops_toolkit_completion.stat.exists
+
 - name: Read the installed AI DevOps revision
   ansible.builtin.command:
     argv:
@@ -136,27 +142,48 @@
   check_mode: false
   when: ai_devops_toolkit_checkout.stat.exists
 
-- name: Read the checkout's tracked ai-devops origin/main
+- name: Read the real ai-devops main without touching the checkout
   ansible.builtin.command:
     argv:
       - git
-      - -C
-      - "{{ ai_devops_toolkit_path }}"
-      - rev-parse
-      - --verify
-      - --quiet
-      - refs/remotes/origin/main
+      - ls-remote
+      - --exit-code
+      - "{{ ai_devops_toolkit_repo_url }}"
+      - refs/heads/main
   become: "{{ ai_devops_toolkit_runtime_become }}"
   become_user: "{{ managed_user }}"
   environment:
     HOME: "{{ ai_devops_toolkit_home }}"
-  register: ai_devops_toolkit_origin_main
+  register: ai_devops_toolkit_remote_main
   changed_when: false
   failed_when: false
   check_mode: false
   when:
     - ai_devops_toolkit_checkout.stat.exists
     - ai_devops_toolkit_installed_revision.stdout != ai_devops_toolkit_version
+
+- name: Test whether the installed revision is on the real ai-devops main
+  ansible.builtin.command:
+    argv:
+      - git
+      - -C
+      - "{{ ai_devops_toolkit_path }}"
+      - merge-base
+      - --is-ancestor
+      - HEAD
+      - "{{ (ai_devops_toolkit_remote_main.stdout | default('')).split() | first | default('none') }}"
+  become: "{{ ai_devops_toolkit_runtime_become }}"
+  become_user: "{{ managed_user }}"
+  environment:
+    HOME: "{{ ai_devops_toolkit_home }}"
+  register: ai_devops_toolkit_on_remote_main
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when:
+    - ai_devops_toolkit_checkout.stat.exists
+    - ai_devops_toolkit_installed_revision.stdout != ai_devops_toolkit_version
+    - (ai_devops_toolkit_remote_main.rc | default(1)) == 0
 
 - name: Test whether the installed revision descends from the pin
   ansible.builtin.command:
@@ -183,15 +210,15 @@
 - name: Classify the installed AI DevOps revision
   ansible.builtin.set_fact:
     # ai-devops advances its own checkout (protected update.sh). A clean main
-    # checkout that equals its tracked origin/main and descends from the pin is
-    # accepted as-is: installer only, never a Git move. Anything else still
-    # needs the pin or a declared predecessor below.
+    # checkout whose HEAD is on the real remote main (ls-remote, not the local
+    # tracking ref) and descends from the pin is accepted as-is: installer
+    # only, never a Git move. Anything else still needs the pin or a declared
+    # predecessor below.
     ai_devops_toolkit_self_advanced: >-
       {{ ai_devops_toolkit_checkout.stat.exists
          and ai_devops_toolkit_installed_revision.stdout != ai_devops_toolkit_version
          and ai_devops_toolkit_installed_branch.stdout == 'main'
-         and (ai_devops_toolkit_origin_main.rc | default(1)) == 0
-         and ai_devops_toolkit_origin_main.stdout == ai_devops_toolkit_installed_revision.stdout
+         and (ai_devops_toolkit_on_remote_main.rc | default(1)) == 0
          and (ai_devops_toolkit_pin_ancestry.rc | default(1)) == 0 }}
 
 - name: Classify the required AI DevOps transition
@@ -199,11 +226,18 @@
     ai_devops_toolkit_expected_revision: >-
       {{ ai_devops_toolkit_installed_revision.stdout if ai_devops_toolkit_self_advanced
          else ai_devops_toolkit_version }}
+
+- name: Classify the required AI DevOps install and Git move
+  ansible.builtin.set_fact:
+    # A marker naming an older revision means the checkout self-advanced since
+    # the last install, so the installer runs again for the live revision.
     ai_devops_toolkit_requires_install: >-
       {{ (not ai_devops_toolkit_checkout.stat.exists)
          or (ai_devops_toolkit_installed_revision.stdout != ai_devops_toolkit_version
              and not ai_devops_toolkit_self_advanced)
-         or (not ai_devops_toolkit_completion.stat.exists) }}
+         or (not ai_devops_toolkit_completion.stat.exists)
+         or ('revision=' ~ (ai_devops_toolkit_expected_revision | trim))
+            not in ((ai_devops_toolkit_completion_content.content | default('')) | b64decode).splitlines() }}
     # The toolkit's installed-checkout guard (ai-devops #1836) refuses any HEAD
     # move by anything but its own installer, so never touch Git when the clean
     # checkout is already the pin, or a self-advanced descendant, on main.

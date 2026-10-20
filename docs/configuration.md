@@ -32,7 +32,7 @@ see [`deployment.md`](deployment.md).
 |---|---|---|
 | `host_timezone` | `America/New_York` | confirmed live 2026-06-23 |
 | `managed_user` | `ai` | passwordless sudo user |
-| `ai_devops_toolkit_version` | `b3a8d606daa4093f70508da6265d7c3f8265c71f` (issue #17; see release evidence below) | exact reviewed toolkit release |
+| `ai_devops_toolkit_version` | `b3a8d606daa4093f70508da6265d7c3f8265c71f` (issue #17; see release evidence below) | reviewed toolkit floor; self-advanced `main` descendants are accepted |
 | `ai_devops_toolkit_checkout_owner` | `root` | blocks direct non-sudo writes; the governed role uses root only for checkout updates |
 | `ai_devops_toolkit_checkout_group` | `ai` | runtime sessions retain read/execute access without direct write authority |
 | `ai_devops_toolkit_backup_path` | `/worksp/ai-devops-pre-rewrite-20260822` | fixed recoverable predecessor checkout |
@@ -57,9 +57,10 @@ access control is the Tailscale ACL, not the proxy.
 
 ## AI DevOps toolkit release evidence
 
-The pin is a floor: a clean `main` checkout equal to its tracked `origin/main` and
-descending from the pin (ai-devops self-update) is installed in place without a
-Git move; see `roles/ai_devops_toolkit/README.md`.
+The pin is a floor: a clean `main` checkout whose HEAD is on the real remote
+`main` and descends from the pin (ai-devops self-update) is installed in place
+without a Git move; see `roles/ai_devops_toolkit/README.md`. Dispatch
+`39453604644` below refused under the earlier exact-pin rule.
 
 Current pin `b3a8d606daa4093f70508da6265d7c3f8265c71f` is the ai-devops `main`
 merge of PR u2giants/ai-devops#1883 (merged 11:22 AM EDT 2026-10-20), eight commits
