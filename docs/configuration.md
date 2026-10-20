@@ -32,7 +32,7 @@ see [`deployment.md`](deployment.md).
 |---|---|---|
 | `host_timezone` | `America/New_York` | confirmed live 2026-06-23 |
 | `managed_user` | `ai` | passwordless sudo user |
-| `ai_devops_toolkit_version` | `b3a8d606daa4093f70508da6265d7c3f8265c71f` (matches live checkout 2026-10-20, issue #17) | exact reviewed toolkit release |
+| `ai_devops_toolkit_version` | `b3a8d606daa4093f70508da6265d7c3f8265c71f` (issue #17; see release evidence below) | exact reviewed toolkit release |
 | `ai_devops_toolkit_checkout_owner` | `root` | blocks direct non-sudo writes; the governed role uses root only for checkout updates |
 | `ai_devops_toolkit_checkout_group` | `ai` | runtime sessions retain read/execute access without direct write authority |
 | `ai_devops_toolkit_backup_path` | `/worksp/ai-devops-pre-rewrite-20260822` | fixed recoverable predecessor checkout |
@@ -57,13 +57,15 @@ access control is the Tailscale ACL, not the proxy.
 
 ## AI DevOps toolkit release evidence
 
-Current pin `b3a8d606daa4093f70508da6265d7c3f8265c71f` (the ai-devops `main`
-squash-merge of reviewed, CI-gated PR u2giants/ai-devops#1883, merged 2026-10-20
-15:22 UTC; a direct descendant of the #19 pin `b1668dc`; it is selected because it
-is reviewed upstream `main`, not because live reached it — live was verified
-clean at that exact commit before the pin) (issue #17) adds automatic
-reviewer-key restore through `--require-secrets`; its install evidence is recorded
-on issue #17 after the governed dispatch. The prior
+Current pin `b3a8d606daa4093f70508da6265d7c3f8265c71f` is the ai-devops `main`
+merge of PR u2giants/ai-devops#1883 (merged 11:22 AM EDT 2026-10-20), eight commits
+after the #19 pin `b1668dc` (`git rev-list --count b1668dc..b3a8d60` = 8, ancestor
+verified). It was chosen because live had already reached it outside Ansible: the
+live reflog shows fast-forwards to `b1668dc` (7:38 AM EDT), `b100981` (11:16 AM EDT)
+and `b3a8d60` (11:46 AM EDT) on 2026-10-20, and toolkit dispatch `39453604644`
+correctly refused the unpinned revision with no changes. Live was clean at
+`b3a8d60` at 12:05 PM EDT. No predecessor exception is needed (installed == pin).
+The prior
 `8435f7938d9865158975c2a4dbd7e43a3c3bde97` pin was the reviewed canonical
 AI DevOps remediation release for every supported platform. It retains the
 production-discovered privilege-boundary and seven-stage workflow repairs,

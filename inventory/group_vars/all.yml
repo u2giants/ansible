@@ -27,9 +27,7 @@ ai_devops_toolkit_checkout_group: "{{ managed_user }}"
 ai_devops_toolkit_version: "b3a8d606daa4093f70508da6265d7c3f8265c71f"
 ai_devops_toolkit_backup_path: "/worksp/ai-devops-pre-rewrite-20260822"
 ai_devops_toolkit_rewrite_predecessors: []
-# b1668dc = pin from #19 (approved in-place predecessor). b3a8d60 = ai-devops main, PR #1883. Clear after dispatch.
-ai_devops_toolkit_upgrade_predecessors:
-  - "b1668dc523501c5644abeedfc8dec49280ab049e"
+ai_devops_toolkit_upgrade_predecessors: []
 
 # ----------------------------------------------------------------------------------
 # base role
