@@ -312,18 +312,10 @@
   no_log: true
   when: ai_devops_toolkit_op_token | length > 0
 
-- name: Inspect the 1Password service-account token file
-  ansible.builtin.stat:
-    path: "{{ ai_devops_toolkit_op_token_file }}"
-    get_checksum: false
-  register: ai_devops_toolkit_op_token_stat
-
 - name: Choose the installer secrets mode
   ansible.builtin.set_fact:
     ai_devops_toolkit_secrets_flag: >-
-      {{ '--require-secrets'
-         if (ai_devops_toolkit_op_token_stat.stat.exists and ai_devops_toolkit_op_token_stat.stat.size > 0)
-         else '--skip-secrets' }}
+      {{ '--require-secrets' if ai_devops_toolkit_op_token | length > 0 else '--skip-secrets' }}
 
 - name: Install the pinned AI DevOps release
   ansible.builtin.command:

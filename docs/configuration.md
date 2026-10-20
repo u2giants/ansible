@@ -32,7 +32,7 @@ see [`deployment.md`](deployment.md).
 |---|---|---|
 | `host_timezone` | `America/New_York` | confirmed live 2026-06-23 |
 | `managed_user` | `ai` | passwordless sudo user |
-| `ai_devops_toolkit_version` | `8435f7938d9865158975c2a4dbd7e43a3c3bde97` | exact reviewed toolkit release |
+| `ai_devops_toolkit_version` | `b1668dc523501c5644abeedfc8dec49280ab049e` (in-place upgrade from `8435f79…`, issue #17) | exact reviewed toolkit release |
 | `ai_devops_toolkit_checkout_owner` | `root` | blocks direct non-sudo writes; the governed role uses root only for checkout updates |
 | `ai_devops_toolkit_checkout_group` | `ai` | runtime sessions retain read/execute access without direct write authority |
 | `ai_devops_toolkit_backup_path` | `/worksp/ai-devops-pre-rewrite-20260822` | fixed recoverable predecessor checkout |
@@ -213,6 +213,7 @@ CLI (already installed on the box). Values are **not** recorded here — only in
 | Secret (1Password item) | Purpose | Consumed by | Status |
 |---|---|---|---|
 | `ci-deploy-ssh` (private key) | CI → host SSH | CI runner | active |
+| `1Password Service Account Token - hetz 'ai' account` (`OP_SERVICE_ACCOUNT_TOKEN`) | lets `install.sh --require-secrets` restore reviewer keys (Muse, StepFun, DeepSeek, GLM) | `ai_devops_toolkit` role → `~/.config/ai-devops/op-service-account` (0600, no_log); loaded only for `tags=ai_devops_toolkit` dispatch | active (#17) |
 | `cf-tunnel-hetz` | Cloudflare Tunnel 1 token | `cloudflared_coolify` role | in 1Password (per plan); not yet wired by Ansible |
 | `github-pat` | git/GitHub | git, MCP | migrated (per plan) |
 | `restic-hetzner`, `do-spaces`, `cf-dns-token`, `ghcr-pat`, `oauth2-proxy`, app secrets | backups, certs, image pulls, app | various | **Phase 3, not yet migrated** |

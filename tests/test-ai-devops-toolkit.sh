@@ -66,7 +66,7 @@ git -C "$source_repo" config user.email test@example.invalid
 cat > "$source_repo/install.sh" <<'SCRIPT'
 #!/usr/bin/env bash
 set -euo pipefail
-[[ "${1:-}" == --skip-secrets ]]
+[[ "${1:-}" == --skip-secrets || "${1:-}" == --require-secrets ]]
 if [[ -f "$HOME/fail-next-install" ]]; then
   rm -f "$HOME/fail-next-install"
   exit 23

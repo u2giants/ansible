@@ -49,8 +49,8 @@ With its state restored, Coolify redeploys the ~20 application containers from t
 wired to the restored data + 1Password secrets.
 
 ### 7. Authenticate (the ONLY manual step)
-Reviewer API keys (Muse, StepFun, DeepSeek, GLM/OpenCode) are restored automatically: the apply
-workflow loads the hetz `ai` 1Password service-account token
+Reviewer API keys (Muse, StepFun, DeepSeek, GLM/OpenCode) are restored by the toolkit dispatch
+(`apply.yml` → workflow_dispatch `tags=ai_devops_toolkit`, run after step 4): it loads the hetz `ai` 1Password service-account token
 (`op://vibe_coding/yw6o7cwwqn5n6zqliddu5d3w4m/OP_SERVICE_ACCOUNT_TOKEN`) into
 `~/.config/ai-devops/op-service-account` (0600, no_log) and runs `install.sh --require-secrets`.
 

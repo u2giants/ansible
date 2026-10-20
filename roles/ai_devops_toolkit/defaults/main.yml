@@ -13,6 +13,7 @@ ai_devops_toolkit_upgrade_predecessors: []
 # keys (Muse, StepFun, DeepSeek, GLM/OpenCode). CI loads it from
 # op://vibe_coding/yw6o7cwwqn5n6zqliddu5d3w4m/OP_SERVICE_ACCOUNT_TOKEN into
 # AI_DEVOPS_OP_SA_TOKEN; it is only ever written to the 0600 token file (no_log).
-# Empty (manual run without it) keeps the old --skip-secrets behaviour.
+# Empty (any run without it) keeps --skip-secrets; an existing token file is left
+# untouched. Rotate by updating the 1Password item and re-dispatching the toolkit tag.
 ai_devops_toolkit_op_token: "{{ lookup('ansible.builtin.env', 'AI_DEVOPS_OP_SA_TOKEN') | default('', true) }}"
 ai_devops_toolkit_op_token_file: "{{ ai_devops_toolkit_home }}/.config/ai-devops/op-service-account"
