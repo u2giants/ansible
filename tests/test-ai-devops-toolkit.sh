@@ -145,6 +145,7 @@ run_role() {
     -e "ai_devops_toolkit_checkout_group=$managed_group" \
     -e "ai_devops_toolkit_runtime_become=$runtime_become" \
     -e ai_devops_toolkit_verify_memory_schedule=false \
+    -e ai_devops_toolkit_require_token=false \
     -e "ai_devops_toolkit_home=$home_dir" \
     -e "ai_devops_toolkit_state_dir=$state" \
     -e "ai_devops_toolkit_completion_marker=$state/$pinned.installed" \

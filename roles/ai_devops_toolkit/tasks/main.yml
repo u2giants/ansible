@@ -293,6 +293,17 @@
     - not ansible_check_mode
     - ai_devops_toolkit_ownership_drift.stdout | default('') | length > 0
 
+- name: Require the reviewer-key token for a real toolkit install
+  ansible.builtin.assert:
+    that:
+      - ai_devops_toolkit_op_token | length > 0
+    fail_msg: >-
+      AI_DEVOPS_OP_SA_TOKEN is empty. Dispatch apply.yml with tags=ai_devops_toolkit
+      (it loads the token from 1Password), or export it from op read before a manual run.
+  when:
+    - ai_devops_toolkit_require_token | bool
+    - ai_devops_toolkit_requires_install
+
 - name: Own the AI DevOps secrets config directory
   ansible.builtin.file:
     path: "{{ ai_devops_toolkit_op_token_file | dirname }}"

@@ -49,14 +49,16 @@ With its state restored, Coolify redeploys the ~20 application containers from t
 wired to the restored data + 1Password secrets.
 
 ### 7. Authenticate (the ONLY manual step)
-Reviewer API keys (Muse, StepFun, DeepSeek, GLM/OpenCode) are restored by the toolkit dispatch
-(`apply.yml` → workflow_dispatch `tags=ai_devops_toolkit`, run after step 4): it loads the hetz `ai` 1Password service-account token
+First log in as `ai` with `gh auth login` (u2giants): the toolkit's secrets stage syncs the
+private config repo and fails without it. Then restore reviewer API keys (Muse, StepFun,
+DeepSeek, GLM/OpenCode) with the toolkit dispatch (`apply.yml` → workflow_dispatch
+`tags=ai_devops_toolkit`): it loads the hetz `ai` 1Password service-account token
 (`op://vibe_coding/yw6o7cwwqn5n6zqliddu5d3w4m/OP_SERVICE_ACCOUNT_TOKEN`) into
 `~/.config/ai-devops/op-service-account` (0600, no_log) and runs `install.sh --require-secrets`.
 
 Still log in by hand as `ai` — by design these are not stored:
 - `claude` (Claude Code native, Anthropic sign-in) and `codex login` (OpenAI/ChatGPT)
-- `gh auth login` (u2giants), `gcloud auth login`, `az login`, `supabase login`
+- `gcloud auth login`, `az login`, `supabase login`
 - `kimi` / `grok` / `gemini` / `qwen` CLI sign-ins if those (frozen) reviewers are wanted
 - `tailscale up`
 Then run `/worksp/ai-devops/bin/ai-devops doctor` and one `ai-review` per rotation reviewer.

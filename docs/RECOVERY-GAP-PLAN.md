@@ -13,7 +13,7 @@ from code.** Based on a full software audit of the live box (2026-06-24).
 | **10 third-party apt repos** (1password, azure-cli, cloudflared, docker, google-chrome, google-cloud-sdk, nodesource, pgdg, tailscale) | ✅ | ❌ |
 | **Third-party CLIs** (`gcloud`, `az`, `gh`, `op`, `psql`, `restic`, `rg`, node/npm) | ✅ | ❌ |
 | **Non-apt binaries** (`go`, `supabase`, `codex`, `cloudflared` binary) | ✅ | ❌ |
-| **Global npm tools** (`@google/gemini-cli`, corepack, ncu; Claude Code is now native — see `roles/dev_tools`) | ✅ | ❌ |
+| **Global npm tools** (`@google/gemini-cli`, corepack, ncu; Claude Code is now native and, like codex, a DELIBERATE presence-managed exception: self-updating, version reported not pinned — see `roles/dev_tools`) | ✅ | ❌ |
 | **Docker engine install** (repo + package) | ✅ | ⚠️ pinned only — repo/install not managed |
 | **Coolify** install + glue scripts (`coolify-autostart.sh`, `coolify-proxy-socket-watchdog.sh`, `restart-coolify-proxy-after-docker.sh`, `docker-update-check.sh`) | ✅ | ❌ |
 | ~202 manual apt packages (full set) | ✅ | ⚠️ only 12 curated |

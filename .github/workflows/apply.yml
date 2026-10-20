@@ -68,10 +68,11 @@ jobs:
       # Toolkit-only: the hetz `ai` service-account token install.sh uses to restore
       # reviewer keys. Scoped so a bad reference cannot break routine phase1 applies.
       - name: Load toolkit reviewer-key token from 1Password
+        id: toolkit_token
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.tags == 'ai_devops_toolkit'
         uses: 1password/load-secrets-action@v2
         with:
-          export-env: true
+          export-env: false
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           AI_DEVOPS_OP_SA_TOKEN: op://vibe_coding/yw6o7cwwqn5n6zqliddu5d3w4m/OP_SERVICE_ACCOUNT_TOKEN
@@ -88,6 +89,7 @@ jobs:
         if: vars.ENABLE_AUTO_APPLY == 'true'
         env:
           DEPLOY_TAGS: ${{ github.event.inputs.tags || 'phase1' }}
+          AI_DEVOPS_OP_SA_TOKEN: ${{ steps.toolkit_token.outputs.AI_DEVOPS_OP_SA_TOKEN }}
         run: |
           tags="$DEPLOY_TAGS"
           extra=()
