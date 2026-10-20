@@ -23,30 +23,36 @@
   changed_when: true
   notify: Restart headroom services
 
+# Owners/modes match the live box exactly so a re-apply is a no-op.
 - name: Create headroom working and log directories
   ansible.builtin.file:
-    path: "{{ item }}"
+    path: "{{ item.path }}"
     state: directory
-    owner: "{{ managed_user }}"
-    group: "{{ managed_user }}"
-    mode: "0755"
+    owner: "{{ item.owner | default(managed_user) }}"
+    group: "{{ item.owner | default(managed_user) }}"
+    mode: "{{ item.mode }}"
   loop:
-    - /home/{{ managed_user }}/.headroom/logs
-    - /home/{{ managed_user }}/.headroom-zcode-home/.headroom/logs
-    - /home/{{ managed_user }}/zcode-headroom-tls
-    - /home/{{ managed_user }}/headroom-perf
+    - { path: "/home/{{ managed_user }}/.headroom/logs", mode: "0775" }
+    - { path: "/home/{{ managed_user }}/.headroom-zcode-home/.headroom/logs", mode: "0755" }
+    - { path: "/home/{{ managed_user }}/zcode-headroom-tls", mode: "0755", owner: root }
+    - { path: "/home/{{ managed_user }}/headroom-perf", mode: "0775" }
 
-- name: Install TLS front and PERF recorder scripts
+- name: Install ZCode TLS front script
   ansible.builtin.copy:
-    src: "{{ item.src }}"
-    dest: "{{ item.dest }}"
+    src: zcode_headroom_tls.py
+    dest: "/home/{{ managed_user }}/zcode-headroom-tls/zcode_headroom_tls.py"
     owner: "{{ managed_user }}"
     group: "{{ managed_user }}"
     mode: "0755"
   notify: Restart headroom services
-  loop:
-    - { src: zcode_headroom_tls.py, dest: "/home/{{ managed_user }}/zcode-headroom-tls/zcode_headroom_tls.py" }
-    - { src: record.py, dest: "/home/{{ managed_user }}/headroom-perf/record.py" }
+
+- name: Install PERF recorder script
+  ansible.builtin.copy:
+    src: record.py
+    dest: "/home/{{ managed_user }}/headroom-perf/record.py"
+    owner: "{{ managed_user }}"
+    group: "{{ managed_user }}"
+    mode: "0775"
 
 - name: Create TLS directory
   ansible.builtin.file:
