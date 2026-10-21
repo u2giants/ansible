@@ -98,12 +98,14 @@ run, the role recursively makes only `/worksp/ai-devops` owned by the declared o
 readable/executable by `ai`, with no access for other users and no group write
 permission. It also
 adds that exact path to the managed user's Git `safe.directory` list so doctors
-and installed commands can inspect the governed checkout. This makes direct,
-in-place non-sudo commits, pulls, and edits of linked
-production commands fail before a tagged Ansible deployment establishes the matching
-manifest and completion marker. Git release transitions run through root; the
-installer, globals adoption, and doctor continue as `ai` and are verified not to
-need checkout write access. The `ai` account retains host-management sudo for the
+and installed commands can inspect the governed checkout. With a `root` owner
+(the role default) this makes direct, in-place non-sudo commits, pulls, and edits
+of linked production commands fail, and Git release transitions run through
+root. With the hetz `ai` owner, `ai` can write the checkout and Git transitions
+run as `ai`; drift is then caught only by the clean-tree and revision checks.
+The installer, globals adoption, and doctor run as `ai` either way, and after an
+ai-devops self-advance the next run re-chmods new entries (including `.git`) to
+the managed `0640`/`0750` modes once, then converges to zero. The `ai` account retains host-management sudo for the
 governed Ansible route, so ownership is an accidental-drift guardrail rather than
 a security boundary against an explicitly privileged manual command. Because
 the shared `/worksp` parent remains `ai`-owned, it also does not prevent a

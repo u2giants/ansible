@@ -349,6 +349,10 @@ if [[ "$root_integration" -eq 1 ]]; then
   [[ "$(stat -c %U "$target")" == "$managed_user" ]]
   [[ -z "$(find "$target" -xdev ! -type l ! -user "$managed_user" -print -quit)" ]]
   [[ "$(git -C "$target" rev-parse HEAD)" == "$release" ]]
+  [[ "$(stat -c '%G:%a' "$target")" == "$managed_group:750" ]]
+  # The point of the migration: the managed user can now write the checkout.
+  runuser -u "$managed_user" -- touch "$target/.git/migration-write-probe"
+  rm -f "$target/.git/migration-write-probe"
   migrated_second="$(run_role "$target" "$backup" "$state" "$predecessor")"
   grep -Eq 'changed=0' <<< "$migrated_second"
   checkout_owner=root
