@@ -302,11 +302,14 @@ non-secret variable value with `gh secret list -R u2giants/ansible` and
 See `docs/deployment.md` for full detail. Summary of the **real, current** state:
 
 - **Pipeline:** GitHub Actions — `check.yml` (PR/manual: `ansible-lint` + `--check --diff`, posts to the PR or manual run summary),
-  `apply.yml` (push to `main`: serialized via `concurrency: apply-hetzner`; real apply **enabled by
+  `apply.yml` (manual dispatch from `main` only; merge does not apply: serialized via `concurrency: apply-hetzner`; real apply **enabled by
   the `ENABLE_AUTO_APPLY=true` repo variable**), `drift.yml` (daily
   `--check`, alerts on drift, never applies), and `task-gates.yml` (PR/push/manual:
   repository classification and refusal fixtures only).
-- **Current reality:** CI auto-apply is active and is the routine deployment path. Phase 2 remains
+- **Current reality:** a merge to `main` does **not** apply. Production runs only by `gh workflow run apply.yml --ref main`
+  after `ai-task-gates check --before production --reviewer-approval <report>` (the `reviewed-production-dispatch` release) passes
+  in a clean checkout whose HEAD equals live GitHub `main`, with an exact-head AI reviewer APPROVE
+  of that commit. Merging is never itself a production action. Phase 2 remains
   gated and is not part of the default apply.
 - **Connection / SSH:** `ssh vps` (alias in the owner's `~/.ssh/config`) reaches the host over
   Tailscale. SSH is exceptional and is used for verification or recovery, not routine changes.
@@ -428,8 +431,8 @@ See `HANDOFF.md` for the detailed continuation state. Summary:
 | done | **Phase 2 complete** — firewall, docker, ssh_hardening, cloudflared all live on prod | — |
 | done | Phase 3 (host-layer scope) — secrets in 1Password; app-layer secrets out of scope (their repos) | — |
 | done | Phase 4 CI **pipeline working** (2026-06-24) — Tailscale tag:ci + 1Password + CI key; **drift detection LIVE** (daily); PR diffs via check.yml | — |
-| done | **Phase 4 COMPLETE (2026-06-24)** — `ENABLE_AUTO_APPLY=true`; self-test passed (pushed a motd line to main → apply.yml auto-applied it to hetz, verified live). Push to main now auto-applies, serialized. |
-| note | Auto-apply is ON: non-documentation pushes to `main` trigger a real Phase 1 apply; Markdown-only and `docs/**` pushes are ignored by `apply.yml`. Drift detection runs daily. `cloudflared` token management remains manual (`cloudflared_manage_token: false`). |
+| done | **Phase 4 COMPLETE (2026-06-24)** — `ENABLE_AUTO_APPLY=true`; self-test passed (pushed a motd line to main → apply.yml auto-applied it to hetz, verified live). (Superseded 2026-10-21: merge no longer applies; see §12.) |
+| note | Applies run only by gated manual dispatch from `main` (§12); pushes never apply. Drift detection runs daily. `cloudflared` token management remains manual (`cloudflared_manage_token: false`). |
 | done | 2026-08-21 incident: reviewed successor `d24884fd073081bb2eb43ce6880ba8714fdd6e17` installed; live doctor passed; second tagged run clean; temporary upgrade allowlist emptied | governed rollout completed 2026-08-22 |
 | done | Reviewed AI DevOps release `82697a8f07fe50338606c4f4b11d3bbf5e90e1cc` installed by governed dispatch `32624619860`; live doctor passed; exact tagged rerun `32625017742` reported `changed=0`, `unreachable=0`, `failed=0`; temporary upgrade allowlist emptied | governed rollout completed 2026-08-23 |
 | done | Final linear memory-index release `3c34bb0785db0a9f1ab548885af279391b196871` installed by governed dispatch `32639239500`; live checkout, owner-only manifest, completion marker, and doctor passed; exact tagged rerun `32639412554` reported `changed=0`, `unreachable=0`, `failed=0`; temporary predecessor exception emptied | governed rollout completed 2026-08-23 |
@@ -451,7 +454,8 @@ See `HANDOFF.md` for the detailed continuation state. Summary:
 2. Validate locally: `ansible-lint` and `ansible-playbook playbooks/site.yml --syntax-check`
    (see `docs/development.md`).
 3. For host-affecting changes, run a read-only `--check --diff` against `hetz` before applying.
-4. Push to `main` so the serialized CI workflow applies Phase 1. Re-run the read-only check to
+4. Merge to `main`, pass the production gate on that exact clean `main` HEAD with reviewer APPROVE,
+   then dispatch `apply.yml` from `main`. Re-run the read-only check to
    confirm 0 changes.
 
 **Never** SSH in and `apt install` / `crontab -e` / edit `/etc` by hand. Manual changes are drift
