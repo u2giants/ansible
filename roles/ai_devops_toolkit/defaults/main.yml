@@ -18,3 +18,6 @@ ai_devops_toolkit_upgrade_predecessors: []
 ai_devops_toolkit_op_token: "{{ lookup('ansible.builtin.env', 'AI_DEVOPS_OP_SA_TOKEN') | default('', true) }}"
 ai_devops_toolkit_op_token_file: "{{ ai_devops_toolkit_home }}/.config/ai-devops/op-service-account"
 ai_devops_toolkit_require_token: true
+# ai-devops' own protected installer (update.sh + ai-task-gates) writes this
+# receipt after a reviewed, verified install (issue #17).
+ai_devops_toolkit_install_receipt: "{{ ai_devops_toolkit_home }}/.local/state/ai-devops/task-gates/install-completions/last.json"
