@@ -22,7 +22,7 @@ managed_user: "ai"
 # ----------------------------------------------------------------------------------
 ai_devops_toolkit_repo_url: "https://github.com/u2giants/ai-devops.git"
 ai_devops_toolkit_path: "/worksp/ai-devops"
-ai_devops_toolkit_checkout_owner: root
+ai_devops_toolkit_checkout_owner: "{{ managed_user }}"  # ai-devops update.sh advances the checkout as ai (#17)
 ai_devops_toolkit_checkout_group: "{{ managed_user }}"
 ai_devops_toolkit_version: "b3a8d606daa4093f70508da6265d7c3f8265c71f"
 ai_devops_toolkit_backup_path: "/worksp/ai-devops-pre-rewrite-20260822"

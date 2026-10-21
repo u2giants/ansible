@@ -167,3 +167,11 @@ once. A checkout behind a newer remote tip is accepted. Local-only commits,
 non-descendant history, detached HEAD, a dirty tree, or an unreachable remote
 still fail closed (the refusal names which). A privileged manual fast-forward to a real `main` commit is
 indistinguishable from `update.sh`, which is the accepted trust boundary.
+
+On hetz the inventory sets `ai_devops_toolkit_checkout_owner` to the managed
+user (`ai`). ai-devops' protected `update.sh` advances the installed checkout as
+`ai` (fetch, fast-forward, install), so a root-owned checkout made every
+reviewed toolkit update fail with `cannot open .git/FETCH_HEAD` (issue #17).
+The ownership was only an accidental-drift guardrail (`ai` has host sudo); the
+toolkit's own `reference-transaction` guard (ai-devops #1836) now refuses HEAD
+moves outside its installer. The role default stays `root` for other hosts.

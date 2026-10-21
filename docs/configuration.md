@@ -33,7 +33,7 @@ see [`deployment.md`](deployment.md).
 | `host_timezone` | `America/New_York` | confirmed live 2026-06-23 |
 | `managed_user` | `ai` | passwordless sudo user |
 | `ai_devops_toolkit_version` | `b3a8d606daa4093f70508da6265d7c3f8265c71f` (issue #17; see release evidence below) | reviewed toolkit floor; self-advanced `main` descendants are accepted |
-| `ai_devops_toolkit_checkout_owner` | `root` | blocks direct non-sudo writes; the governed role uses root only for checkout updates |
+| `ai_devops_toolkit_checkout_owner` | `ai` (`managed_user`; role default `root`) | ai-devops `update.sh` advances the checkout as `ai`, and its #1836 guard protects HEAD; root ownership made every reviewed toolkit update fail (issue #17) |
 | `ai_devops_toolkit_checkout_group` | `ai` | runtime sessions retain read/execute access without direct write authority |
 | `ai_devops_toolkit_backup_path` | `/worksp/ai-devops-pre-rewrite-20260822` | fixed recoverable predecessor checkout |
 | `dns_fallback_servers` | `1.1.1.1 1.0.0.1 8.8.8.8 8.8.4.4` | resolved FallbackDNS |
