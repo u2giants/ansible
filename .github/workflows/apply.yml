@@ -12,6 +12,9 @@ on:
       tags:
         description: "Ansible tags to run (default phase1)"
         default: "phase1"
+      sha:
+        description: "Exact reviewed main commit (full SHA) the production gate passed on"
+        required: true
 
 # THE serialization guarantee: queue, never run two applies simultaneously (§5.1).
 concurrency:
@@ -31,7 +34,21 @@ jobs:
         run: |
           echo "::error::Production applies dispatch only from main (got $GITHUB_REF)"
           exit 1
+      - name: Refuse a SHA that is not the current main tip
+        env:
+          SHA: ${{ github.event.inputs.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::sha must be a full 40-hex commit"; exit 1; }
+          tip="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)"
+          [ "$tip" = "$SHA" ] || { echo "::error::sha $SHA is not current main ($tip); re-run the gate"; exit 1; }
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.sha }}
+      - name: Assert checkout is the reviewed SHA
+        env:
+          SHA: ${{ github.event.inputs.sha }}
+        run: '[ "$(git rev-parse HEAD)" = "$SHA" ] || { echo "::error::checkout is not $SHA"; exit 1; }'
       - name: Refuse an ambiguous toolkit maintenance dispatch
         if: github.event_name == 'workflow_dispatch'
         env:

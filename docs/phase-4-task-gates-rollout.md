@@ -9,4 +9,4 @@ Issue `popcre/ai-devops#335` adds repository-local infrastructure routing and ex
 
 ## Release boundary
 
-This repository's supported delivery remains main-only. `ENABLE_AUTO_APPLY=true`, and any non-documentation push to `main` runs a real serialized Phase 1 apply. This rollout's source is being reviewed through a temporary pull request, but it does not change that delivery rule or authorize the production action; the pull request must remain unmerged until an exact apply is explicitly authorized and the unconditional refusal is changed through a separate reviewed policy commit.
+This repository's supported delivery remains main-only. `ENABLE_AUTO_APPLY=true`, and (since 2026-10-21) pushes to `main` never apply; production is a gated `apply.yml` dispatch of the exact reviewed SHA (`docs/deployment.md`). This rollout's source is being reviewed through a temporary pull request, but it does not change that delivery rule or authorize the production action; the pull request must remain unmerged until an exact apply is explicitly authorized and the unconditional refusal is changed through a separate reviewed policy commit.

@@ -179,7 +179,12 @@ class ProxyHandler(BaseHTTPRequestHandler):
                     chunk = resp.read(65536)
                     if not chunk:
                         break
-                    self.wfile.write(chunk)
+                    try:
+                        self.wfile.write(chunk)
+                    except OSError:
+                        # Client went away; not an upstream failure.
+                        self.close_connection = True
+                        return
                     sent += len(chunk)
                 if sent < expected:
                     # http.client returns b"" on early EOF instead of raising.
@@ -189,7 +194,7 @@ class ProxyHandler(BaseHTTPRequestHandler):
             if started:
                 # Mid-stream failure: a second status line would corrupt the
                 # response, so drop the connection and let the client see EOF.
-                self.log_error("mid-stream upstream failure on %s: %r", path, exc)
+                self.log_error("mid-stream upstream failure on %s: %r", path.split("?", 1)[0], exc)
                 self.close_connection = True
                 return
             try:

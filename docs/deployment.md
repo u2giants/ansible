@@ -28,7 +28,7 @@ default-off maintenance gate for one run.
 
 ## Current reality (important)
 
-- **Gated dispatch apply (2026-10-21, #17).** A merge to `main` does **not** apply. Production runs only by `gh workflow run apply.yml --ref main`
+- **Gated dispatch apply (2026-10-21, #17).** A merge to `main` does **not** apply. Production runs only by `gh workflow run apply.yml --ref main -f sha=<reviewed main SHA>` (the run refuses unless that SHA is still the main tip, and checks out exactly it)
   after `ai-task-gates check --before production --reviewer-approval <report>` (the `reviewed-production-dispatch` release) passes
   in a clean checkout whose HEAD equals live GitHub `main`, with an exact-head AI reviewer APPROVE
   of that commit. The dispatch then runs the serialized
