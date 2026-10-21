@@ -39,7 +39,7 @@
   failed_when: ai_devops_toolkit_safe_directories.rc not in [0, 1]
   check_mode: false
 
-- name: Trust the exact governed root-owned checkout for managed-user reads
+- name: Trust the exact governed checkout for managed-user reads
   ansible.builtin.command:
     argv:
       - git
@@ -62,13 +62,23 @@
 - name: Refuse an AI DevOps checkout owned by another account
   ansible.builtin.assert:
     that:
-      - ai_devops_toolkit_checkout.stat.pw_name in [managed_user, ai_devops_toolkit_checkout_owner]
+      - ai_devops_toolkit_checkout.stat.pw_name in [managed_user, ai_devops_toolkit_checkout_owner, 'root']
       - ai_devops_toolkit_checkout.stat.gr_name in [ai_devops_toolkit_group, ai_devops_toolkit_checkout_group]
     fail_msg: >-
       {{ ai_devops_toolkit_path }} is not owned by either the managed account or
       the governed checkout owner. Refusing to rewrite or install through an
       ambiguously owned checkout.
   when: ai_devops_toolkit_checkout.stat.exists
+
+- name: Choose privilege for checkout transitions
+  ansible.builtin.set_fact:
+    # Root is needed while either the declared or the current owner is not the
+    # managed user, so an owner migration (root:ai -> ai:ai, issue #17) can
+    # move, clone and chown entries it does not yet own.
+    ai_devops_toolkit_checkout_become: >-
+      {{ ai_devops_toolkit_checkout_owner != managed_user
+         or (ai_devops_toolkit_checkout.stat.exists
+             and ai_devops_toolkit_checkout.stat.pw_name != managed_user) }}
 
 - name: Inspect the pinned release completion marker
   ansible.builtin.stat:
@@ -111,6 +121,9 @@
   become_user: "{{ managed_user }}"
   environment:
     HOME: "{{ ai_devops_toolkit_home }}"
+    # A read-only check: never refresh the index, so an ai-owned checkout
+    # does not gain a rewritten .git/index on every run (issue #17).
+    GIT_OPTIONAL_LOCKS: "0"
   register: ai_devops_toolkit_status
   changed_when: false
   check_mode: false
@@ -276,7 +289,7 @@
       - "{{ ai_devops_toolkit_backup_path }}"
     removes: "{{ ai_devops_toolkit_path }}"
     creates: "{{ ai_devops_toolkit_backup_path }}"
-  become: "{{ ai_devops_toolkit_checkout_owner != managed_user }}"
+  become: "{{ ai_devops_toolkit_checkout_become | bool }}"
   when: ai_devops_toolkit_requires_history_cutover
 
 - name: Report the planned history cutover during check mode
@@ -295,7 +308,7 @@
     version: "{{ ai_devops_toolkit_version }}"
     update: true
     force: false
-  become: "{{ ai_devops_toolkit_checkout_owner != managed_user }}"
+  become: "{{ ai_devops_toolkit_checkout_become | bool }}"
   environment:
     HOME: "{{ ai_devops_toolkit_home }}"
   when:
@@ -313,7 +326,7 @@
       - -B
       - main
       - "{{ ai_devops_toolkit_version }}"
-  become: "{{ ai_devops_toolkit_checkout_owner != managed_user }}"
+  become: "{{ ai_devops_toolkit_checkout_become | bool }}"
   environment:
     HOME: "{{ ai_devops_toolkit_home }}"
   when:
@@ -386,12 +399,12 @@
       - ")"
       - -print
       - -quit
-  become: "{{ ai_devops_toolkit_checkout_owner != managed_user }}"
+  become: "{{ ai_devops_toolkit_checkout_become | bool }}"
   register: ai_devops_toolkit_ownership_drift
   changed_when: false
   when: not ansible_check_mode
 
-- name: Make the governed checkout readable but not directly mutable by runtime sessions
+- name: Converge the governed checkout ownership and modes
   ansible.builtin.file:
     path: "{{ ai_devops_toolkit_path }}"
     state: directory
@@ -400,7 +413,7 @@
     mode: "u=rwX,g=rX,o="
     recurse: true
     follow: false
-  become: "{{ ai_devops_toolkit_checkout_owner != managed_user }}"
+  become: "{{ ai_devops_toolkit_checkout_become | bool }}"
   when:
     - not ansible_check_mode
     - ai_devops_toolkit_ownership_drift.stdout | default('') | length > 0

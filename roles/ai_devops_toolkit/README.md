@@ -92,17 +92,20 @@ keys at the same pin, remove the completion marker and re-dispatch.
 asserts that owner but never changes the parent, so it cannot take ownership of
 sibling application checkouts such as `/worksp/hiclaw`.
 
-The toolkit checkout itself is different: before the exact installer and globals
-run, the role recursively makes only `/worksp/ai-devops` root-owned and
+The toolkit checkout itself is different (on hetz the declared owner is now `ai`;
+see the end of this file): before the exact installer and globals
+run, the role recursively makes only `/worksp/ai-devops` owned by the declared owner and
 readable/executable by `ai`, with no access for other users and no group write
 permission. It also
 adds that exact path to the managed user's Git `safe.directory` list so doctors
-and installed commands can inspect the governed checkout. This makes direct,
-in-place non-sudo commits, pulls, and edits of linked
-production commands fail before a tagged Ansible deployment establishes the matching
-manifest and completion marker. Git release transitions run through root; the
-installer, globals adoption, and doctor continue as `ai` and are verified not to
-need checkout write access. The `ai` account retains host-management sudo for the
+and installed commands can inspect the governed checkout. With a `root` owner
+(the role default) this makes direct, in-place non-sudo commits, pulls, and edits
+of linked production commands fail, and Git release transitions run through
+root. With the hetz `ai` owner, `ai` can write the checkout and Git transitions
+run as `ai`; drift is then caught only by the clean-tree and revision checks.
+The installer, globals adoption, and doctor run as `ai` either way, and after an
+ai-devops self-advance the next run re-chmods new entries (including `.git`) to
+the managed `0640`/`0750` modes once, then converges to zero. The `ai` account retains host-management sudo for the
 governed Ansible route, so ownership is an accidental-drift guardrail rather than
 a security boundary against an explicitly privileged manual command. Because
 the shared `/worksp` parent remains `ai`-owned, it also does not prevent a
@@ -112,7 +115,7 @@ Sibling checkouts are never touched.
 
 Before applying recursive ownership, the role performs a non-following tree
 audit confined to the checkout's filesystem. It skips the operation when every
-same-filesystem, non-symlink entry is already exactly `root:ai` with the managed
+same-filesystem, non-symlink entry is already exactly the declared owner and group with the managed
 `0640`/`0750` modes. This keeps repeat deployments at zero changes while
 retaining self-healing when any real drift is found.
 
@@ -136,8 +139,7 @@ ansible-playbook playbooks/site.yml -l hetzner \
 After every apply, the checkout must equal `ai_devops_toolkit_version` or be an
 accepted self-advanced descendant of it (below),
 `ai-devops doctor` must pass, and a second tagged run must report zero changes.
-The checkout root must be owned by `root:ai` at mode `0750`; a write attempt by
-the `ai` runtime user must fail.
+The checkout root must be owned by the declared owner (hetz: `ai:ai`) at mode `0750`.
 After a history cutover, the fixed backup must also contain the predecessor
 commit. Before writing its completion marker, the role proves the installer did
 not recreate the retired `ai-memory-sync` schedule.
@@ -167,3 +169,11 @@ once. A checkout behind a newer remote tip is accepted. Local-only commits,
 non-descendant history, detached HEAD, a dirty tree, or an unreachable remote
 still fail closed (the refusal names which). A privileged manual fast-forward to a real `main` commit is
 indistinguishable from `update.sh`, which is the accepted trust boundary.
+
+On hetz the inventory sets `ai_devops_toolkit_checkout_owner` to the managed
+user (`ai`). ai-devops' protected `update.sh` advances the installed checkout as
+`ai` (fetch, fast-forward, install), so a root-owned checkout made every
+reviewed toolkit update fail with `cannot open .git/FETCH_HEAD` (issue #17).
+The ownership was only an accidental-drift guardrail (`ai` has host sudo); the
+toolkit's own `reference-transaction` guard (ai-devops #1836) now refuses HEAD
+moves outside its installer. The role default stays `root` for other hosts.
