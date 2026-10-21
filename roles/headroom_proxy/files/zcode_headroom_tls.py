@@ -142,6 +142,7 @@ class ProxyHandler(BaseHTTPRequestHandler):
         else:
             conn = http.client.HTTPConnection(host, port, timeout=180)
 
+        started = False  # True once the response headers have gone to the client
         try:
             conn.request(self.command, path, body=body or None, headers=headers)
             resp = conn.getresponse()
@@ -155,11 +156,13 @@ class ProxyHandler(BaseHTTPRequestHandler):
             has_length = "content-length" in {k.lower() for k, _ in resp.getheaders()}
             if no_body:
                 self.end_headers()
+                started = True
             elif not has_length:
                 # read1 returns as soon as bytes arrive, so SSE events stream
                 # through instead of waiting for an 8 KiB buffer to fill.
                 self.send_header("Transfer-Encoding", "chunked")
                 self.end_headers()
+                started = True
                 while True:
                     chunk = resp.read1(8192)
                     if not chunk:
@@ -169,13 +172,26 @@ class ProxyHandler(BaseHTTPRequestHandler):
                     self.wfile.flush()
             else:
                 self.end_headers()
+                started = True
+                expected = int(resp.getheader("Content-Length", "0") or 0)
+                sent = 0
                 while True:
                     chunk = resp.read(65536)
                     if not chunk:
                         break
                     self.wfile.write(chunk)
+                    sent += len(chunk)
+                if sent < expected:
+                    # http.client returns b"" on early EOF instead of raising.
+                    raise http.client.IncompleteRead(b"", expected - sent)
             self.wfile.flush()
         except Exception as exc:  # noqa: BLE001 - surface proxy failure to client
+            if started:
+                # Mid-stream failure: a second status line would corrupt the
+                # response, so drop the connection and let the client see EOF.
+                self.log_error("mid-stream upstream failure on %s: %r", path, exc)
+                self.close_connection = True
+                return
             try:
                 payload = f"upstream error: {exc}\n".encode()
                 self.send_response(502, "Bad Gateway")
