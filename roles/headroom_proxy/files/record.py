@@ -7,12 +7,30 @@ OUT = '/home/ai/headroom-perf/perf.csv'
 LOGS = ['/home/ai/.headroom/logs/proxy.log'] + sorted(glob.glob('/home/ai/.headroom/logs/proxy.log.[0-9]'))
 COLS = ['ts','reqid','model','msgs','tok_before','tok_after','tok_saved',
         'cache_read','cache_write','cache_hit_pct','transforms']
-PAT = re.compile(
-    r'^(?P<ts>\d{4}-\d\d-\d\d \d\d:\d\d:\d\d),\d+ .*?\[(?P<reqid>hr_[0-9_]+)\] PERF '
-    r'model=(?P<model>\S+) msgs=(?P<msgs>\d+) tok_before=(?P<tok_before>\d+) '
-    r'tok_after=(?P<tok_after>\d+) tok_saved=(?P<tok_saved>\d+) .*?'
-    r'cache_read=(?P<cache_read>\d+) cache_write=(?P<cache_write>\d+) '
-    r'cache_hit_pct=(?P<cache_hit_pct>[\d.]+).*?transforms=(?P<transforms>\S+)')
+# Header up to the PERF marker; the rest is parsed as key=value pairs, so new
+# fields or reordering in later headroom releases cannot silently drop rows.
+HEAD = re.compile(r'^(?P<ts>\d{4}-\d\d-\d\d \d\d:\d\d:\d\d),\d+ .*?\[(?P<reqid>hr_[0-9_]+)\] PERF (?P<tail>.*)$')
+KV = re.compile(r'(?:^| )([a-z_]+)=(\S*)')
+NUMERIC = {'msgs','tok_before','tok_after','tok_saved','cache_read','cache_write','cache_hit_pct'}
+
+
+def parse(line):
+    m = HEAD.match(line)
+    if not m:
+        return None
+    fields = {}
+    for key, value in KV.findall(m.group('tail')):
+        fields.setdefault(key, value)  # first occurrence wins
+    if not all(k in fields for k in NUMERIC | {'model'}):
+        return None
+    if not all(re.fullmatch(r'[\d.]+', fields[k]) for k in NUMERIC):
+        return None
+    r = {c: fields.get(c, '') for c in COLS}
+    r['ts'], r['reqid'] = m.group('ts'), m.group('reqid')
+    # transforms is space-separated: keep everything from transforms= to the next key=
+    t = re.search(r'(?:^| )transforms=(.*?)(?= [a-z_]+=|$)', m.group('tail'))
+    r['transforms'] = t.group(1).split(' ')[0] if t else ''
+    return r
 
 rows = {}
 if os.path.exists(OUT):
@@ -28,10 +46,9 @@ for path in LOGS:
         continue
     with fh:
         for line in fh:
-            m = PAT.match(line)
-            if not m:
+            r = parse(line.rstrip('\n'))
+            if not r:
                 continue
-            r = m.groupdict()
             if r['reqid'] not in rows:
                 rows[r['reqid']] = r
                 added += 1

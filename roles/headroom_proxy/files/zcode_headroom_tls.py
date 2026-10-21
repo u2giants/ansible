@@ -42,34 +42,81 @@ HOP_BY_HOP = {
 }
 
 
+# Largest request body accepted (prompts with long context stay far below this).
+MAX_BODY = 64 * 1024 * 1024
+
+
+class BadRequest(Exception):
+    """Malformed or truncated client request body."""
+
+
 class ProxyHandler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
+    timeout = 300  # a client that stalls mid-request is dropped, not waited on forever
     server_version = "zcode-headroom-tls/1.0"
 
     def log_message(self, fmt: str, *args) -> None:
         sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
 
+    def _read_exact(self, n: int) -> bytes:
+        data = self.rfile.read(n)
+        if len(data) != n:
+            raise BadRequest("request body truncated")
+        return data
+
     def _read_body(self) -> bytes:
         if "chunked" in self.headers.get("Transfer-Encoding", "").lower():
-            parts = []
+            parts, total = [], 0
             while True:
-                size = int(self.rfile.readline().split(b";", 1)[0].strip() or b"0", 16)
+                line = self.rfile.readline(1024)
+                if not line.endswith(b"\n"):
+                    raise BadRequest("truncated chunk size line")
+                token = line.split(b";", 1)[0].strip()
+                if not token or any(c not in b"0123456789abcdefABCDEF" for c in token) or len(token) > 8:
+                    raise BadRequest("invalid chunk size")
+                size = int(token, 16)
                 if size == 0:
-                    while self.rfile.readline() not in (b"\r\n", b"\n", b""):
-                        pass  # discard trailers
-                    return b"".join(parts)
-                parts.append(self.rfile.read(size))
-                self.rfile.readline()  # CRLF after each chunk
+                    while True:  # discard trailers up to the blank line
+                        trailer = self.rfile.readline(8192)
+                        if not trailer.endswith(b"\n"):
+                            raise BadRequest("truncated chunk trailer")
+                        if trailer in (b"\r\n", b"\n"):
+                            return b"".join(parts)
+                total += size
+                if total > MAX_BODY:
+                    raise BadRequest("request body too large")
+                parts.append(self._read_exact(size))
+                if self.rfile.readline(3) not in (b"\r\n", b"\n"):
+                    raise BadRequest("missing CRLF after chunk")
         length = self.headers.get("Content-Length")
         if not length:
             return b""
+        if not length.strip().isdigit():
+            raise BadRequest("invalid Content-Length")
         n = int(length)
-        if n <= 0:
-            return b""
-        return self.rfile.read(n)
+        if n > MAX_BODY:
+            raise BadRequest("request body too large")
+        return self._read_exact(n) if n else b""
+
+    def _reply(self, status: int, reason: str, text: str) -> None:
+        payload = f"{text}\n".encode()
+        self.send_response(status, reason)
+        self.send_header("Content-Type", "text/plain")
+        self.send_header("Content-Length", str(len(payload)))
+        self.send_header("Connection", "close")
+        self.end_headers()
+        self.wfile.write(payload)
+        self.close_connection = True
 
     def _forward(self) -> None:
-        body = self._read_body()
+        try:
+            body = self._read_body()
+        except (BadRequest, OSError) as exc:
+            try:
+                self._reply(400, "Bad Request", f"bad request: {exc}")
+            except Exception:
+                pass
+            return
         path = self.path
         if path.startswith(HANDSHAKE_PREFIX):
             host, port, use_tls = HANDSHAKE_HOST, HANDSHAKE_PORT, True
@@ -78,7 +125,7 @@ class ProxyHandler(BaseHTTPRequestHandler):
 
         headers = {}
         for key, value in self.headers.items():
-            if key.lower() in HOP_BY_HOP:
+            if key.lower() in HOP_BY_HOP or key.lower() == "content-length":
                 continue
             headers[key] = value
         headers["Host"] = f"{host}:{port}" if use_tls else f"{host}:{port}"
@@ -103,11 +150,8 @@ class ProxyHandler(BaseHTTPRequestHandler):
                 if key.lower() in HOP_BY_HOP:
                     continue
                 self.send_header(key, value)
-            no_body = (
-                self.command == "HEAD"
-                or resp.status in (204, 304)
-                or 100 <= resp.status < 200
-            )
+            # http.client consumes interim 1xx itself; only these carry no body.
+            no_body = self.command == "HEAD" or resp.status in (204, 304)
             has_length = "content-length" in {k.lower() for k, _ in resp.getheaders()}
             if no_body:
                 self.end_headers()
@@ -126,11 +170,10 @@ class ProxyHandler(BaseHTTPRequestHandler):
             else:
                 self.end_headers()
                 while True:
-                    chunk = resp.read1(8192)
+                    chunk = resp.read(65536)
                     if not chunk:
                         break
                     self.wfile.write(chunk)
-                    self.wfile.flush()
             self.wfile.flush()
         except Exception as exc:  # noqa: BLE001 - surface proxy failure to client
             try:
