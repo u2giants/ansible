@@ -13,9 +13,12 @@ class H(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
     def log_message(self, *a): pass
     def do_GET(self):
-        if self.path == "/cut":
+        if self.path == "/cut":  # declared length never reached
             self.send_response(200); self.send_header("Content-Length", "100"); self.end_headers()
             self.wfile.write(b"partial"); self.wfile.flush(); self.close_connection = True
+        elif self.path == "/cutchunk":  # chunk shorter than its declared size
+            self.send_response(200); self.send_header("Transfer-Encoding", "chunked"); self.end_headers()
+            self.wfile.write(b"7\r\npartial\r\n40\r\nshort"); self.wfile.flush(); self.close_connection = True
         elif self.path == "/sse":
             self.send_response(200); self.send_header("Content-Type", "text/event-stream")
             self.send_header("Connection", "close"); self.end_headers()
@@ -54,18 +57,23 @@ python3 -c "import sys; t=[float(x) for x in sys.argv[1:]]; assert t[2]-t[0] > 1
 [[ "$(curl -sk -H 'content-length: 5' --data-binary 'abcde' https://127.0.0.1:18443/echo)" == 'abcde|cl=1' ]]
 
 python3 -I - <<'EOF'
-import socket, ssl
+import socket, ssl, time
 ctx = ssl._create_unverified_context()
-# Upstream dies mid-body: exactly one status line, no trailing 502, then EOF.
-s = ctx.wrap_socket(socket.create_connection(("127.0.0.1", 18443)), server_hostname="x")
-s.settimeout(8); s.sendall(b"GET /cut HTTP/1.1\r\nHost: x\r\n\r\n")
-got = b""
-while True:
-    d = s.recv(4096)
-    if not d:
-        break
-    got += d
-assert got.count(b"HTTP/1.1 ") == 1 and b"502" not in got and b"partial" in got, got
+# Upstream dies mid-body: exactly one status line, no trailing 502, and the
+# front closes at once (well inside its 3 s test idle timeout).
+for route in (b"/cut", b"/cutchunk"):
+    s = ctx.wrap_socket(socket.create_connection(("127.0.0.1", 18443)), server_hostname="x")
+    s.settimeout(8); t0 = time.monotonic()
+    s.sendall(b"GET " + route + b" HTTP/1.1\r\nHost: x\r\n\r\n")
+    got = b""
+    while True:
+        d = s.recv(4096)
+        if not d:
+            break
+        got += d
+    took = time.monotonic() - t0
+    assert got.count(b"HTTP/1.1 ") == 1 and b"502" not in got and b"partial" in got, (route, got)
+    assert took < 1.5, (route, took)
 EOF
 
 python3 -I - <<'EOF'
