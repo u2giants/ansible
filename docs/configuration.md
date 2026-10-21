@@ -34,7 +34,7 @@ see [`deployment.md`](deployment.md).
 | `managed_user` | `ai` | passwordless sudo user |
 | `ai_devops_toolkit_version` | `b3a8d606daa4093f70508da6265d7c3f8265c71f` (issue #17; see release evidence below) | reviewed toolkit floor; self-advanced `main` descendants are accepted |
 | `ai_devops_toolkit_checkout_owner` | `ai` (`managed_user`; role default `root`) | ai-devops `update.sh` advances the checkout as `ai`, and its #1836 guard protects HEAD; root ownership made every reviewed toolkit update fail (issue #17) |
-| `ai_devops_toolkit_checkout_group` | `ai` | runtime sessions retain read/execute access without direct write authority |
+| `ai_devops_toolkit_checkout_group` | `ai` | group of the governed checkout (owner is now `ai` too, so runtime sessions can write it; drift is caught by the role's clean-tree and revision checks) |
 | `ai_devops_toolkit_backup_path` | `/worksp/ai-devops-pre-rewrite-20260822` | fixed recoverable predecessor checkout |
 | `dns_fallback_servers` | `1.1.1.1 1.0.0.1 8.8.8.8 8.8.4.4` | resolved FallbackDNS |
 | `docker_ce_version` | `5:29.6.0-1~ubuntu.24.04~noble` | pinned/held |
@@ -195,6 +195,9 @@ completion marker and reported `changed=4`, `unreachable=0`, `failed=0`. Live
 checkout, manifest, marker, retired-schedule, and doctor checks all passed. Exact
 tagged rerun `32680940940` reported `changed=0`, `unreachable=0`, and `failed=0`;
 both predecessor allowlists remain empty.
+
+Superseded 2026-10-21 (issue #17): the checkout is now owned by `ai`, because
+ai-devops' reviewed `update.sh` advances it as `ai`; the paragraph below is history.
 
 On 2026-08-24, exact Claude-approved Ansible commit
 `16c614753c40088e7293b02140dcc8266936f906` made only the toolkit checkout

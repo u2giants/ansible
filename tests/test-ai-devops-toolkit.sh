@@ -18,7 +18,7 @@ trap 'rm -rf "$TMP_ROOT"' EXIT
 
 grep -q '^ai_devops_toolkit_checkout_owner: root$' \
   "$REPO_ROOT/roles/ai_devops_toolkit/defaults/main.yml"
-grep -q 'Make the governed checkout readable but not directly mutable by runtime sessions' \
+grep -q 'Converge the governed checkout ownership and modes' \
   "$REPO_ROOT/roles/ai_devops_toolkit/tasks/main.yml"
 grep -A8 -q 'follow: false' "$REPO_ROOT/roles/ai_devops_toolkit/tasks/main.yml"
 
@@ -338,5 +338,20 @@ secrets_second="$(AI_DEVOPS_OP_SA_TOKEN=test-sa-token run_role "$secrets_target"
   "$secrets_state" "$retry_predecessor" "$symlink_release")"
 grep -Eq 'changed=0' <<< "$secrets_second"
 rm -f "$home_dir/expect-require-secrets"
+
+# hetz migrates its root:ai checkout to the managed user so ai-devops' own
+# update.sh (run as ai) can advance it (issue #17): the role must accept the
+# root-owned checkout, chown it with root, and then converge to zero.
+if [[ "$root_integration" -eq 1 ]]; then
+  [[ "$(stat -c %U "$target")" == root ]]
+  checkout_owner="$managed_user"
+  run_role "$target" "$backup" "$state" "$predecessor" >/dev/null
+  [[ "$(stat -c %U "$target")" == "$managed_user" ]]
+  [[ -z "$(find "$target" -xdev ! -type l ! -user "$managed_user" -print -quit)" ]]
+  [[ "$(git -C "$target" rev-parse HEAD)" == "$release" ]]
+  migrated_second="$(run_role "$target" "$backup" "$state" "$predecessor")"
+  grep -Eq 'changed=0' <<< "$migrated_second"
+  checkout_owner=root
+fi
 
 echo "PASS: AI DevOps toolkit cutover, protected ownership, partial-release upgrade, self-advanced descendant, and idempotence are recoverable"

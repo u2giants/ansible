@@ -92,8 +92,9 @@ keys at the same pin, remove the completion marker and re-dispatch.
 asserts that owner but never changes the parent, so it cannot take ownership of
 sibling application checkouts such as `/worksp/hiclaw`.
 
-The toolkit checkout itself is different: before the exact installer and globals
-run, the role recursively makes only `/worksp/ai-devops` root-owned and
+The toolkit checkout itself is different (on hetz the declared owner is now `ai`;
+see the end of this file): before the exact installer and globals
+run, the role recursively makes only `/worksp/ai-devops` owned by the declared owner and
 readable/executable by `ai`, with no access for other users and no group write
 permission. It also
 adds that exact path to the managed user's Git `safe.directory` list so doctors
@@ -112,7 +113,7 @@ Sibling checkouts are never touched.
 
 Before applying recursive ownership, the role performs a non-following tree
 audit confined to the checkout's filesystem. It skips the operation when every
-same-filesystem, non-symlink entry is already exactly `root:ai` with the managed
+same-filesystem, non-symlink entry is already exactly the declared owner and group with the managed
 `0640`/`0750` modes. This keeps repeat deployments at zero changes while
 retaining self-healing when any real drift is found.
 
@@ -136,8 +137,7 @@ ansible-playbook playbooks/site.yml -l hetzner \
 After every apply, the checkout must equal `ai_devops_toolkit_version` or be an
 accepted self-advanced descendant of it (below),
 `ai-devops doctor` must pass, and a second tagged run must report zero changes.
-The checkout root must be owned by `root:ai` at mode `0750`; a write attempt by
-the `ai` runtime user must fail.
+The checkout root must be owned by the declared owner (hetz: `ai:ai`) at mode `0750`.
 After a history cutover, the fixed backup must also contain the predecessor
 commit. Before writing its completion marker, the role proves the installer did
 not recreate the retired `ai-memory-sync` schedule.
