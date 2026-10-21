@@ -9,7 +9,7 @@ those).
 > or `crontab -e`. Manual changes are drift and get reverted by the next apply.
 
 Developer-computer management is a separate, opt-in path. It is not part of
-the Hetz production `site.yml`/auto-apply pipeline. A new Windows machine first
+the Hetz production `site.yml`/gated-dispatch apply pipeline. A new Windows machine first
 runs the minimum-touch bootstrap from `u2giants/ai-devops`; that establishes
 Tailscale/OpenSSH and a WSL Ansible controller before this repository manages
 Windows and Ubuntu computers through `playbooks/dev-computers.yml`.
