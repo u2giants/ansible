@@ -237,6 +237,7 @@ BIN  ai-install-completion-check-hook
 BIN  ai-install-manifest
 BIN  ai-install-memory-hook
 BIN  ai-install-post-merge-hook
+BIN  ai-install-pr-poll-guard-hook
 BIN  ai-install-session-tmp
 BIN  ai-install-skills
 BIN  ai-jev-completion-shadow
@@ -259,12 +260,14 @@ BIN  ai-oracle-native-alternate-v2
 BIN  ai-private-config
 BIN  ai-process-supervisor
 BIN  ai-provider-version
+BIN  ai-pr-poll-guard-hook
 BIN  ai-pr-wait
 BIN  ai-public-boundary-check
 BIN  ai-qwen
 BIN  ai-qwen-cli
 BIN  ai-reap-shared-db-worktrees
 BIN  ai-release-live-check
+BIN  ai-render-globals
 BIN  ai-repo-identity
 BIN  ai-repo-policy
 BIN  ai-review
