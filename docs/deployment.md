@@ -14,7 +14,7 @@ This project deploys **configuration to a host**, not images or packages. "Deplo
 | Workflow | Trigger | What it does | Applies changes? |
 |---|---|---|---|
 | `.github/workflows/check.yml` | pull request to `main`; manual dispatch | `ansible-lint` + `ansible-playbook --check --diff` (phase1) against `hetz`; posts the diff to the PR or the manual run summary | no (read-only) |
-| `.github/workflows/apply.yml` | push to `main`; manual dispatch | serialized by `concurrency: apply-hetzner`; runs the real apply **only if repo variable `ENABLE_AUTO_APPLY == 'true'`**, otherwise `--check` only | gated |
+| `.github/workflows/apply.yml` | manual dispatch from `main` only (merge does not apply) | serialized by `concurrency: apply-hetzner`; runs the real apply **only if repo variable `ENABLE_AUTO_APPLY == 'true'`**, otherwise `--check` only | gated |
 | `.github/workflows/drift.yml` | daily cron 03:00 UTC; manual | `--check --diff` (phase1); fails/alerts on drift | no (never applies) |
 | `.github/workflows/task-gates.yml` | pull request to `main`; push to `main`; manual dispatch | verifies repository-wide infrastructure classification and protected-action refusals using the public pinned task-gate engine | no (verification only) |
 
@@ -28,9 +28,13 @@ default-off maintenance gate for one run.
 
 ## Current reality (important)
 
-- **CI auto-apply is enabled.** `ENABLE_AUTO_APPLY=true`, and pushes to `main` run the serialized
-  Phase 1 apply through the authenticated Tailscale/1Password path.
-- **Routine applies are automated.** Direct SSH is for read-only verification and exceptional
+- **Gated dispatch apply (2026-10-21, #17).** A merge to `main` does **not** apply. Production runs only by `gh workflow run apply.yml --ref main`
+  after `ai-task-gates check --before production --reviewer-approval <report>` (the `reviewed-production-dispatch` release) passes
+  in a clean checkout whose HEAD equals live GitHub `main`, with an exact-head AI reviewer APPROVE
+  of that commit. The dispatch then runs the serialized
+  Phase 1 apply through the authenticated Tailscale/1Password path (`ENABLE_AUTO_APPLY=true` still
+  gates real apply vs `--check`). Merging is therefore never itself a production action.
+- **Routine applies go through that dispatch.** Direct SSH is for read-only verification and exceptional
   recovery only. Phase 2 remains gated and is not applied.
 
 Emergency manual fallback command (Phase 1; connects as the managed `ai` user):

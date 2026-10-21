@@ -1,16 +1,12 @@
 name: apply
 
-# On merge to main: the SINGLE, SERIALIZED apply point (plan §5). Two merges never apply at
-# once. GATED: the real apply only runs when the repo variable ENABLE_AUTO_APPLY == 'true'.
-# ENABLE_AUTO_APPLY is currently true; routine pushes therefore apply Phase 1.
+# The SINGLE, SERIALIZED production apply point (plan §5). Merging to main does NOT apply:
+# production runs only by manual dispatch from main, after `ai-task-gates check --before
+# production` passes on that exact clean main HEAD with an exact-head AI reviewer APPROVE
+# (docs/deployment.md). GATED: the real apply only runs when ENABLE_AUTO_APPLY == 'true'.
 # The default-off toolkit maintenance role still requires its exact manual tag.
 
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - 'docs/**'
-      - '**/*.md'
   workflow_dispatch:
     inputs:
       tags:
@@ -30,6 +26,11 @@ jobs:
     runs-on: ubuntu-latest
     environment: production    # add required reviewers here for a manual approval gate
     steps:
+      - name: Refuse a dispatch from any ref but main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Production applies dispatch only from main (got $GITHUB_REF)"
+          exit 1
       - uses: actions/checkout@v4
       - name: Refuse an ambiguous toolkit maintenance dispatch
         if: github.event_name == 'workflow_dispatch'

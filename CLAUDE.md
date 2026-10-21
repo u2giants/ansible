@@ -8,7 +8,7 @@ Claude-Code-specific notes that do not belong in `AGENTS.md`.
 
 - **Ignore files:** `.claudeignore` controls what Claude Code skips. Keep it aligned with the
   "What to ignore" section of `AGENTS.md`.
-- **SSH / applies:** pushes to `main` run the serialized Phase 1 production apply (see
+- **SSH / applies:** production applies run only by the gated manual `apply.yml` dispatch from `main` (see
   `docs/deployment.md`). Direct SSH is exceptional and is used for read-only verification or
   recovery, never as a substitute for an Ansible source change.
 - **Allowed tooling:** `gh` for GitHub, `ansible*` via WSL, `ssh vps` for the host. The owner's
