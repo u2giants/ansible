@@ -142,9 +142,11 @@ class ProxyHandler(BaseHTTPRequestHandler):
         else:
             conn = http.client.HTTPConnection(host, port, timeout=180)
 
+        started = False  # True once the status line has gone to the client
         try:
             conn.request(self.command, path, body=body or None, headers=headers)
             resp = conn.getresponse()
+            started = True
             self.send_response_only(resp.status, resp.reason)
             for key, value in resp.getheaders():
                 if key.lower() in HOP_BY_HOP:
@@ -176,6 +178,11 @@ class ProxyHandler(BaseHTTPRequestHandler):
                     self.wfile.write(chunk)
             self.wfile.flush()
         except Exception as exc:  # noqa: BLE001 - surface proxy failure to client
+            if started:
+                # Mid-stream failure: a second status line would corrupt the
+                # response, so drop the connection and let the client see EOF.
+                self.close_connection = True
+                return
             try:
                 payload = f"upstream error: {exc}\n".encode()
                 self.send_response(502, "Bad Gateway")

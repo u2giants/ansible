@@ -13,7 +13,10 @@ class H(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
     def log_message(self, *a): pass
     def do_GET(self):
-        if self.path == "/sse":
+        if self.path == "/cut":
+            self.send_response(200); self.send_header("Content-Length", "100"); self.end_headers()
+            self.wfile.write(b"partial"); self.wfile.flush(); self.close_connection = True
+        elif self.path == "/sse":
             self.send_response(200); self.send_header("Content-Type", "text/event-stream")
             self.send_header("Connection", "close"); self.end_headers()
             for i in range(3):
@@ -53,6 +56,21 @@ python3 -c "import sys; t=[float(x) for x in sys.argv[1:]]; assert t[2]-t[0] > 1
 python3 -I - <<'EOF'
 import socket, ssl
 ctx = ssl._create_unverified_context()
+# Upstream dies mid-body: exactly one status line, no trailing 502, then EOF.
+s = ctx.wrap_socket(socket.create_connection(("127.0.0.1", 18443)), server_hostname="x")
+s.settimeout(8); s.sendall(b"GET /cut HTTP/1.1\r\nHost: x\r\n\r\n")
+got = b""
+while True:
+    d = s.recv(4096)
+    if not d:
+        break
+    got += d
+assert got.count(b"HTTP/1.1 ") == 1 and b"502" not in got and b"partial" in got, got
+EOF
+
+python3 -I - <<'EOF'
+import socket, ssl
+ctx = ssl._create_unverified_context()
 def first_line(req, wait=8):
     s = ctx.wrap_socket(socket.create_connection(("127.0.0.1", 18443)), server_hostname="x")
     s.settimeout(wait); s.sendall(req)
@@ -72,6 +90,11 @@ line = ("2026-10-21 07:23:25,622 - headroom.proxy - INFO - [hr_1_2] PERF model=m
         "cache_write=1 cache_hit_pct=100 opt_ms=3 transforms=a:b c:d client=x")
 r = ns['parse'](line)
 assert r and r['tok_saved'] == '2' and r['cache_read'] == '7' and r['transforms'] == 'a:b', r
+old = ("2026-10-19 07:23:25,622 - headroom.proxy - INFO - [hr_3_4] PERF model=m msgs=9 "
+       "tok_before=10 tok_after=8 tok_saved=2 cache_read=7 cache_write=1 cache_hit_pct=100 "
+       "transforms=a:b")
+r = ns['parse'](old)
+assert r and r['reqid'] == 'hr_3_4' and r['cache_write'] == '1' and r['transforms'] == 'a:b', r
 assert ns['parse']("2026-10-21 07:23:25,622 - x - INFO - [hr_1_2] PERF model=m msgs=1") is None
 EOF
 echo "PASS: headroom TLS front streams, frames, de-chunks and rejects bad bodies; PERF recorder parses 0.41"
