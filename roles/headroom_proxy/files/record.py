@@ -10,7 +10,7 @@ COLS = ['ts','reqid','model','msgs','tok_before','tok_after','tok_saved',
 PAT = re.compile(
     r'^(?P<ts>\d{4}-\d\d-\d\d \d\d:\d\d:\d\d),\d+ .*?\[(?P<reqid>hr_[0-9_]+)\] PERF '
     r'model=(?P<model>\S+) msgs=(?P<msgs>\d+) tok_before=(?P<tok_before>\d+) '
-    r'tok_after=(?P<tok_after>\d+) tok_saved=(?P<tok_saved>\d+) '
+    r'tok_after=(?P<tok_after>\d+) tok_saved=(?P<tok_saved>\d+) .*?'
     r'cache_read=(?P<cache_read>\d+) cache_write=(?P<cache_write>\d+) '
     r'cache_hit_pct=(?P<cache_hit_pct>[\d.]+).*?transforms=(?P<transforms>\S+)')
 

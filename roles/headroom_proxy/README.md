@@ -16,5 +16,7 @@ after a rebuild, tailnet clients must trust the new `ca.crt`.
 Security: both proxies run with `HEADROOM_ALLOW_UNAUTHENTICATED_BIND=1` on the tailnet address and
 the TLS front has no auth — the Tailscale ACL is the only access control.
 
-Known live defects (preserved verbatim, tracked on issue #17): `record.py` regex no longer matches
-headroom 0.41 PERF lines; TLS front buffers streamed responses; `StartLimit*` keys sit in `[Service]`.
+Defects found by the 2026-10-20 audit, fixed 2026-10-21 (issue #17): `record.py` now tolerates the
+extra headroom 0.41 PERF fields; the TLS front streams responses as they arrive, sends no body or
+chunk framing for HEAD/1xx/204/304, and de-chunks chunked request bodies; `StartLimit*` moved to
+`[Unit]`.

@@ -50,6 +50,16 @@ class ProxyHandler(BaseHTTPRequestHandler):
         sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
 
     def _read_body(self) -> bytes:
+        if "chunked" in self.headers.get("Transfer-Encoding", "").lower():
+            parts = []
+            while True:
+                size = int(self.rfile.readline().split(b";", 1)[0].strip() or b"0", 16)
+                if size == 0:
+                    while self.rfile.readline() not in (b"\r\n", b"\n", b""):
+                        pass  # discard trailers
+                    return b"".join(parts)
+                parts.append(self.rfile.read(size))
+                self.rfile.readline()  # CRLF after each chunk
         length = self.headers.get("Content-Length")
         if not length:
             return b""
@@ -93,22 +103,34 @@ class ProxyHandler(BaseHTTPRequestHandler):
                 if key.lower() in HOP_BY_HOP:
                     continue
                 self.send_header(key, value)
-            if "Content-Length" not in {k.title() for k, _ in resp.getheaders()}:
+            no_body = (
+                self.command == "HEAD"
+                or resp.status in (204, 304)
+                or 100 <= resp.status < 200
+            )
+            has_length = "content-length" in {k.lower() for k, _ in resp.getheaders()}
+            if no_body:
+                self.end_headers()
+            elif not has_length:
+                # read1 returns as soon as bytes arrive, so SSE events stream
+                # through instead of waiting for an 8 KiB buffer to fill.
                 self.send_header("Transfer-Encoding", "chunked")
                 self.end_headers()
                 while True:
-                    chunk = resp.read(8192)
+                    chunk = resp.read1(8192)
                     if not chunk:
                         self.wfile.write(b"0\r\n\r\n")
                         break
                     self.wfile.write(f"{len(chunk):x}\r\n".encode() + chunk + b"\r\n")
+                    self.wfile.flush()
             else:
                 self.end_headers()
                 while True:
-                    chunk = resp.read(8192)
+                    chunk = resp.read1(8192)
                     if not chunk:
                         break
                     self.wfile.write(chunk)
+                    self.wfile.flush()
             self.wfile.flush()
         except Exception as exc:  # noqa: BLE001 - surface proxy failure to client
             try:
