@@ -253,7 +253,7 @@ This is the heart of the "7 AI sessions can't collide" guarantee. Design:
 1. Any change to the host is made by **editing this repo and opening a PR** — never by SSHing in.
 2. **On PR:** CI runs `ansible-lint` + `ansible-playbook --check --diff` against the server (read-only
    dry run) and posts the diff. The human reviews what *would* change.
-3. **On merge to `main`:** CI runs `ansible-playbook` for real. **Concurrency is serialized** so two
+3. **On merge to `main`:** CI runs `ansible-playbook` for real. *(Superseded 2026-10-21: merges no longer apply; production is a gated `apply.yml` dispatch of the exact reviewed `main` SHA — see `docs/deployment.md`. The serialization below still holds.)* **Concurrency is serialized** so two
    merges never apply at once:
    ```yaml
    concurrency:

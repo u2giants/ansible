@@ -90,7 +90,7 @@ Secrets: scoped 1Password service account, vault `vibe_coding`, provided through
 Package manifests are a conservative baseline and should be expanded only from
 an approved inventory. The roles have not yet been proven on disposable hosts.
 Windows OpenSSH capability installation can depend on Windows Update and may
-stall, as observed on 4837. The existing production auto-apply path uses
+stall, as observed on 4837. The existing production apply path (gated `apply.yml` dispatch) uses
 `site.yml`; the new dev-computer playbook is separate and is not wired to CI.
 
 The Windows secret-backed setup must run under `pwsh` (PowerShell 7), not the
@@ -424,8 +424,9 @@ If the credential is ever replaced again:
    `gh secret set OP_SERVICE_ACCOUNT_TOKEN --repo u2giants/ansible` through
    standard input without printing or writing it. You will know GitHub accepted
    it when `gh secret list --repo u2giants/ansible` shows a new `updatedAt`.
-3. Run `gh workflow run apply.yml --repo u2giants/ansible -f
-   tags=retired_platform_cleanup`. You will know the account works and the host
+3. Run `gh workflow run apply.yml --repo u2giants/ansible --ref main -f
+   tags=retired_platform_cleanup -f sha=<reviewed main SHA>` after the production gate passes
+   on that SHA (`docs/deployment.md`). You will know the account works and the host
    is converged when “Load secrets from 1Password” succeeds and the recap says
    `changed=0 failed=0`.
 4. Only after step 3 succeeds, revoke the superseded service account. You will

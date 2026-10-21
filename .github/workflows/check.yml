@@ -32,6 +32,8 @@ jobs:
         run: bash tests/test-ai-devops-toolkit.sh
       - name: Test headroom TLS front and PERF recorder
         run: bash tests/test-headroom-proxy.sh
+      - name: Test apply workflow invariants
+        run: bash tests/test-apply-workflow.sh
       - name: Syntax check
         run: ansible-playbook playbooks/site.yml --syntax-check
 
