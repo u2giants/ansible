@@ -210,7 +210,7 @@ cause drift. Phased plan with hard gates: [`docs/ANSIBLE-IMPLEMENTATION-PLAN.md`
   (broke the SSH username), SSH key trailing newline, and the drift grep (matched loop items).
   **Phase 4 COMPLETE 2026-06-24:** `ENABLE_AUTO_APPLY=true` (GitHub repo variable). Self-test
   passed — pushed a motd line to `main`, `apply.yml` auto-applied it to hetz (serialized), verified
-  live. **Push to `main` now auto-applies to prod** (doc-only pushes = no-op applies). Drift
+  live. **Push to `main` now auto-applies to prod** (superseded 2026-10-21: merges no longer apply; see `docs/deployment.md`). Drift
   detection runs daily.
 
 The scratch box (`165.227.208.178`) is to be **destroyed** by the owner once results are reviewed.
@@ -284,8 +284,8 @@ lives in the `backrest-wiz` repo, not here, and needs the real backups.
 - **`docker` never auto-restarts; firewall has auto-revert; risky roles gated by `enable_phase2`**
   — safety against the documented outages (AGENTS §13).
 - **Main-only git workflow**; commits use the owner's GitHub noreply email (privacy enabled).
-- **GitHub Actions is the canonical apply path** — merges to `main` serialize
-  through `apply.yml`; do not replace this with routine manual WSL or SSH
+- **GitHub Actions is the canonical apply path** — gated dispatches of the reviewed `main` SHA serialize
+  through `apply.yml` (merges do not apply, 2026-10-21); do not replace this with routine manual WSL or SSH
   changes. `ENABLE_AUTO_APPLY=true` is verified.
 
 ## Dead ends / corrections

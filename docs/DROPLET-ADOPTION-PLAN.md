@@ -121,7 +121,7 @@ Each phase is independently valuable and independently revertible. Do not merge 
 containers are up, and `https://backup.designflow.app` returns 200.
 
 ⚠️ **Do not skip to D1.** Adopting an unproven playbook into the serialized CI pipeline means
-the first real test happens on a merge to `main`, unattended.
+the first real test happens on the first gated production dispatch.
 
 ### Phase D1 — Give CI a way in
 
@@ -181,7 +181,7 @@ reports no unexpected changes and `changed=0` on a second real run.
 4. Add the droplet to `drift.yml` so it gets the same config and software-inventory drift
    detection `hetz` has.
 
-**You'll know it worked when:** a no-op merge to `main` produces a green droplet apply
+**You'll know it worked when:** a gated no-op dispatch from `main` produces a green droplet apply
 reporting `changed=0`, and the drift job reports the droplet clean.
 
 ### Phase D4 — Retire the duplicates

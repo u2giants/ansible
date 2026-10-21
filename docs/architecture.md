@@ -39,8 +39,9 @@ secrets ── 1Password (vibe_coding), injected at apply time
 
 1. A change is made by editing this repo (roles/vars), not the box.
 2. `check.yml` (on PR) runs `ansible-lint` + `ansible-playbook --check --diff` and posts the diff.
-3. On merge to `main`, `apply.yml` runs — serialized by `concurrency: apply-hetzner` so two
-   applies never overlap. Real apply is gated by `ENABLE_AUTO_APPLY` (currently `true`).
+3. Merging to `main` does not apply. After the production gate passes on the exact `main` HEAD,
+   `apply.yml` is dispatched with that SHA — serialized by `concurrency: apply-hetzner` so two
+   applies never overlap (see `docs/deployment.md`). Real apply is gated by `ENABLE_AUTO_APPLY` (currently `true`).
 4. `drift.yml` runs daily `--check` and alerts if the live host has drifted from the repo.
 
 The serialization (one apply path) is the mechanism that lets ~7 concurrent AI sessions share one

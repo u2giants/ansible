@@ -24,7 +24,7 @@ see [`deployment.md`](deployment.md).
 | `firewall_lock_ipv6` | `true` | also lock down IPv6 port 22 (closes the live v6 gap) |
 | `ssh_trusted_root_password` | `true` | allow root password login from trusted sources (Tailscale) — no-key break-glass |
 | `docker_auto_restart` | `false` | MUST stay false — Ansible never restarts Docker |
-| `ENABLE_AUTO_APPLY` | `true` | GitHub repo variable; enables real serialized apply-on-push in `apply.yml` |
+| `ENABLE_AUTO_APPLY` | `true` | GitHub repo variable; real apply (vs `--check`) for a gated `apply.yml` dispatch |
 
 ## Key non-secret variables (`group_vars/all.yml`)
 
@@ -252,7 +252,7 @@ Full migration table and order: `ANSIBLE-IMPLEMENTATION-PLAN.md` §5.2.
 |---|---|---|
 | `OP_SERVICE_ACCOUNT_TOKEN` | secret | 1Password access in CI (the only secret stored in GitHub) |
 | `TS_OAUTH_CLIENT_ID`, `TS_OAUTH_SECRET` | secret | Tailscale `tag:ci` ephemeral node |
-| `ENABLE_AUTO_APPLY` | variable | set to `true`; enables apply-on-push |
+| `ENABLE_AUTO_APPLY` | variable | set to `true`; enables real apply for a gated dispatch |
 
 Verify what exists: `gh secret list -R u2giants/ansible` and `gh variable list -R u2giants/ansible`.
 Verified active on 2026-08-22: all three secrets are configured and

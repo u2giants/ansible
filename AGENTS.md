@@ -306,7 +306,7 @@ See `docs/deployment.md` for full detail. Summary of the **real, current** state
   the `ENABLE_AUTO_APPLY=true` repo variable**), `drift.yml` (daily
   `--check`, alerts on drift, never applies), and `task-gates.yml` (PR/push/manual:
   repository classification and refusal fixtures only).
-- **Current reality:** a merge to `main` does **not** apply. Production runs only by `gh workflow run apply.yml --ref main`
+- **Current reality:** a merge to `main` does **not** apply. Production runs only by `gh workflow run apply.yml --ref main -f sha=<reviewed main SHA>` (the run refuses unless that SHA is still the main tip, and checks out exactly it)
   after `ai-task-gates check --before production --reviewer-approval <report>` (the `reviewed-production-dispatch` release) passes
   in a clean checkout whose HEAD equals live GitHub `main`, with an exact-head AI reviewer APPROVE
   of that commit. Merging is never itself a production action. Phase 2 remains
