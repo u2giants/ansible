@@ -177,3 +177,12 @@ reviewed toolkit update fail with `cannot open .git/FETCH_HEAD` (issue #17).
 The ownership was only an accidental-drift guardrail (`ai` has host sudo); the
 toolkit's own `reference-transaction` guard (ai-devops #1836) now refuses HEAD
 moves outside its installer. The role default stays `root` for other hosts.
+
+ai-devops' `install.sh` refuses to run without its own reviewed install
+authority (dispatch `39566924504`: "Ordinary Linux installation needs a declared
+installation task and an assigned AI reviewer APPROVE"). Its protected
+`update.sh` writes a verified receipt
+(`~/.local/state/ai-devops/task-gates/install-completions/last.json`). For a
+self-advanced checkout whose receipt names the live HEAD and this checkout, the
+role records the completion marker (`installer=ai-devops update.sh ...`) and runs
+doctor, but never calls `install.sh` or `ai-install-skills` itself.

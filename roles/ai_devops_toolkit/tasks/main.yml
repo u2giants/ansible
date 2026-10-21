@@ -418,6 +418,27 @@
     - not ansible_check_mode
     - ai_devops_toolkit_ownership_drift.stdout | default('') | length > 0
 
+- name: Read ai-devops' own verified install receipt
+  ansible.builtin.slurp:
+    src: "{{ ai_devops_toolkit_install_receipt }}"
+  register: ai_devops_toolkit_receipt
+  failed_when: false
+  when:
+    - ai_devops_toolkit_requires_install
+    - ai_devops_toolkit_self_advanced
+
+- name: Accept a self-advanced release the toolkit installed and verified itself
+  ansible.builtin.set_fact:
+    # ai-devops' installer refuses to run without its own reviewed install
+    # authority, so a self-advanced checkout its protected update.sh already
+    # installed and verified is recorded, never reinstalled (issue #17).
+    ai_devops_toolkit_installed_by_toolkit: >-
+      {{ ai_devops_toolkit_self_advanced
+         and (ai_devops_toolkit_receipt.content is defined)
+         and ((ai_devops_toolkit_receipt.content | b64decode | from_json).target_head | default('')) == (ai_devops_toolkit_expected_revision | trim)
+         and ((ai_devops_toolkit_receipt.content | b64decode | from_json).installed_checkout | default('')) == ai_devops_toolkit_path }}
+  when: ai_devops_toolkit_requires_install
+
 - name: Require the reviewer-key token for a real toolkit install
   ansible.builtin.assert:
     that:
@@ -464,6 +485,7 @@
     HOME: "{{ ai_devops_toolkit_home }}"
   when:
     - ai_devops_toolkit_requires_install
+    - not (ai_devops_toolkit_installed_by_toolkit | default(false) | bool)
     - not ansible_check_mode
 
 - name: Adopt reviewed Claude and Codex globals
@@ -477,6 +499,7 @@
     HOME: "{{ ai_devops_toolkit_home }}"
   when:
     - ai_devops_toolkit_requires_install
+    - not (ai_devops_toolkit_installed_by_toolkit | default(false) | bool)
     - not ansible_check_mode
 
 - name: Inspect the governed checkout ownership boundary
@@ -571,8 +594,12 @@
     content: |
       revision={{ ai_devops_toolkit_expected_revision | trim }}
       pin={{ ai_devops_toolkit_version }}
+      {% if ai_devops_toolkit_installed_by_toolkit | default(false) | bool %}
+      installer=ai-devops update.sh (verified receipt {{ ai_devops_toolkit_install_receipt }})
+      {% else %}
       installer=install.sh {{ ai_devops_toolkit_secrets_flag }}
       globals=ai-install-skills --adopt-globals
+      {% endif %}
       doctor=passed
   when:
     - ai_devops_toolkit_requires_install

@@ -302,6 +302,29 @@ if run_role "$matching_target" "$matching_backup" "$TMP_ROOT/detached-state" \
   exit 1
 fi
 
+# ai-devops' own update.sh installs a self-advance and leaves a verified
+# receipt; the role then records it without calling install.sh (issue #17).
+printf '%s\n' receipt-release > "$source_repo/receipt.txt"
+git -C "$source_repo" add receipt.txt
+git -C "$source_repo" commit -qm receipt-release
+receipt_release="$(git -C "$source_repo" rev-parse HEAD)"
+git -C "$matching_target" checkout -q main
+git -C "$matching_target" reset -q --hard "$advanced_again"
+git -C "$matching_target" fetch -q origin
+git -C "$matching_target" merge -q --ff-only origin/main
+mkdir -p "$home_dir/.local/state/ai-devops/task-gates/install-completions"
+printf '{"target_head":"%s","installed_checkout":"%s"}\n' "$receipt_release" "$matching_target" \
+  > "$home_dir/.local/state/ai-devops/task-gates/install-completions/last.json"
+receipt_state="$TMP_ROOT/receipt-state"
+before_receipt="$(wc -l < "$home_dir/toolkit-test.log")"
+run_role "$matching_target" "$matching_backup" "$receipt_state" "$retry_predecessor" "$repaired_release" >/dev/null
+[[ "$(($(wc -l < "$home_dir/toolkit-test.log") - before_receipt))" -eq 1 ]]
+grep -q "^revision=$receipt_release$" "$receipt_state/$repaired_release.installed"
+grep -q '^installer=ai-devops update.sh' "$receipt_state/$repaired_release.installed"
+receipt_second="$(run_role "$matching_target" "$matching_backup" "$receipt_state" "$retry_predecessor" "$repaired_release")"
+grep -Eq 'changed=0' <<< "$receipt_second"
+rm -f "$home_dir/.local/state/ai-devops/task-gates/install-completions/last.json"
+
 # A tracked outward symlink must not expand the recursive ownership boundary.
 # Exercise it in a final release after all idempotence checks so Ansible's file
 # module handling of the symlink itself cannot obscure the core convergence
