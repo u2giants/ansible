@@ -2,6 +2,8 @@
 Description=Headroom AI Proxy Service (ZCode / Z.ai lane)
 After=network-online.target tailscaled.service
 Wants=network-online.target tailscaled.service
+StartLimitIntervalSec=300
+StartLimitBurst=5
 
 [Service]
 Environment=HEADROOM_OUTPUT_SHAPER=1
@@ -18,8 +20,6 @@ WorkingDirectory=/home/ai/.headroom-zcode-home
 ExecStart=/home/ai/.local/bin/headroom proxy --port 8788 --host 100.66.37.58 --mode cache --anthropic-api-url https://api.z.ai/api/anthropic
 Restart=on-failure
 RestartSec=5
-StartLimitIntervalSec=300
-StartLimitBurst=5
 StandardOutput=append:/home/ai/.headroom-zcode-home/.headroom/logs/proxy.log
 StandardError=append:/home/ai/.headroom-zcode-home/.headroom/logs/proxy.log
 Environment="PATH=/home/ai/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
