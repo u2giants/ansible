@@ -3,8 +3,12 @@
   ansible.builtin.systemd:
     daemon_reload: true
 
+# daemon_reload here, not only via "Reload systemd": that handler name is shared
+# with other roles and can run after this restart, leaving the old unit loaded
+# (seen 2026-10-21: StartLimit* change applied but NeedDaemonReload=yes).
 - name: Restart headroom services
   ansible.builtin.systemd:
     name: "{{ item }}"
     state: restarted
+    daemon_reload: true
   loop: [headroom.service, headroom-zcode.service, zcode-headroom-tls.service]
