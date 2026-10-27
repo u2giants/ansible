@@ -291,17 +291,17 @@
   check_mode: false
   when: not ansible_check_mode
 
-- name: Create a private extraction directory for the LibreOffice installer
-  ansible.builtin.tempfile:
-    state: directory
-    prefix: libreoffice_install_
-  register: dt_lo_tmpdir
-
 - name: Install or repair LibreOffice {{ libreoffice_version }}
   when: >-
-    ('LibreOffice ' ~ libreoffice_version ~ '.') not in (dt_lo.stdout | default(''))
-    or (not (dt_lo_writer is skipped) and (dt_lo_writer.stdout | default('')) != 'install ok installed')
+    not ansible_check_mode
+    and (('LibreOffice ' ~ libreoffice_version ~ '.') not in (dt_lo.stdout | default(''))
+         or (not (dt_lo_writer is skipped) and (dt_lo_writer.stdout | default('')) != 'install ok installed'))
   block:
+    - name: Create a private extraction directory for the LibreOffice installer
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: libreoffice_install_
+      register: dt_lo_tmpdir
     - name: Download the checksum-pinned LibreOffice tarball
       ansible.builtin.get_url:
         url: "{{ libreoffice_dl_base }}/{{ libreoffice_version }}/deb/x86_64/LibreOffice_{{ libreoffice_version }}_Linux_x86-64_deb.tar.gz"
@@ -332,10 +332,12 @@
       failed_when: dt_lo_writer_after.stdout != 'install ok installed'
       check_mode: false
       when: not ansible_check_mode
+  always:
     - name: Remove the LibreOffice installer temp directory
       ansible.builtin.file:
         path: "{{ dt_lo_tmpdir.path }}"
         state: absent
+      when: dt_lo_tmpdir.path is defined
 
 - name: Symlink soffice and the versioned launcher into /usr/local/bin
   ansible.builtin.file:
