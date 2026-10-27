@@ -11,6 +11,7 @@ what's live, so a rebuild reproduces them. Recovery gap **R2**
 | `claude` | native vendor installer as `ai` → `~/.local/bin/claude`, linked at `/usr/local/bin/claude`; npm copy removed | presence-managed, self-updating (version reported) |
 | `gemini-cli`, `corepack`, `npm-check-updates` | global npm (`community.general.npm`) | pinned in `dev_tools_npm` |
 | `codex` | `@openai/codex` global npm (standalone → `/opt/codex`) | `codex_version` 0.141.0 |
+| `soffice` (LibreOffice) | official deb tarball → `/opt/libreoffice26.8`; `soffice` + `libreoffice26.8` symlinked into `/usr/local/bin` | `libreoffice_version` 26.8.1 |
 | `cloudflared` symlink | `/usr/local/bin/cloudflared` → `/usr/bin/cloudflared` (binary is apt, installed by `packages`) | — |
 
 ## Safe / idempotent
@@ -23,4 +24,3 @@ box is a **no-op**. **Bump the version vars** when you upgrade a tool, so a rebu
   duplicate.
 - **Authenticating** these tools after a rebuild (`gcloud auth`, `supabase login`, `codex` login,
   etc.) stays a manual step, by design.
-| `soffice` (LibreOffice) | official deb tarball → `/opt/libreoffice26.8`, `soffice` symlinked into `/usr/local/bin` | `libreoffice_version` 26.8.1 |
