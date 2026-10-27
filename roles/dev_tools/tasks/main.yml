@@ -267,9 +267,11 @@
 # Captures the 2026-10-27 manual install (document-QA rendering for the xlsx skill gate)
 # so an apply does not flag it and a rebuild reproduces it. The whole deb set goes to ONE
 # apt-get transaction (per-deb installs fail on the set's interdependencies), the tarball
-# is checksum-pinned, and a writer-package check catches partial installs that the soffice
-# binary alone would mask. docs/baseline-software.txt and roles/packages/files/apt-manual.txt
-# both list the packages; the packages role skips them as not-in-repo — dev_tools owns them.
+# is checksum-pinned and extracted to a root-owned unpredictable temp dir, and a
+# writer-package check runs on EVERY apply (outside the guarded block) so the partial
+# install the soffice binary alone would mask both fails loudly and self-repairs via
+# --reinstall. docs/baseline-software.txt and roles/packages/files/apt-manual.txt both
+# list the packages; the packages role skips them as not-in-repo — dev_tools owns them.
 - name: Derive LibreOffice major.minor directory
   ansible.builtin.set_fact:
     dev_tools_lo_dir: "{{ libreoffice_version.split('.')[0] }}.{{ libreoffice_version.split('.')[1] }}"
@@ -281,45 +283,59 @@
   failed_when: false
   check_mode: false
 
-- name: Install LibreOffice from the pinned tarball
-  when: "('LibreOffice ' ~ libreoffice_version ~ '.') not in (dt_lo.stdout | default(''))"
+- name: Check the document-QA writer package is fully installed
+  ansible.builtin.command: dpkg-query -W -f=${Status} libreoffice{{ dev_tools_lo_dir }}-writer
+  register: dt_lo_writer
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: not ansible_check_mode
+
+- name: Create a private extraction directory for the LibreOffice installer
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: libreoffice_install_
+  register: dt_lo_tmpdir
+
+- name: Install or repair LibreOffice {{ libreoffice_version }}
+  when: >-
+    ('LibreOffice ' ~ libreoffice_version ~ '.') not in (dt_lo.stdout | default(''))
+    or (not (dt_lo_writer is skipped) and (dt_lo_writer.stdout | default('')) != 'install ok installed')
   block:
     - name: Download the checksum-pinned LibreOffice tarball
       ansible.builtin.get_url:
         url: "{{ libreoffice_dl_base }}/{{ libreoffice_version }}/deb/x86_64/LibreOffice_{{ libreoffice_version }}_Linux_x86-64_deb.tar.gz"
-        dest: "/tmp/libreoffice_{{ libreoffice_version }}.tar.gz"
+        dest: "{{ dt_lo_tmpdir.path }}/libreoffice_{{ libreoffice_version }}.tar.gz"
         checksum: "sha256:{{ libreoffice_tarball_sha256 }}"
-        mode: "0644"
+        mode: "0600"
     - name: Extract the LibreOffice installer
       ansible.builtin.unarchive:
-        src: "/tmp/libreoffice_{{ libreoffice_version }}.tar.gz"
-        dest: "/tmp/libreoffice_install_{{ libreoffice_version }}"
+        src: "{{ dt_lo_tmpdir.path }}/libreoffice_{{ libreoffice_version }}.tar.gz"
+        dest: "{{ dt_lo_tmpdir.path }}"
         remote_src: true
     - name: Find LibreOffice debs
       ansible.builtin.find:
-        paths: "/tmp/libreoffice_install_{{ libreoffice_version }}"
+        paths: "{{ dt_lo_tmpdir.path }}"
         patterns: "*.deb"
         recurse: true
       register: dt_lo_debs
     - name: Install the full LibreOffice deb set in one apt transaction
       ansible.builtin.command:
-        argv: "{{ ['/usr/bin/apt-get', '-y', '--no-install-recommends', 'install']
+        argv: "{{ ['/usr/bin/apt-get', '-y', '--no-install-recommends', '--reinstall', 'install']
                    + (dt_lo_debs.files | map(attribute='path') | sort | list) }}"
       register: dt_lo_install
-      changed_when: "'newly installed' in dt_lo_install.stdout"
-    - name: Verify the document-QA component installed (guards partial installs)
+      changed_when: "'0 newly installed' not in dt_lo_install.stdout"
+    - name: Verify the document-QA component after install
       ansible.builtin.command: dpkg-query -W -f=${Status} libreoffice{{ dev_tools_lo_dir }}-writer
-      register: dt_lo_writer
+      register: dt_lo_writer_after
       changed_when: false
-      failed_when: dt_lo_writer.stdout != 'install ok installed'
+      failed_when: dt_lo_writer_after.stdout != 'install ok installed'
       check_mode: false
-    - name: Remove LibreOffice installer leftovers
+      when: not ansible_check_mode
+    - name: Remove the LibreOffice installer temp directory
       ansible.builtin.file:
-        path: "{{ item }}"
+        path: "{{ dt_lo_tmpdir.path }}"
         state: absent
-      loop:
-        - "/tmp/libreoffice_{{ libreoffice_version }}.tar.gz"
-        - "/tmp/libreoffice_install_{{ libreoffice_version }}"
 
 - name: Symlink soffice and the versioned launcher into /usr/local/bin
   ansible.builtin.file:

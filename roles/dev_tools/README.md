@@ -17,6 +17,8 @@ what's live, so a rebuild reproduces them. Recovery gap **R2**
 ## Safe / idempotent
 Every install is guarded by a version check (or an idempotent module), so applying to the live
 box is a **no-op**. **Bump the version vars** when you upgrade a tool, so a rebuild matches.
+When bumping LibreOffice, also regenerate `libreoffice_tarball_sha256` from the official
+tarball — a stale checksum fails the download loudly rather than installing the wrong build.
 
 ## Notes
 - The live box also has a second, older `gemini` at `/usr/local/bin/gemini` (0.35.2); this role
