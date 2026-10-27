@@ -265,23 +265,32 @@
 
 # ---- LibreOffice (official deb tarball -> /opt/libreofficeX.Y, soffice symlinked) ----
 # Captures the 2026-10-27 manual install (document-QA rendering for the xlsx skill gate)
-# so an apply does not flag it and a rebuild reproduces it. Baseline: docs/baseline-software.txt.
+# so an apply does not flag it and a rebuild reproduces it. The whole deb set goes to ONE
+# apt-get transaction (per-deb installs fail on the set's interdependencies), the tarball
+# is checksum-pinned, and a writer-package check catches partial installs that the soffice
+# binary alone would mask. docs/baseline-software.txt and roles/packages/files/apt-manual.txt
+# both list the packages; the packages role skips them as not-in-repo — dev_tools owns them.
+- name: Derive LibreOffice major.minor directory
+  ansible.builtin.set_fact:
+    dev_tools_lo_dir: "{{ libreoffice_version.split('.')[0] }}.{{ libreoffice_version.split('.')[1] }}"
+
 - name: Check installed LibreOffice version
-  ansible.builtin.command: "/opt/libreoffice{{ libreoffice_dir }}/program/soffice --version"
+  ansible.builtin.command: "/opt/libreoffice{{ dev_tools_lo_dir }}/program/soffice --version"
   register: dt_lo
   changed_when: false
   failed_when: false
   check_mode: false
 
-- name: Install LibreOffice {{ libreoffice_version }}
-  when: libreoffice_version not in (dt_lo.stdout | default(''))
+- name: Install LibreOffice from the pinned tarball
+  when: "('LibreOffice ' ~ libreoffice_version ~ '.') not in (dt_lo.stdout | default(''))"
   block:
-    - name: Download LibreOffice {{ libreoffice_version }}
+    - name: Download the checksum-pinned LibreOffice tarball
       ansible.builtin.get_url:
         url: "{{ libreoffice_dl_base }}/{{ libreoffice_version }}/deb/x86_64/LibreOffice_{{ libreoffice_version }}_Linux_x86-64_deb.tar.gz"
         dest: "/tmp/libreoffice_{{ libreoffice_version }}.tar.gz"
+        checksum: "sha256:{{ libreoffice_tarball_sha256 }}"
         mode: "0644"
-    - name: Extract LibreOffice installer
+    - name: Extract the LibreOffice installer
       ansible.builtin.unarchive:
         src: "/tmp/libreoffice_{{ libreoffice_version }}.tar.gz"
         dest: "/tmp/libreoffice_install_{{ libreoffice_version }}"
@@ -292,14 +301,29 @@
         patterns: "*.deb"
         recurse: true
       register: dt_lo_debs
-    - name: Install LibreOffice debs
-      ansible.builtin.apt:
-        deb: "{{ item.path }}"
-        state: present
-      loop: "{{ dt_lo_debs.files }}"
+    - name: Install the full LibreOffice deb set in one apt transaction
+      ansible.builtin.command:
+        argv: "{{ ['/usr/bin/apt-get', '-y', '--no-install-recommends', 'install']
+                   + (dt_lo_debs.files | map(attribute='path') | sort | list) }}"
+      register: dt_lo_install
+      changed_when: "'newly installed' in dt_lo_install.stdout"
+    - name: Verify the document-QA component installed (guards partial installs)
+      ansible.builtin.command: dpkg-query -W -f=${Status} libreoffice{{ dev_tools_lo_dir }}-writer
+      register: dt_lo_writer
+      changed_when: false
+      failed_when: dt_lo_writer.stdout != 'install ok installed'
+      check_mode: false
+    - name: Remove LibreOffice installer leftovers
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "/tmp/libreoffice_{{ libreoffice_version }}.tar.gz"
+        - "/tmp/libreoffice_install_{{ libreoffice_version }}"
 
-- name: Symlink soffice into /usr/local/bin
+- name: Symlink soffice and the versioned launcher into /usr/local/bin
   ansible.builtin.file:
-    src: "/opt/libreoffice{{ libreoffice_dir }}/program/soffice"
-    dest: /usr/local/bin/soffice
+    src: "/opt/libreoffice{{ dev_tools_lo_dir }}/program/soffice"
+    dest: "/usr/local/bin/{{ item }}"
     state: link
+  loop: "{{ ['soffice', 'libreoffice' ~ dev_tools_lo_dir] }}"
