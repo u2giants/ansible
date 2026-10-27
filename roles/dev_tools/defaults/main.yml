@@ -25,6 +25,10 @@ codex_bwrap_apparmor: true
 # Unprivileged user the post-apply verification runs as. Root is NOT subject to the
 # userns restriction, so verifying as root would pass even when the fix did nothing.
 codex_bwrap_verify_user: "ai"
+# LibreOffice (official deb tarball -> /opt/libreoffice26.8, document-QA rendering)
+libreoffice_version: "26.8.1"
+libreoffice_dir: "26.8"
+libreoffice_dl_base: "https://download.documentfoundation.org/libreoffice/stable"
 # Claude Code is NOT an npm global: live uses the native self-updating install at
 # ~/.local/bin/claude (see the native-claude tasks in tasks/main.yml).
 # Global npm CLIs (idempotent via community.general.npm). codex is handled separately (guarded).

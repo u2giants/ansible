@@ -262,3 +262,44 @@
     - { path: /usr/local/bin/supabase }
     - { path: /usr/local/lib/node_modules/@google/gemini-cli, state: directory, recurse: true }
   failed_when: false   # paths may be absent on a fresh box before npm/.deb installs run
+
+# ---- LibreOffice (official deb tarball -> /opt/libreofficeX.Y, soffice symlinked) ----
+# Captures the 2026-10-27 manual install (document-QA rendering for the xlsx skill gate)
+# so an apply does not flag it and a rebuild reproduces it. Baseline: docs/baseline-software.txt.
+- name: Check installed LibreOffice version
+  ansible.builtin.command: "/opt/libreoffice{{ libreoffice_dir }}/program/soffice --version"
+  register: dt_lo
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Install LibreOffice {{ libreoffice_version }}
+  when: libreoffice_version not in (dt_lo.stdout | default(''))
+  block:
+    - name: Download LibreOffice {{ libreoffice_version }}
+      ansible.builtin.get_url:
+        url: "{{ libreoffice_dl_base }}/{{ libreoffice_version }}/deb/x86_64/LibreOffice_{{ libreoffice_version }}_Linux_x86-64_deb.tar.gz"
+        dest: "/tmp/libreoffice_{{ libreoffice_version }}.tar.gz"
+        mode: "0644"
+    - name: Extract LibreOffice installer
+      ansible.builtin.unarchive:
+        src: "/tmp/libreoffice_{{ libreoffice_version }}.tar.gz"
+        dest: "/tmp/libreoffice_install_{{ libreoffice_version }}"
+        remote_src: true
+    - name: Find LibreOffice debs
+      ansible.builtin.find:
+        paths: "/tmp/libreoffice_install_{{ libreoffice_version }}"
+        patterns: "*.deb"
+        recurse: true
+      register: dt_lo_debs
+    - name: Install LibreOffice debs
+      ansible.builtin.apt:
+        deb: "{{ item.path }}"
+        state: present
+      loop: "{{ dt_lo_debs.files }}"
+
+- name: Symlink soffice into /usr/local/bin
+  ansible.builtin.file:
+    src: "/opt/libreoffice{{ libreoffice_dir }}/program/soffice"
+    dest: /usr/local/bin/soffice
+    state: link

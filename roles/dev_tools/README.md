@@ -23,3 +23,4 @@ box is a **no-op**. **Bump the version vars** when you upgrade a tool, so a rebu
   duplicate.
 - **Authenticating** these tools after a rebuild (`gcloud auth`, `supabase login`, `codex` login,
   etc.) stays a manual step, by design.
+| `soffice` (LibreOffice) | official deb tarball → `/opt/libreoffice26.8`, `soffice` symlinked into `/usr/local/bin` | `libreoffice_version` 26.8.1 |
