@@ -28,7 +28,7 @@
       UNAVAILABLE (skipped, not in any configured repo; LibreOffice's deb set is
       installed by dev_tools, not apt repos):
       {{ packages_apt_manual | difference(packages_available.stdout_lines)
-         | reject('match', '^(libreoffice|libobasis)26\\.') | list }}
+         | reject('match', '^(libreoffice|libobasis)26\.') | list }}
   when: (packages_apt_manual | difference(packages_available.stdout_lines)) | length > 0
 
 - name: Install all available manual apt packages (full host package set)
