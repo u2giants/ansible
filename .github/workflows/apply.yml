@@ -58,6 +58,10 @@ jobs:
             echo "::error::Run the toolkit maintenance tag by itself: tags=ai_devops_toolkit"
             exit 1
           fi
+          if [[ "$DEPLOY_TAGS" == *firewall* && "$DEPLOY_TAGS" != "firewall" ]]; then
+            echo "::error::Run the firewall role by itself: tags=firewall"
+            exit 1
+          fi
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -113,6 +117,11 @@ jobs:
           extra=()
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "$tags" = "ai_devops_toolkit" ]; then
             extra=(-e enable_ai_devops_toolkit_deploy=true)
+          fi
+          # The firewall role is phase2; an exact `tags=firewall` dispatch opens the phase2
+          # gate for that one role only (any other phase2 tag still hits the site.yml assert).
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "$tags" = "firewall" ]; then
+            extra=(-e enable_phase2=true)
           fi
           ansible-playbook playbooks/site.yml -l hetzner --tags "$tags" "${extra[@]}"
 
