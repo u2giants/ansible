@@ -73,5 +73,94 @@
   when: firewall_lock_ipv6 | bool
   notify: Persist iptables
 
+# --- Private admin ports (Coolify 8000/6001/6002, Backrest 9898) ---
+- name: Remove stale INPUT ACCEPT rules for retired ports
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "{{ item }}"
+    jump: ACCEPT
+    state: absent
+  loop: "{{ firewall_stale_input_ports }}"
+  notify: Persist iptables
+
+- name: Allow private host ports from trusted IPv4 sources
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "{{ item[0] }}"
+    source: "{{ item[1] }}"
+    jump: ACCEPT
+  loop: "{{ firewall_private_host_ports | product(firewall_private_trusted_v4) | list }}"
+  notify: Persist iptables
+
+- name: Drop private host ports from everyone else (IPv4)
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "{{ item }}"
+    jump: DROP
+  loop: "{{ firewall_private_host_ports }}"
+  notify: Persist iptables
+
+- name: Allow private host ports from trusted IPv6 sources
+  ansible.builtin.iptables:
+    chain: INPUT
+    ip_version: ipv6
+    protocol: tcp
+    destination_port: "{{ item[0] }}"
+    source: "{{ item[1] }}"
+    jump: ACCEPT
+  loop: "{{ firewall_private_host_ports | product(firewall_private_trusted_v6) | list }}"
+  notify: Persist iptables
+
+- name: Drop private host ports from everyone else (IPv6)
+  ansible.builtin.iptables:
+    chain: INPUT
+    ip_version: ipv6
+    protocol: tcp
+    destination_port: "{{ item }}"
+    jump: DROP
+  loop: "{{ firewall_private_host_ports }}"
+  notify: Persist iptables
+
+# Docker-published ports never traverse INPUT (DNAT -> FORWARD), so they are filtered in
+# DOCKER-USER, which Docker creates but never flushes. Match on the ORIGINAL destination port
+# (conntrack) so the container-side port and container IP do not matter. The iptables module
+# cannot express --ctorigdstport, so rules are managed with an idempotent check (-C) then add.
+# Trusted RETURNs are INSERTED at the top and DROPs APPENDED, so order stays correct even if
+# the trusted list later grows. RETURN (not ACCEPT) hands traffic back to Docker's own rules.
+- name: Ensure DOCKER-USER exists
+  ansible.builtin.shell: "{{ item }} -n -L DOCKER-USER >/dev/null 2>&1 || {{ item }} -N DOCKER-USER"
+  loop: [iptables, ip6tables]
+  changed_when: false
+
+- name: Return trusted sources for private Docker ports to Docker's rules
+  ansible.builtin.shell: >-
+    {{ item.0.cmd }} -C DOCKER-USER {{ spec }} 2>/dev/null && echo present ||
+    {{ item.0.cmd }} -I DOCKER-USER 1 {{ spec }}
+  vars:
+    spec: >-
+      -s {{ item.1[1] }} -p tcp -m conntrack --ctdir ORIGINAL
+      --ctorigdstport {{ item.1[0] }} -j RETURN
+  loop: >-
+    {{ [{'cmd': 'iptables', 'p': firewall_private_docker_ports | product(firewall_private_trusted_v4) | list},
+        {'cmd': 'ip6tables', 'p': firewall_private_docker_ports | product(firewall_private_trusted_v6) | list}]
+       | subelements('p') }}
+  register: firewall_du_return
+  changed_when: "'present' not in firewall_du_return.stdout"
+  notify: Persist iptables
+
+- name: Drop private Docker ports from everyone else
+  ansible.builtin.shell: >-
+    {{ item[0] }} -C DOCKER-USER {{ spec }} 2>/dev/null && echo present ||
+    {{ item[0] }} -A DOCKER-USER {{ spec }}
+  vars:
+    spec: "-p tcp -m conntrack --ctdir ORIGINAL --ctorigdstport {{ item[1] }} -j DROP"
+  loop: "{{ ['iptables', 'ip6tables'] | product(firewall_private_docker_ports) | list }}"
+  register: firewall_du_drop
+  changed_when: "'present' not in firewall_du_drop.stdout"
+  notify: Persist iptables
+
 - name: Confirm we still have a working connection after the firewall changes
   ansible.builtin.ping:

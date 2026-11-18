@@ -16,5 +16,26 @@ firewall_ssh_trusted_v6:
   - "::1/128"                # localhost
 firewall_lock_ipv6: true     # close the IPv6 port-22 gap (live v6 currently has no restriction)
 
-# NOTE: live INPUT also has a stale `--dport 18790 ACCEPT` (nothing listens there). It is left
-# UNMANAGED here — recommend removing it once confirmed unused; not done automatically.
+
+# Private admin ports: reachable only from Tailscale, localhost and Docker networks.
+# Defense-in-depth behind the upstream (Hetzner) port filter. Docker-published ports bypass
+# INPUT, so they are filtered in DOCKER-USER by their ORIGINAL (pre-DNAT) destination port.
+firewall_private_docker_ports:   # coolify: 8000->8080 UI, 6001-6002 realtime/terminal
+  - 8000
+  - 6001
+  - 6002
+firewall_private_host_ports:     # host processes, filtered in INPUT
+  - 9898                         # backrest (no login; its API exposes backup credentials)
+firewall_private_trusted_v4:
+  - "100.64.0.0/10"              # Tailscale
+  - "127.0.0.0/8"                # localhost (cloudflared -> 127.0.0.1:8000)
+  - "10.0.0.0/8"                 # Docker default-address-pools
+  - "172.16.0.0/12"              # Docker networks created with explicit subnets
+firewall_private_trusted_v6:
+  - "fd7a:115c:a1e0::/48"        # Tailscale
+  - "::1/128"                    # localhost
+  - "fc00::/7"                   # Docker ULA networks
+
+# Retired INPUT ACCEPT rules removed by the role (nothing listens there; confirmed 2026-11-18).
+firewall_stale_input_ports:
+  - 18790
