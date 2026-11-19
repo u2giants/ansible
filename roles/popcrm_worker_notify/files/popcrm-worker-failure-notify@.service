@@ -1,0 +1,24 @@
+[Unit]
+# Fired by the OnFailure= drop-in each POP CRM worker unit carries (role
+# popcrm_worker_notify, popcrm-web issue #64). The instance is the failed
+# unit's full name: OnFailure=popcrm-worker-failure-notify@%n.service for
+# popcrm-reroute.service yields this unit with %i = "popcrm-reroute.service".
+# Deliberately no OnFailure of its own — a broken notifier must not loop.
+Description=Email notifier for failed POP CRM worker unit %i
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+# Read by systemd (PID 1) before privileges drop; mode 0600 root:root on the
+# host. The deploy step populates it from 1Password — see the role README.
+EnvironmentFile=/etc/popcrm-worker-notify.env
+ExecStart=/usr/local/bin/popcrm-worker-failure-notify %i
+# Nothing beyond sending the mail: ephemeral user, no new privileges, no
+# writable filesystem except PrivateTmp, no home access.
+DynamicUser=yes
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+TimeoutStartSec=120
