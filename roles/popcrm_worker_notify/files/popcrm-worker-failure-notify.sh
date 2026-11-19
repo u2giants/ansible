@@ -38,7 +38,7 @@ if curl --fail --silent --show-error \
     -H "api-key: ${BREVO_API_KEY}" \
     -H 'content-type: application/json' \
     --data "${payload}" \
-    https://brevo-api.com/v3/smtp/email; then
+    https://api.brevo.com/v3/smtp/email; then
   logger -t popcrm-worker-failure-notify "failure notification for ${unit} mailed to ${to}"
 else
   status=$?
