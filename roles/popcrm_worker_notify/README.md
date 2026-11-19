@@ -17,7 +17,7 @@ the Ansible layer — a "rebuild everything" must reproduce it, not lose it.
 
 | Path | What |
 |---|---|
-| `/usr/local/bin/popcrm-worker-failure-notify` | the mailer script (curl → `https://brevo-api.com/v3/smtp/email`) |
+| `/usr/local/bin/popcrm-worker-failure-notify` | the mailer script (curl → `https://api.brevo.com/v3/smtp/email`) |
 | `/etc/systemd/system/popcrm-worker-failure-notify@.service` | oneshot template unit; instance = failed unit's full name; `DynamicUser`, `NoNewPrivileges`, `ProtectSystem=strict` — no privileges beyond sending the mail |
 | `/etc/systemd/system/<worker>.service.d/failure-notify.conf` | `OnFailure=popcrm-worker-failure-notify@%n.service` drop-in for each of the five worker units |
 
