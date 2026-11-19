@@ -1,0 +1,64 @@
+---
+# popcrm_worker_notify — emails the owner when a POP CRM host worker unit fails.
+#
+# The five POP CRM workers (popcrm-web repo, installed on this host as oneshot
+# .service units driven by timers) historically exited 0 even when their work
+# failed, and no OnFailure= hook existed — so a dead worker left nothing but a
+# journal line. popcrm-web #64 makes the workers exit non-zero on failure; this
+# role is the host-side notifier half: a template unit fired by systemd
+# OnFailure= plus a small script that sends one email through Brevo's
+# SMTP-relay HTTP API (popcrm-web issue #64, owner decision 2026-11-19:
+# alerts go to u2giants@gmail.com).
+#
+# Scope boundary: the worker .service/.timer units themselves stay owned by the
+# popcrm-web repo (installed per its docs/deployment.md). This role touches them
+# only through least-invasive systemd drop-ins that add the OnFailure= line —
+# it never copies or edits the unit files, so the two repos cannot drift.
+#
+# No secret ever enters this repo: the Brevo API key is read at runtime by
+# systemd (PID 1) from the root-only /etc/popcrm-worker-notify.env (mode 0600,
+# 1Password item `Sendinblue (Brevo) API Key - designflow-backend` in vault
+# vibe_coding). The deploy step must populate that file before the first
+# apply — see README.md.
+
+- name: Install the failure-notify script
+  ansible.builtin.copy:
+    src: popcrm-worker-failure-notify.sh
+    dest: /usr/local/bin/popcrm-worker-failure-notify
+    owner: root
+    group: root
+    mode: "0755"
+  notify: Reload systemd
+
+- name: Install the failure-notify template unit
+  ansible.builtin.copy:
+    src: popcrm-worker-failure-notify@.service
+    dest: /etc/systemd/system/popcrm-worker-failure-notify@.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Create OnFailure drop-in directories for the POP CRM worker units
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ item }}.service.d"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop: "{{ popcrm_worker_notify_units }}"
+
+- name: Install the OnFailure drop-in for each POP CRM worker unit
+  ansible.builtin.copy:
+    src: failure-notify.conf
+    dest: "/etc/systemd/system/{{ item }}.service.d/failure-notify.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ popcrm_worker_notify_units }}"
+  notify: Reload systemd
+
+# A daemon-reload is required before systemd sees the new OnFailure= setting;
+# the units themselves are NOT restarted (they are timer-driven oneshots).
+- name: Flush handlers so systemd registers the OnFailure wiring
+  ansible.builtin.meta: flush_handlers

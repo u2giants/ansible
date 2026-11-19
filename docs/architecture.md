@@ -68,6 +68,7 @@ server without drift: host changes can only land through this pipeline.
 | `users` | 1 | `ai` user, passwordless sudo, authorized public keys |
 | `dns_hardening` | 1 | `resolved` FallbackDNS (May 2026 outage fix) |
 | `backrest_watchdog` | 1 | docker.sock self-heal timer (June 2026 outage fix) |
+| `popcrm_worker_notify` | 1 | OnFailure email notifier for the POP CRM worker units (popcrm-web #64); drop-ins only, never touches the units |
 | `memory_sync_containment` | 1 | preserve Claude memory and remove the retired public-repository sync cron |
 | `ai_devops_toolkit` | maintenance | explicitly gated toolkit history cutover and declared partial-release recovery; never routine Phase 1 |
 | `firewall` | 2 | declarative `iptables` SSH lockdown only (host-owned INPUT rules), netfilter-persistent, fail2ban |

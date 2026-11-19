@@ -1,0 +1,9 @@
+---
+# The five POP CRM worker units (popcrm-web systemd/). The units themselves are
+# owned by the popcrm-web repo; this list only drives the drop-in path.
+popcrm_worker_notify_units:
+  - popcrm-outlook-ingest
+  - popcrm-reroute
+  - popcrm-contact-sync
+  - popcrm-summarize
+  - popcrm-apply-ignore-rules

@@ -162,6 +162,7 @@ Host-level systemd services/units that **this repo manages or relies on**:
 |---|---|---|---|
 | `cloudflared-coolify.service` | Cloudflare Tunnel 1 (`coolify.designflow.app`) | `roles/cloudflared_coolify` (Phase 2, gated) | Tunnels 2/3 are Coolify's — never touch |
 | `backrest-dump-watchdog.timer` + `.service` | Self-heal backrest backup agent after docker.sock staleness | `roles/backrest_watchdog` (Phase 1, applied) | units vendored verbatim from `backrest-wiz` |
+| `popcrm-worker-failure-notify@.service` | OnFailure email notifier for the five POP CRM worker units (popcrm-web #64); alerts to u2giants@gmail.com via Brevo | `roles/popcrm_worker_notify` (Phase 1) | adds `OnFailure=` drop-ins only; worker units stay owned by popcrm-web; needs one-time `/etc/popcrm-worker-notify.env` (0600) |
 | `dns-watchdog.timer` + `.service` | Self-heal host DNS (restart `systemd-resolved`) if external resolution breaks | `roles/dns_watchdog` (Phase 1) | script in `/usr/local/sbin`; vendored verbatim; counterpart to `dns_hardening` |
 | `headroom.service`, `headroom-zcode.service`, `zcode-headroom-tls.service` + PERF cron | Headroom AI proxies (:8787 Claude, :8788 Z.ai) and ZCode TLS front (:8443) | `roles/headroom_proxy` (Phase 1) | vendored verbatim 2026-10-20; TLS CA regenerated if absent |
 | `gemini-mcp.service` | Retired Gemini MCP bridge — disabled/inactive since 2026-03, referenced nowhere | not managed (intentionally not restored) | left on disk untouched; see issue #17 |

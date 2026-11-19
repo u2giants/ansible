@@ -51,6 +51,7 @@ see [`deployment.md`](deployment.md).
 | `headroom_version` | `0.41.0` | pinned `headroom-ai` pipx version (`headroom_proxy`); reinstalled with `--force` when the installed version differs |
 | `headroom_tailnet_ip` | `100.66.37.58` | SAN in the generated TLS cert; the vendored units/script also hardcode this address |
 | `headroom_tls_dir` | `/etc/ai-zcode-headroom/tls` | self-signed CA + server cert, generated only when absent |
+| `popcrm_worker_notify_units` | the five `popcrm-*` worker unit names | units stay owned by the popcrm-web repo; the list only drives `OnFailure=` drop-in paths (`popcrm_worker_notify`) |
 
 The Headroom units set `HEADROOM_ALLOW_UNAUTHENTICATED_BIND=1` and bind to the tailnet address only:
 access control is the Tailscale ACL, not the proxy.
@@ -241,6 +242,7 @@ CLI (already installed on the box). Values are **not** recorded here — only in
 | `ci-deploy-ssh` (private key) | CI → host SSH | CI runner | active |
 | `1Password Service Account Token - hetz 'ai' account` (`OP_SERVICE_ACCOUNT_TOKEN`) | lets `install.sh --require-secrets` restore reviewer keys (Muse, StepFun, DeepSeek, GLM) | `ai_devops_toolkit` role → `~/.config/ai-devops/op-service-account` (0600, no_log); loaded only for `tags=ai_devops_toolkit` dispatch | active (#17) |
 | `cf-tunnel-hetz` | Cloudflare Tunnel 1 token | `cloudflared_coolify` role | in 1Password (per plan); not yet wired by Ansible |
+| `Sendinblue (Brevo) API Key - designflow-backend` | worker-failure alert emails to u2giants@gmail.com (popcrm-web #64) | `popcrm_worker_notify` role → `/etc/popcrm-worker-notify.env` (0600, read by systemd; one-time manual populate, see role README) | active |
 | `github-pat` | git/GitHub | git, MCP | migrated (per plan) |
 | `restic-hetzner`, `do-spaces`, `cf-dns-token`, `ghcr-pat`, `oauth2-proxy`, app secrets | backups, certs, image pulls, app | various | **Phase 3, not yet migrated** |
 
